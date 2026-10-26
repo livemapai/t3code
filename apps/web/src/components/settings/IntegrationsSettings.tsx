@@ -4,6 +4,7 @@ import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings"
 import { ScopedSwitch } from "./ScopedSwitch";
 import { DeviceHostsSettings } from "./DeviceHostsSettings";
 import { EasDeviceHostsSettings } from "./EasDeviceHostsSettings";
+import { LimrunDeviceHostsSettings } from "./LimrunDeviceHostsSettings";
 import {
   AuthSettingsWriteScope,
   BrowserImportFailureReason,
@@ -1058,6 +1059,9 @@ function DeviceIntegrationControls({
       ) : null}
       <DeviceHostsSettings environmentId={environmentId} />
       {state.supportsEasHosts ? <EasDeviceHostsSettings environmentId={environmentId} /> : null}
+      {state.supportsLimrunHosts ? (
+        <LimrunDeviceHostsSettings environmentId={environmentId} />
+      ) : null}
     </>
   );
 }

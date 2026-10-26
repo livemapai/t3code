@@ -232,7 +232,7 @@ describe("EAS Simulator host", () => {
       });
       const listed = (yield* ready.devices.list).devices;
       expect(listed.find((device) => device.id === "session-1")?.booted).toBe(true);
-      expect(yield* ready.devices.agentEndpoint!("session-1")).toEqual({
+      expect(yield* ready.devices.agentEndpoint!("session-1", "t3-session")).toEqual({
         baseUrl: "https://agent.test",
         token: "agent-token",
         agentDeviceId: "UDID-1",

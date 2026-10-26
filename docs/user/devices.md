@@ -123,6 +123,24 @@ installation, and connectivity to development servers such as Metro separately.
 A simulator on another machine cannot reach Metro through your environment's
 localhost without forwarding or another reachable address.
 
+## Limrun device hosts
+
+Limrun runs iOS Simulators and Android Emulators in the cloud, so neither
+needs Xcode or the Android SDK on any of your machines. In Settings →
+Integrations → Devices, add a host under **Limrun**. The environment server
+uses the API key saved for the host, then `LIM_API_KEY`, then its `lim login`.
+
+Every instance bills the Limrun organization until it stops. Each host limits
+how many instances run at once, and Limrun ends one after its session or idle
+minutes. Closing a device with **Power off**, editing or removing the host, or
+stopping the server deletes its instances; a server that crashed deletes its
+own leftovers when it starts again.
+
+Instances start without your apps. Agents install builds with `agent-device
+install`. An Android emulator reaches Metro on the environment through reverse
+port forwarding; an iOS Simulator needs a public Metro URL. Device settings
+and accessibility frames are not available for Limrun devices.
+
 ## Device tool updates
 
 The connected T3 server manages the device hub and agent tools on its own machine and configured SSH hosts. Required versions install automatically the next time those tools are used. Settings → Integrations → Check device tool versions reads installed versions without installing tools or starting devices.

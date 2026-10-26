@@ -12,9 +12,12 @@ export class DeviceScreenshotError extends Error {
 }
 
 export async function captureDeviceScreenshot(target: DeviceStreamTarget, signal: AbortSignal) {
-  const vendor = target.platform === "ios" ? "serve-sim" : "serve-emu";
+  const route =
+    target.transport === "limrun"
+      ? `limrun/screenshot?platform=${target.platform}&`
+      : `${target.platform === "ios" ? "serve-sim" : "serve-emu"}/api/screenshot?`;
   const url = withDeviceHubQuery(
-    `${target.access.httpBase}/vendor/${vendor}/api/screenshot?device=${encodeURIComponent(target.deviceId)}`,
+    `${target.access.httpBase}/vendor/${route}device=${encodeURIComponent(target.deviceId)}`,
     target.access,
   );
   const response = await fetch(url, {

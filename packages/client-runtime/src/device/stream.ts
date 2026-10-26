@@ -11,6 +11,7 @@ import * as Option from "effect/Option";
 import { createCanvasFrameSink, type DeviceFrameSink } from "./frame.ts";
 import { simulatorAvcConfig } from "./avcConfig.ts";
 import { type DeviceHubAccess, withDeviceHubQuery } from "./hubAccess.ts";
+import { createLimrunStreamClient } from "./limrunStream.ts";
 import type { DevicePlatform } from "@t3tools/contracts";
 
 export type DeviceStreamStatus = "connecting" | "streaming" | "error";
@@ -118,6 +119,8 @@ export interface DeviceStreamTarget {
   readonly access: DeviceHubAccess;
   /** Native iOS WebViews can use MJPEG without cross-origin fetch or secure-context support. */
   readonly preferMjpeg?: boolean;
+  /** Limrun devices stream over their own WebRTC signalling instead of the device hub's. */
+  readonly transport?: "hub" | "limrun";
   readonly panelId?: 1 | 3;
   readonly videoOnly?: boolean;
 }
@@ -386,6 +389,7 @@ export function createDeviceStreamClient(
   output: HTMLCanvasElement | DeviceFrameSink,
   events: DeviceStreamEvents,
 ): DeviceStreamClient {
+  if (target.transport === "limrun") return createLimrunStreamClient(target, output, events);
   const { access, platform, deviceId } = target;
   const sink = "present" in output ? output : createCanvasFrameSink(output);
   const vendor = platform === "ios" ? "/vendor/serve-sim" : "/vendor/serve-emu";

@@ -4,12 +4,15 @@ import {
   DeviceServiceState,
   EasDeviceHostConfig,
   EasDeviceHostConfigs,
+  LimrunDeviceHostConfig,
+  LimrunDeviceHostConfigs,
   SshDeviceHostConfigs,
 } from "./device.ts";
 import { secretSettingsFields } from "./settings.ts";
 
 const decodeSshHosts = Schema.decodeUnknownSync(SshDeviceHostConfigs);
 const decodeEas = Schema.decodeUnknownSync(EasDeviceHostConfigs);
+const decodeLimrun = Schema.decodeUnknownSync(LimrunDeviceHostConfigs);
 const encodeState = Schema.encodeSync(DeviceServiceState);
 const decodeState = Schema.decodeUnknownSync(DeviceServiceState);
 // The host summary as clients decoded it before EAS hosts existed.
@@ -49,6 +52,27 @@ describe("configured device hosts", () => {
   it("marks the EAS access token as a secret setting", () => {
     expect(secretSettingsFields(EasDeviceHostConfig)).toEqual(["accessToken"]);
   });
+
+  it("bounds Limrun instances and keeps the API key secret", () => {
+    expect(decodeLimrun([{ kind: "limrun", id: "limrun", label: "Limrun" }])).toEqual([
+      {
+        kind: "limrun",
+        id: "limrun",
+        label: "Limrun",
+        apiKey: "",
+        maxSessionMinutes: 30,
+        idleMinutes: 10,
+        maxConcurrentSessions: 2,
+      },
+    ]);
+    expect(() =>
+      decodeLimrun([{ kind: "limrun", id: "limrun", label: "Limrun", jurisdiction: "mars" }]),
+    ).toThrow();
+    expect(() =>
+      decodeLimrun([{ kind: "limrun", id: "limrun", label: "Limrun", maxSessionMinutes: 10 }]),
+    ).toThrow();
+    expect(secretSettingsFields(LimrunDeviceHostConfig)).toEqual(["apiKey"]);
+  });
 });
 
 describe("device state for clients from before EAS hosts", () => {
@@ -62,6 +86,7 @@ describe("device state for clients from before EAS hosts", () => {
     hosts: [
       { ...summary, id: "local", kind: "local" as const },
       { ...summary, id: "eas", kind: "eas" as const },
+      { ...summary, id: "limrun", kind: "limrun" as const },
     ],
     hostStatus: "ready" as const,
     hostStatuses: {},
@@ -73,7 +98,7 @@ describe("device state for clients from before EAS hosts", () => {
     revision: 1,
   };
 
-  it("sends EAS hosts where an older client does not look, and reads them back", () => {
+  it("sends cloud hosts where an older client does not look, and reads them back", () => {
     const wire = encodeState(state);
     expect(decodeOlderState(wire).hosts.map((host) => host.id)).toEqual(["local"]);
     expect(decodeState(wire).hosts).toEqual(state.hosts);

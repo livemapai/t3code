@@ -68,7 +68,46 @@ export const EasDeviceHostConfig = Schema.Struct({
 );
 export type EasDeviceHostConfig = typeof EasDeviceHostConfig.Type;
 
-export type DeviceHostConfig = SshDeviceHostConfig | EasDeviceHostConfig;
+export const LimrunJurisdiction = Schema.Literals(["us", "eu", "as"]);
+export type LimrunJurisdiction = typeof LimrunJurisdiction.Type;
+
+/**
+ * Cloud iOS Simulators and Android Emulators from Limrun. Every instance bills
+ * the Limrun organization until it ends, so each one is bounded.
+ */
+export const LimrunDeviceHostConfig = Schema.Struct({
+  kind: Schema.Literal("limrun"),
+  id: ConfiguredDeviceHostId,
+  label: TrimmedNonEmptyString,
+  /**
+   * Limrun API key, kept in the secret store. When empty the server uses
+   * LIM_API_KEY, then the `lim login` session.
+   */
+  apiKey: TrimmedString.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed("")),
+    Schema.annotateKey({ settingsSecret: true }),
+  ),
+  /** Where instances run; Limrun picks the nearest region when unset. */
+  jurisdiction: Schema.optional(LimrunJurisdiction),
+  maxSessionMinutes: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 240 })).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(30)),
+  ),
+  idleMinutes: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 60 })).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(10)),
+  ),
+  maxConcurrentSessions: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 20 })).pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(2)),
+  ),
+}).check(
+  Schema.makeFilter(
+    (host: { readonly idleMinutes: number; readonly maxSessionMinutes: number }) =>
+      host.idleMinutes < host.maxSessionMinutes ||
+      "Idle minutes must be smaller than session minutes.",
+  ),
+);
+export type LimrunDeviceHostConfig = typeof LimrunDeviceHostConfig.Type;
+
+export type DeviceHostConfig = SshDeviceHostConfig | EasDeviceHostConfig | LimrunDeviceHostConfig;
 
 const uniqueHostIds = Schema.makeFilter(
   (hosts: ReadonlyArray<{ readonly id: string }>) =>
@@ -84,6 +123,9 @@ export const SshDeviceHostConfigs = Schema.Array(SshDeviceHostConfig).check(uniq
  * or snapshot over one EAS entry.
  */
 export const EasDeviceHostConfigs = Schema.Array(EasDeviceHostConfig).check(uniqueHostIds);
+
+/** Kept apart for the same reason as EAS hosts. */
+export const LimrunDeviceHostConfigs = Schema.Array(LimrunDeviceHostConfig).check(uniqueHostIds);
 
 export const DeviceEasAccountInput = Schema.Struct({
   /** A saved EAS host whose stored token is checked when no new token is given. */
@@ -161,7 +203,15 @@ const EasDeviceHostSummary = Schema.Struct({
   ...deviceHostSummaryFields,
   kind: Schema.Literal("eas"),
 });
-export const DeviceHostSummary = Schema.Union([MachineDeviceHostSummary, EasDeviceHostSummary]);
+const LimrunDeviceHostSummary = Schema.Struct({
+  ...deviceHostSummaryFields,
+  kind: Schema.Literal("limrun"),
+});
+export const DeviceHostSummary = Schema.Union([
+  MachineDeviceHostSummary,
+  EasDeviceHostSummary,
+  LimrunDeviceHostSummary,
+]);
 export type DeviceHostSummary = typeof DeviceHostSummary.Type;
 
 export const DeviceHostStatus = Schema.Literals([
@@ -198,6 +248,7 @@ const deviceServiceStateFields = {
   supportsToolInspection: Schema.optional(Schema.Boolean),
   /** Servers from before EAS hosts ignore `easDeviceHosts`, so clients offer them only when set. */
   supportsEasHosts: Schema.optional(Schema.Boolean),
+  supportsLimrunHosts: Schema.optional(Schema.Boolean),
   hostStatus: DeviceHostStatus,
   hostStatusDetail: Schema.optional(Schema.String),
   hostStatuses: DeviceHostStatuses,
@@ -213,14 +264,15 @@ const deviceServiceStateFields = {
 };
 
 /**
- * EAS host summaries travel as `easHosts`: clients from before EAS hosts
- * decode `hosts` with a `local | ssh` kind and would reject the whole state.
- * Decoded, every host is in `hosts`.
+ * EAS and Limrun host summaries travel as `easHosts` and `limrunHosts`:
+ * clients from before them decode `hosts` with a `local | ssh` kind and
+ * would reject the whole state. Decoded, every host is in `hosts`.
  */
 const DeviceServiceStateWire = Schema.Struct({
   ...deviceServiceStateFields,
   hosts: Schema.Array(MachineDeviceHostSummary),
   easHosts: Schema.optional(Schema.Array(EasDeviceHostSummary)),
+  limrunHosts: Schema.optional(Schema.Array(LimrunDeviceHostSummary)),
 });
 const DeviceServiceStateDecoded = Schema.Struct({
   ...deviceServiceStateFields,
@@ -234,17 +286,21 @@ export const DeviceServiceState = DeviceServiceStateWire.pipe(
       typeof DeviceServiceStateDecoded.Type,
       typeof DeviceServiceStateWire.Type
     >({
-      decode: ({ easHosts, ...state }) => ({
+      decode: ({ easHosts, limrunHosts, ...state }) => ({
         ...state,
-        hosts: [...state.hosts, ...(easHosts ?? [])],
+        hosts: [...state.hosts, ...(easHosts ?? []), ...(limrunHosts ?? [])],
       }),
       encode: (state) => ({
         ...state,
         hosts: state.hosts.filter(
-          (host): host is typeof MachineDeviceHostSummary.Type => host.kind !== "eas",
+          (host): host is typeof MachineDeviceHostSummary.Type =>
+            host.kind === "local" || host.kind === "ssh",
         ),
         easHosts: state.hosts.filter(
           (host): host is typeof EasDeviceHostSummary.Type => host.kind === "eas",
+        ),
+        limrunHosts: state.hosts.filter(
+          (host): host is typeof LimrunDeviceHostSummary.Type => host.kind === "limrun",
         ),
       }),
     }),

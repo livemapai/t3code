@@ -120,9 +120,11 @@ export function platformSetupStatus(state: DeviceServiceState, platform: DeviceP
     message:
       remoteHost?.kind === "eas"
         ? `${remoteHost.label} starts iOS Simulators in the cloud with EAS Simulator.`
-        : platform === "ios"
-          ? `Xcode and iOS Simulator are available${location}.`
-          : `The Android SDK and Emulator are available${location}.`,
+        : remoteHost?.kind === "limrun"
+          ? `${remoteHost.label} starts ${platform === "ios" ? "iOS Simulators" : "Android Emulators"} in the cloud with Limrun.`
+          : platform === "ios"
+            ? `Xcode and iOS Simulator are available${location}.`
+            : `The Android SDK and Emulator are available${location}.`,
   };
 }
 

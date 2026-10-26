@@ -20,17 +20,28 @@ import * as McpInvocationContext from "../../McpInvocationContext.ts";
 import * as McpToolAccess from "../../McpToolAccess.ts";
 import { DeviceScreenshotToolkit, DeviceStandardToolkit, DeviceToolkit } from "./tools.ts";
 
-function agentDeviceTargetArgs(device: DeviceSummary): ReadonlyArray<string> {
+/** A null id leaves the device to the session, which hosts such as Limrun bind it to. */
+function agentDeviceTargetArgs(
+  device: Pick<DeviceSummary, "platform">,
+  agentDeviceId: string | null,
+): ReadonlyArray<string> {
+  if (agentDeviceId === null) return ["--platform", device.platform];
   return device.platform === "ios"
-    ? ["--platform", "ios", "--udid", device.id]
-    : ["--platform", "android", "--serial", device.id];
+    ? ["--platform", "ios", "--udid", agentDeviceId]
+    : ["--platform", "android", "--serial", agentDeviceId];
 }
+
+const CLOUD_NOTES = {
+  eas: "This is an EAS Simulator session in the cloud. It bills the Expo account per minute until it stops, so call device_close with shutdown: true when you are done. It starts with no apps installed: install-from-source <url> installs a build from a URL (iOS needs a .tar.gz containing a .app), and install uploads one from this machine.",
+  limrun:
+    "This is a Limrun instance in the cloud. It bills the Limrun organization until it stops, so call device_close with shutdown: true when you are done. It starts with no apps of yours installed: install uploads a build from this machine (iOS needs a simulator .app). An Android emulator reaches local Metro through reverse port forwarding; an iOS Simulator needs a public Metro URL.",
+} as const;
 
 export function agentDeviceQuickStart(
   device: DeviceSummary,
-  targetArgs = agentDeviceTargetArgs(device),
+  targetArgs = agentDeviceTargetArgs(device, device.id),
   command = "agent-device",
-  cloud = false,
+  cloud: keyof typeof CLOUD_NOTES | null = null,
 ): string {
   const executable = /^[a-zA-Z0-9_./:-]+$/.test(command)
     ? command
@@ -41,7 +52,7 @@ export function agentDeviceQuickStart(
     )
     .join(" ");
   const platformNotes = cloud
-    ? "This is an EAS Simulator session in the cloud. It bills the Expo account per minute until it stops, so call device_close with shutdown: true when you are done. It starts with no apps installed: install-from-source <url> installs a build from a URL (iOS needs a .tar.gz containing a .app), and install uploads one from this machine."
+    ? CLOUD_NOTES[cloud]
     : device.platform === "ios"
       ? "First use builds an XCTest runner and can take a couple of minutes; later commands are fast."
       : "The Android snapshot helper installs itself on first use.";
@@ -182,11 +193,9 @@ const handlers = {
         hostId: device.hostId,
         deviceId: device.id,
       });
-      const cloud = after.hosts.some((host) => host.id === device.hostId && host.kind === "eas");
-      const targetArgs = [
-        ...agentDeviceTargetArgs({ ...device, id: agent.agentDeviceId }),
-        ...agent.args,
-      ];
+      const hostKind = after.hosts.find((host) => host.id === device.hostId)?.kind;
+      const cloud = hostKind === "eas" || hostKind === "limrun" ? hostKind : null;
+      const targetArgs = [...agentDeviceTargetArgs(device, agent.agentDeviceId), ...agent.args];
       const config = yield* ServerConfig.ServerConfig;
       const path = yield* Path.Path;
       const platform = yield* HostProcess.Platform;

@@ -3,6 +3,7 @@ import {
   ClaudeSettings,
   CodexSettings,
   EasDeviceHostConfig,
+  LimrunDeviceHostConfig,
   type ServerSettings,
   UsageLimitSourceConfig,
   secretSettingsFields,
@@ -33,6 +34,7 @@ const providerSecretFields = new Map([
 ]);
 const usageLimitSecretFields = secretSettingsFields(UsageLimitSourceConfig);
 const easDeviceHostSecretFields = secretSettingsFields(EasDeviceHostConfig);
+const limrunDeviceHostSecretFields = secretSettingsFields(LimrunDeviceHostConfig);
 const encode = (value: string) => Buffer.from(value, "utf8").toString("base64url");
 
 export interface SettingsSecret {
@@ -155,5 +157,23 @@ export function mapSettingsSecrets(
       ) as EasDeviceHostConfig,
   );
 
-  return { ...settings, providerInstances, sourceControlHosts, usageLimitSources, easDeviceHosts };
+  const limrunDeviceHosts = settings.limrunDeviceHosts.map(
+    (host) =>
+      mapFields(
+        host,
+        limrunDeviceHostSecretFields,
+        (field, serverHost) =>
+          `device-host-${encode(host.id)}-${encode(field)}` +
+          (serverHost === null ? "" : `-${encode(serverHost)}`),
+      ) as LimrunDeviceHostConfig,
+  );
+
+  return {
+    ...settings,
+    providerInstances,
+    sourceControlHosts,
+    usageLimitSources,
+    easDeviceHosts,
+    limrunDeviceHosts,
+  };
 }

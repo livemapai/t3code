@@ -9,7 +9,11 @@ import type { AgentDaemonEndpoint } from "./DeviceHost.ts";
 
 const encodeEndpoint = Schema.encodeEffect(
   Schema.fromJsonString(
-    Schema.Struct({ daemonBaseUrl: Schema.String, daemonAuthToken: Schema.String }),
+    Schema.Struct({
+      daemonBaseUrl: Schema.String,
+      daemonAuthToken: Schema.String,
+      stateDir: Schema.optional(Schema.String),
+    }),
   ),
 );
 
@@ -48,6 +52,7 @@ export const writeAgentDeviceConfig = Effect.fn("AgentDeviceTarget.writeConfig")
   const content = yield* encodeEndpoint({
     daemonBaseUrl: endpoint.baseUrl,
     daemonAuthToken: endpoint.token,
+    ...(endpoint.stateDir === undefined ? {} : { stateDir: endpoint.stateDir }),
   });
   if ((yield* fs.readFileString(file).pipe(Effect.orElseSucceed(() => ""))) === content) return;
   const temporary = yield* fs.makeTempFile({ directory: path.dirname(file), prefix: ".endpoint-" });
