@@ -17,8 +17,8 @@ git fetch --quiet "$UPSTREAM" main
 upstream=$(git rev-parse FETCH_HEAD)
 git push --quiet "$FORK" "$upstream:refs/heads/main"
 
-git fetch --quiet "$FORK" livemap
-git checkout --quiet livemap
+git fetch --quiet "$FORK" refs/heads/livemap
+git switch --quiet livemap
 git merge --quiet --ff-only FETCH_HEAD
 
 if git merge-base --is-ancestor "$upstream" HEAD; then
@@ -27,7 +27,7 @@ if git merge-base --is-ancestor "$upstream" HEAD; then
 fi
 
 if git merge --no-edit --quiet -m "chore(livemap): merge upstream main" "$upstream"; then
-  git push --quiet "$FORK" livemap
+  git push --quiet "$FORK" HEAD:refs/heads/livemap
   echo "Merged upstream $(git rev-parse --short "$upstream") into livemap."
 else
   echo "Conflicts merging upstream $(git rev-parse --short "$upstream"):" >&2
