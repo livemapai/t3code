@@ -44,6 +44,20 @@ clients never hold it. Agent config files are written per device
 device before targeting it. Device settings run `simctl` on the simulator's
 machine, which EAS does not expose, so they are unavailable there.
 
+## Limrun hosts reach devices through a provider
+
+A [Limrun host](../../apps/server/src/device/LimrunDeviceHost.ts) has neither a
+machine nor a remote daemon: agent-device drives Limrun instances itself, from
+credentials in its environment. So the host runs one HTTP agent-device daemon
+per instance, started with that instance's URL and token and without the API
+key, and binds each agent session to it with `connect limrun` before
+`device_open` returns. The agent's config names the daemon and the state
+directory holding those connections, and passes no device selector, which
+would conflict with the session's binding. Instances carry a label derived
+from the environment id and host id; that label, not a ledger, finds leftovers.
+The viewer speaks Limrun's own WebRTC signalling, which the proxy forwards with
+the instance token added.
+
 ## The hub is never exposed
 
 serve-sim has a shell-exec route whose token is readable from its own

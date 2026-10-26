@@ -6,7 +6,7 @@ import { useId, useRef, useState, type ReactNode } from "react";
 
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
-import { renewDeviceHubAccess, useDeviceHubAccess } from "~/state/device";
+import { renewDeviceHubAccess, useDeviceHubAccess, useDeviceState } from "~/state/device";
 import { resolveDeviceShape } from "@t3tools/client-runtime/device/shape-profile";
 import { deviceKeyboard, deviceModel } from "./deviceModels";
 import { fitDeviceFrame } from "./deviceFrameLayout";
@@ -109,16 +109,24 @@ export function DeviceStreamView(props: {
     cancelPhoneInputRef.current = cancel;
   };
   const access = useDeviceHubAccess(props.environmentId, props.hostId);
+  const deviceState = useDeviceState(props.environmentId);
+  // Waits for the host list so a Limrun device never first tries the hub's protocol.
+  const transport = deviceState.loaded
+    ? deviceState.state.hosts.find((host) => host.id === props.hostId)?.kind === "limrun"
+      ? "limrun"
+      : "hub"
+    : null;
   const ownViewId = useId();
   const viewId = props.viewId ?? ownViewId;
   const session = useAtomValue(
-    access && props.visible
+    access && transport && props.visible
       ? deviceStreamSessionAtom({
           environmentId: props.environmentId,
           hostId: props.hostId,
           platform: props.platform,
           deviceId: props.deviceId,
           access,
+          transport,
           viewId,
         })
       : NO_SESSION_ATOM,
@@ -193,7 +201,7 @@ export function DeviceStreamView(props: {
       };
 
   const axResult = useAtomValue(
-    props.axOverlay && access && props.visible
+    props.axOverlay && access && transport === "hub" && props.visible
       ? deviceAxElementsAtom({ access, platform: props.platform, deviceId: props.deviceId })
       : NO_AX_ATOM,
   );

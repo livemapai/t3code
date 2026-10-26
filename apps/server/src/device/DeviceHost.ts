@@ -82,7 +82,12 @@ export interface DeviceOpenContext {
   readonly workspaceRoot?: string | undefined;
 }
 
-export type AgentDaemonEndpoint = Pick<AgentDeviceEndpoint, "baseUrl" | "token">;
+export interface AgentDaemonEndpoint {
+  readonly baseUrl: string;
+  readonly token: string;
+  /** Where agent-device keeps the connection profiles of hosts that reach devices through a provider. */
+  readonly stateDir?: string;
+}
 
 /** Where the proxy sends a device hub request, for hosts that serve several upstreams. */
 export interface HubUpstream {
@@ -120,12 +125,14 @@ export interface DeviceOperations {
   /**
    * For hosts that run one agent-device daemon per device instead of one per
    * host. `agentDeviceId` is the id agent-device selects the device by, when
-   * it differs from the host's device id.
+   * it differs from the host's device id, or null when the session alone
+   * selects it. `session` is the agent-device session the caller will use.
    */
   readonly agentEndpoint?: (
     deviceId: string,
+    session: string,
   ) => Effect.Effect<
-    AgentDaemonEndpoint & { readonly agentDeviceId: string },
+    AgentDaemonEndpoint & { readonly agentDeviceId: string | null },
     DeviceHostUnavailableError
   >;
   /**

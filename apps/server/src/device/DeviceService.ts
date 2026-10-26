@@ -22,6 +22,7 @@ import {
   type DeviceEasAccountInput,
   type DeviceHostConfig,
   type EasDeviceHostConfig,
+  type LimrunDeviceHostConfig,
   type SshDeviceHostConfig,
   type DeviceHostSummary,
   LOCAL_DEVICE_HOST_ID,
@@ -59,6 +60,7 @@ import * as ProcessRunner from "../processRunner.ts";
 import * as DeviceHost from "./DeviceHost.ts";
 import * as SshDeviceHost from "./SshDeviceHost.ts";
 import * as EasDeviceHost from "./EasDeviceHost.ts";
+import * as LimrunDeviceHost from "./LimrunDeviceHost.ts";
 import { makeExpoApi, resolveExpoCredential } from "./ExpoApi.ts";
 import * as Exit from "effect/Exit";
 import * as LocalDeviceHost from "./LocalDeviceHost.ts";
@@ -121,7 +123,7 @@ export class DeviceService extends Context.Service<
       hostId: DeviceHostId;
       deviceId: DeviceId;
     }) => Effect.Effect<
-      { readonly agentDeviceId: string; readonly args: ReadonlyArray<string> },
+      { readonly agentDeviceId: string | null; readonly args: ReadonlyArray<string> },
       DeviceError
     >;
     readonly state: Effect.Effect<DeviceServiceState>;
@@ -209,6 +211,7 @@ export const makeWithHosts = Effect.fn("DeviceService.makeWithHosts")(function* 
       supportsToolUpdate: installTool !== undefined,
       supportsToolInspection: true,
       supportsEasHosts: true,
+      supportsLimrunHosts: true,
       hosts: initialHosts,
       hostStatus: initialSettings.enabled ? "idle" : "disabled",
       hostStatuses: {},
@@ -843,6 +846,15 @@ export const makeWithHosts = Effect.fn("DeviceService.makeWithHosts")(function* 
             reason:
               "Agent device access requires enabled device support, agent access, and an available simulator platform on this host.",
           });
+        const session = yield* agentDeviceSession(
+          input.threadId,
+          input.hostId,
+          input.deviceId,
+        ).pipe(Effect.provideService(Crypto.Crypto, crypto));
+        // Preparing an endpoint can start processes, so it runs outside the lifecycle lock.
+        const endpoint = ready.devices.agentEndpoint
+          ? yield* ready.devices.agentEndpoint(input.deviceId, session)
+          : null;
         const { configPath, agentDeviceId } = yield* lifecycleLock.withPermit(
           Effect.gen(function* () {
             if (hosts.get(host.id) !== host)
@@ -851,8 +863,7 @@ export const makeWithHosts = Effect.fn("DeviceService.makeWithHosts")(function* 
                 hostLabel: host.label,
                 reason: "Host configuration changed. Retry the operation.",
               });
-            if (ready.devices.agentEndpoint) {
-              const endpoint = yield* ready.devices.agentEndpoint(input.deviceId);
+            if (endpoint) {
               return {
                 configPath: yield* configureAgent(input.hostId, endpoint, input.deviceId),
                 agentDeviceId: endpoint.agentDeviceId,
@@ -870,11 +881,6 @@ export const makeWithHosts = Effect.fn("DeviceService.makeWithHosts")(function* 
             };
           }),
         );
-        const session = yield* agentDeviceSession(
-          input.threadId,
-          input.hostId,
-          input.deviceId,
-        ).pipe(Effect.provideService(Crypto.Crypto, crypto));
         return { agentDeviceId, args: ["--config", configPath, "--session", session] };
       }),
       state: SynchronizedRef.get(stateRef).pipe(Effect.map(({ state }) => state)),
@@ -996,6 +1002,8 @@ export const make = Effect.gen(function* () {
     yield* Effect.context<Effect.Services<ReturnType<typeof SshDeviceHost.make>>>();
   const easContext =
     yield* Effect.context<Effect.Services<ReturnType<typeof EasDeviceHost.make>>>();
+  const limrunContext =
+    yield* Effect.context<Effect.Services<ReturnType<typeof LimrunDeviceHost.make>>>();
   const configured = new Map<string, { config: DeviceHostConfig; scope: Scope.Closeable }>();
   const unchanged = (current: DeviceHostConfig, previous: DeviceHostConfig) =>
     current.kind === "ssh" && previous.kind === "ssh"
@@ -1051,6 +1059,16 @@ export const make = Effect.gen(function* () {
             configured.set(host.id, { config: host, scope: hostScope });
             continue;
           }
+          if (host.kind === "limrun") {
+            // Closing this scope deletes the host's running instances, as for EAS.
+            const instance = yield* LimrunDeviceHost.make(host).pipe(
+              Effect.provideService(Scope.Scope, hostScope),
+              Effect.provide(limrunContext),
+            );
+            hosts.set(host.id, instance);
+            configured.set(host.id, { config: host, scope: hostScope });
+            continue;
+          }
           const instance = yield* SshDeviceHost.make(
             host,
             (ready) =>
@@ -1081,14 +1099,22 @@ export const make = Effect.gen(function* () {
     );
   });
   const changes = yield* settings.subscribeChanges;
-  // Settings keep EAS hosts apart from SSH hosts; an id both lists use stays the SSH host's.
+  // Settings keep cloud hosts apart from SSH hosts; an id two lists use stays the first list's.
   const configuredHosts = (value: {
     readonly deviceHosts: ReadonlyArray<SshDeviceHostConfig>;
     readonly easDeviceHosts: ReadonlyArray<EasDeviceHostConfig>;
-  }): ReadonlyArray<DeviceHostConfig> => [
-    ...value.deviceHosts,
-    ...value.easDeviceHosts.filter((host) => !value.deviceHosts.some((ssh) => ssh.id === host.id)),
-  ];
+    readonly limrunDeviceHosts: ReadonlyArray<LimrunDeviceHostConfig>;
+  }): ReadonlyArray<DeviceHostConfig> => {
+    const hosts: Array<DeviceHostConfig> = [];
+    for (const host of [
+      ...value.deviceHosts,
+      ...value.easDeviceHosts,
+      ...value.limrunDeviceHosts,
+    ]) {
+      if (!hosts.some((existing) => existing.id === host.id)) hosts.push(host);
+    }
+    return hosts;
+  };
   yield* reconcile(configuredHosts(yield* settings.getSettings));
   yield* changes.pipe(
     Stream.runForEach((value) => reconcile(configuredHosts(value))),

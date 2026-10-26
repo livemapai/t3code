@@ -42,6 +42,8 @@ const ALLOWED_WS_PATHS: ReadonlyArray<RegExp> = [
   /^\/api\/devices\/ws$/,
   /^\/vendor\/serve-sim\/helper\/ws$/,
   /^\/vendor\/serve-emu\/ws$/,
+  // Limrun signalling, routed by the Limrun host to the instance with its token added.
+  /^\/vendor\/limrun\/ws$/,
 ];
 
 const DROPPED_REQUEST_HEADERS = new Set([
