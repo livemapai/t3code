@@ -1,10 +1,12 @@
 #!/bin/sh
 # Mirrors upstream main into the fork's mirror branch and merges it into ours.
 # Exit 0: up to date or merged. Exit 2: merge conflict, nothing pushed.
-# FORK, MIRROR_BRANCH and OUR_BRANCH can be overridden (the Hermes job pushes over HTTPS).
+# UPSTREAM, UPSTREAM_BRANCH, FORK, MIRROR_BRANCH and OUR_BRANCH can be overridden
+# (the Hermes job pushes over HTTPS; a test run points them at throwaway branches).
 set -eu
 
 UPSTREAM=${UPSTREAM:-https://github.com/pingdotgg/t3code.git}
+UPSTREAM_BRANCH=${UPSTREAM_BRANCH:-main}
 FORK=${FORK:-git@github.com:livemapai/t3code.git}
 MIRROR_BRANCH=${MIRROR_BRANCH:-main}
 OUR_BRANCH=${OUR_BRANCH:-livemap}
@@ -16,7 +18,7 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-git fetch --quiet "$UPSTREAM" main
+git fetch --quiet "$UPSTREAM" "refs/heads/$UPSTREAM_BRANCH"
 upstream=$(git rev-parse FETCH_HEAD)
 git push --quiet "$FORK" "$upstream:refs/heads/$MIRROR_BRANCH"
 
