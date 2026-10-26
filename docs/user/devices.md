@@ -125,7 +125,7 @@ localhost without forwarding or another reachable address.
 
 ## Limrun device hosts
 
-Limrun runs iOS Simulators and Android Emulators in the cloud, so neither
+Limrun runs iOS Simulators and Android Emulators remotely, so neither
 needs Xcode or the Android SDK on any of your machines. In Settings →
 Integrations → Devices, add a host under **Limrun**. The environment server
 uses the API key saved for the host, then `LIM_API_KEY`, then its `lim login`.
