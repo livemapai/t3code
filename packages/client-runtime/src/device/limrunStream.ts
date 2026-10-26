@@ -22,6 +22,7 @@ const RETRY_DELAY_MS = 1_000;
 const MAX_ATTEMPTS = 3;
 const FIRST_FRAME_TIMEOUT_MS = 20_000;
 const KEEP_ALIVE_MS = 10_000;
+const FRAME_REQUEST_MS = 250;
 const MOUSE_POINTER_ID = -10;
 
 const CONTROL_KEYCODE = 0;
@@ -143,6 +144,11 @@ const metaState = (event: KeyboardEvent) =>
   (event.metaKey ? 65536 : 0);
 
 const BUTTON_KEYCODES = { home: 3, back: 4, recents: 187, appSwitcher: 187, power: 26 } as const;
+// iOS takes hardware buttons as named actions on the signalling socket, not key codes.
+const IOS_BUTTONS: Partial<Record<keyof typeof BUTTON_KEYCODES, string>> = {
+  home: "home",
+  power: "lock",
+};
 
 export function createLimrunStreamClient(
   target: DeviceStreamTarget,
@@ -167,8 +173,10 @@ export function createLimrunStreamClient(
   let keepAlive: ReturnType<typeof setInterval> | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let frameTimer: ReturnType<typeof setTimeout> | null = null;
+  let frameRequests: ReturnType<typeof setInterval> | null = null;
   let screen: DeviceScreenSize | null = null;
   let streaming = false;
+  let buttonRequests = 0;
   const sessionId = Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
@@ -180,7 +188,13 @@ export function createLimrunStreamClient(
     if (control?.readyState === "open") control.send(message);
   };
 
+  const stopFrameRequests = () => {
+    if (frameRequests !== null) clearInterval(frameRequests);
+    frameRequests = null;
+  };
+
   const teardown = () => {
+    stopFrameRequests();
     if (keepAlive !== null) clearInterval(keepAlive);
     if (retryTimer !== null) clearTimeout(retryTimer);
     if (frameTimer !== null) clearTimeout(frameTimer);
@@ -230,6 +244,7 @@ export function createLimrunStreamClient(
     if (!streaming) {
       streaming = true;
       attempts = 0;
+      stopFrameRequests();
       if (frameTimer !== null) clearTimeout(frameTimer);
       frameTimer = null;
       events.onStatus("streaming");
@@ -254,7 +269,11 @@ export function createLimrunStreamClient(
     control = channel;
     channel.binaryType = "arraybuffer";
     channel.onopen = () => {
-      if (generation === lifecycle) events.onInputConnected(true);
+      if (generation !== lifecycle) return;
+      events.onInputConnected(true);
+      // The instance sends no video until asked, and an ask can land before its encoder is up.
+      send({ type: "requestFrame" });
+      frameRequests = setInterval(() => send({ type: "requestFrame" }), FRAME_REQUEST_MS);
     };
     channel.onclose = () => {
       if (generation === lifecycle) events.onInputConnected(false);
@@ -400,7 +419,17 @@ export function createLimrunStreamClient(
       if (text.length > 0) sendControl(encodeLimrunPaste(text));
     },
     pressButton(button) {
-      pressKey(BUTTON_KEYCODES[button]);
+      if (platform !== "ios") return pressKey(BUTTON_KEYCODES[button]);
+      const name = IOS_BUTTONS[button];
+      if (!name) return;
+      send({
+        type: "performActions",
+        id: `t3-button-${++buttonRequests}`,
+        actions: [
+          { type: "buttonDown", button: name },
+          { type: "buttonUp", button: name },
+        ],
+      });
     },
     rotate() {},
     setOrientation() {},

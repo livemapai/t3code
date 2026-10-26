@@ -43,6 +43,7 @@ import {
 } from "./LimrunApi.ts";
 
 export const LIMRUN_STREAM_PATH = "/vendor/limrun/ws";
+export const LIMRUN_SCREENSHOT_PATH = "/vendor/limrun/screenshot";
 const OWNER_LABEL = "t3-code-host";
 // How stale a running instance's state may get before listing rechecks it.
 const STATUS_TTL_MS = 15_000;

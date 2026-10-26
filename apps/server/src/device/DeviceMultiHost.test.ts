@@ -147,3 +147,60 @@ it.effect("keeps hosts independent when serials collide and another host fails",
     ),
   ),
 );
+
+it.effect("opens a cloud Android device without checking for a local ffmpeg", () =>
+  Effect.gen(function* () {
+    const emulator = {
+      id: "cloud-android",
+      platform: "android" as const,
+      name: "Android (Cloud)",
+      version: "Cloud",
+      booted: true,
+      physical: false,
+    };
+    // A cloud host has no machine to run commands on; its stream never goes through serve-emu.
+    const ready: DeviceHost.DeviceHostAgentReady = {
+      nodePath: process.execPath,
+      hub: { origin: "https://cloud.test" },
+      devices: {
+        list: Effect.succeed({ devices: [emulator], detail: undefined }),
+        boot: (device) => Effect.succeed(device.id),
+        attach: () => Effect.void,
+        shutdown: () => Effect.void,
+        screenshot: () => Effect.succeed(new Uint8Array()),
+      },
+      upstream: () => Effect.succeed(null),
+      agentDevice: null,
+      run: () => Effect.succeed({ stdout: "", stderr: "no host commands", code: 127 }),
+      helpers: { serveSimAxSettings: null, serveSimCli: null },
+    };
+    const host: DeviceHost.DeviceHost["Service"] = {
+      id: "cloud",
+      label: "Cloud",
+      summary: Effect.succeed({
+        id: "cloud",
+        label: "Cloud",
+        kind: "limrun",
+        hubInstalled: true,
+        agentDeviceInstalled: true,
+        platforms: [{ platform: "android", available: true }],
+      }),
+      platformAvailability: (platform) => Effect.succeed({ platform, available: true }),
+      ensureReady: () => Effect.succeed(ready),
+      ensureAgentReady: () => Effect.succeed(ready),
+      current: Effect.succeed(ready),
+      stopAgent: Effect.void,
+      stop: Effect.void,
+    };
+    const service = yield* DeviceService.makeWithHosts(new Map([["cloud", host]]), undefined, () =>
+      Effect.succeed("/host-config.json"),
+    ).pipe(Effect.provide(NodeCrypto.layer));
+    const session = yield* service.open({
+      threadId: ThreadId.make("thread"),
+      hostId: "cloud",
+      deviceId: "cloud-android",
+      platform: "android",
+    });
+    expect(session.deviceId).toBe("cloud-android");
+  }).pipe(Effect.provide(ServerSettings.layerTest({ enableDeviceSupport: true }))),
+);

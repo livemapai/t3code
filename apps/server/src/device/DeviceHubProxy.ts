@@ -15,6 +15,7 @@ import * as NodeSocket from "@effect/platform-node/NodeSocket";
 
 import { authenticateMediaRequest } from "../auth/http.ts";
 import * as DeviceService from "./DeviceService.ts";
+import { LIMRUN_SCREENSHOT_PATH } from "./LimrunDeviceHost.ts";
 import { repeatStillFrame } from "./mjpegStillFrame.ts";
 
 const ALLOWED_PATHS: ReadonlyArray<RegExp> = [
@@ -28,6 +29,7 @@ const ALLOWED_PATHS: ReadonlyArray<RegExp> = [
   /^\/vendor\/serve-sim\/appstate$/,
   /^\/vendor\/serve-emu\/api\/(devices|screenshot|stream-mode|stream-settings|accessibility|fold)$/,
   /^\/vendor\/serve-emu\/health$/,
+  /^\/vendor\/limrun\/screenshot$/,
 ];
 
 const MUTABLE_PATHS: ReadonlyArray<RegExp> = [
@@ -36,6 +38,7 @@ const MUTABLE_PATHS: ReadonlyArray<RegExp> = [
   /^\/vendor\/serve-sim\/helper\/[^/]+\/webrtc\/(offer|close)$/,
   /^\/vendor\/serve-emu\/api\/(screenshot|stream-mode|stream-settings)$/,
   /^\/vendor\/serve-emu\/api\/fold$/,
+  /^\/vendor\/limrun\/screenshot$/,
 ];
 
 const ALLOWED_WS_PATHS: ReadonlyArray<RegExp> = [
@@ -189,6 +192,29 @@ const handler = Effect.gen(function* () {
   upstreamSearch.delete("wsTicket");
   upstreamSearch.delete("hostId");
   const search = upstreamSearch.size > 0 ? `?${upstreamSearch.toString()}` : "";
+  // Limrun captures over its own socket, which the host holds; there is no HTTP route to proxy.
+  if (hubPath === LIMRUN_SCREENSHOT_PATH) {
+    const device = upstreamSearch.get("device") ?? "";
+    const platform = upstreamSearch.get("platform") === "ios" ? "ios" : "android";
+    return yield* ready.devices
+      .screenshot({
+        id: device,
+        platform,
+        name: device,
+        version: "",
+        booted: true,
+        physical: false,
+      })
+      .pipe(
+        Effect.map((png) =>
+          HttpServerResponse.uint8Array(png, {
+            contentType: "image/png",
+            headers: { "cache-control": "no-store" },
+          }),
+        ),
+        Effect.orElseSucceed(() => HttpServerResponse.text("Screenshot failed", { status: 502 })),
+      );
+  }
   // Hosts with several upstreams (one per cloud session) route and authenticate requests themselves.
   const routed = ready.upstream ? yield* ready.upstream(hubPath, upstreamSearch) : undefined;
   if (routed === null) {

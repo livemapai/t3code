@@ -4,7 +4,7 @@ import {
   captureDeviceScreenshot,
   DeviceScreenshotError,
 } from "@t3tools/client-runtime/device/screenshot";
-import { refreshDeviceHubAccess, useDeviceHubAccess } from "~/state/device";
+import { refreshDeviceHubAccess, useDeviceHubAccess, useDeviceState } from "~/state/device";
 import { DeviceControlsRail } from "./DeviceControlsRail";
 import { DeviceStreamView } from "./DeviceStreamView";
 import { DeviceToolsPanel } from "./DeviceToolsPanel";
@@ -29,6 +29,9 @@ export function DeviceWorkspace(props: {
   // A capture always finishes, even if the panel hides or closes meanwhile; the user asked for it.
   const capturing = useRef(false);
   const access = useDeviceHubAccess(props.environmentId, props.device.hostId);
+  const hostKind = useDeviceState(props.environmentId).state.hosts.find(
+    (host) => host.id === props.device.hostId,
+  )?.kind;
   const controls = useDeviceControls({ ...props, access });
   const saveScreenshot = () => {
     if (!access || capturing.current || !props.visible) return;
@@ -36,7 +39,12 @@ export function DeviceWorkspace(props: {
     setScreenshotPending(true);
     setScreenshotError(null);
     return captureDeviceScreenshot(
-      { access, platform: props.device.platform, deviceId: props.device.id },
+      {
+        access,
+        platform: props.device.platform,
+        deviceId: props.device.id,
+        transport: hostKind === "limrun" ? "limrun" : "hub",
+      },
       // Never aborted: see `capturing` above.
       new AbortController().signal,
     )
