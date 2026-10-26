@@ -1,10 +1,13 @@
 #!/bin/sh
-# Mirrors upstream main into the fork's main and merges it into livemap.
+# Mirrors upstream main into the fork's mirror branch and merges it into ours.
 # Exit 0: up to date or merged. Exit 2: merge conflict, nothing pushed.
+# FORK, MIRROR_BRANCH and OUR_BRANCH can be overridden (the Hermes job pushes over HTTPS).
 set -eu
 
-UPSTREAM=https://github.com/pingdotgg/t3code.git
-FORK=git@github.com:livemapai/t3code.git
+UPSTREAM=${UPSTREAM:-https://github.com/pingdotgg/t3code.git}
+FORK=${FORK:-git@github.com:livemapai/t3code.git}
+MIRROR_BRANCH=${MIRROR_BRANCH:-main}
+OUR_BRANCH=${OUR_BRANCH:-livemap}
 
 cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 
@@ -15,20 +18,20 @@ fi
 
 git fetch --quiet "$UPSTREAM" main
 upstream=$(git rev-parse FETCH_HEAD)
-git push --quiet "$FORK" "$upstream:refs/heads/main"
+git push --quiet "$FORK" "$upstream:refs/heads/$MIRROR_BRANCH"
 
-git fetch --quiet "$FORK" refs/heads/livemap
-git switch --quiet livemap
+git fetch --quiet "$FORK" "refs/heads/$OUR_BRANCH"
+git switch --quiet "$OUR_BRANCH"
 git merge --quiet --ff-only FETCH_HEAD
 
 if git merge-base --is-ancestor "$upstream" HEAD; then
-  echo "livemap already contains upstream $(git rev-parse --short "$upstream")."
+  echo "$OUR_BRANCH already contains upstream $(git rev-parse --short "$upstream")."
   exit 0
 fi
 
 if git merge --no-edit --quiet -m "chore(livemap): merge upstream main" "$upstream"; then
-  git push --quiet "$FORK" HEAD:refs/heads/livemap
-  echo "Merged upstream $(git rev-parse --short "$upstream") into livemap."
+  git push --quiet "$FORK" "HEAD:refs/heads/$OUR_BRANCH"
+  echo "Merged upstream $(git rev-parse --short "$upstream") into $OUR_BRANCH."
 else
   echo "Conflicts merging upstream $(git rev-parse --short "$upstream"):" >&2
   git diff --name-only --diff-filter=U >&2
