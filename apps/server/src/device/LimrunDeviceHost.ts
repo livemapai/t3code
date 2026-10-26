@@ -177,12 +177,12 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
       ...(cause === undefined ? {} : { cause }),
     });
 
-  const api: Effect.Effect<LimrunApi, DeviceHostUnavailableError> = resolveLimrunCredential(
-    config.apiKey,
-  ).pipe(
-    Effect.map((credential) => makeLimrunApi(http, credential)),
+  const credential = resolveLimrunCredential(config.apiKey).pipe(
     Effect.provide(services),
     Effect.mapError((error) => unavailable(error.message, error)),
+  );
+  const api: Effect.Effect<LimrunApi, DeviceHostUnavailableError> = credential.pipe(
+    Effect.map((resolved) => makeLimrunApi(http, resolved)),
   );
 
   const agentTool = ensureAgentDevice(server.baseDir).pipe(
@@ -194,14 +194,21 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
     Effect.mapError((cause) => unavailable(cause.message, cause)),
   );
 
-  /** agent-device reaches an instance it did not create through these, and never deletes it. */
-  const instanceEnvironment = (running: RunningInstance): NodeJS.ProcessEnv => {
+  /**
+   * agent-device reaches an instance it did not create through these, and never
+   * deletes it. The API key only uploads apps; it stays in the daemon, which
+   * agents reach over HTTP without seeing its environment.
+   */
+  const instanceEnvironment = (
+    running: RunningInstance,
+    apiKey: Redacted.Redacted<string>,
+  ): NodeJS.ProcessEnv => {
     const { instance } = running;
     const prefix = instance.platform === "ios" ? "LIM_IOS_INSTANCE" : "LIM_ANDROID_INSTANCE";
-    // Without an API key here, nothing an agent runs can start another billed instance.
-    const { LIM_API_KEY: _key, LIMRUN_API_KEY: _legacyKey, ...rest } = environment;
+    const { LIM_API_KEY: _key, ...rest } = environment;
     return {
       ...rest,
+      LIMRUN_API_KEY: Redacted.value(apiKey),
       [`${prefix}_URL`]: instance.endpoints.apiUrl,
       [`${prefix}_TOKEN`]: Redacted.value(instance.endpoints.token),
       ...(instance.platform === "android" && instance.endpoints.adbWebSocketUrl
@@ -221,11 +228,12 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
   ) {
     const tool = yield* agentTool;
     const node = yield* nodePath;
+    const { apiKey } = yield* credential;
     return yield* runner
       .run({
         command: node,
         args: [tool.entryPath, ...args],
-        env: { ...instanceEnvironment(running), ...extra },
+        env: { ...instanceEnvironment(running, apiKey), ...extra },
         timeout: DAEMON_TIMEOUT,
         timeoutBehavior: "timedOutResult",
       })
