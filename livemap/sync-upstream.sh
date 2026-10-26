@@ -23,7 +23,7 @@ upstream=$(git rev-parse FETCH_HEAD)
 git push --quiet "$FORK" "$upstream:refs/heads/$MIRROR_BRANCH"
 
 git fetch --quiet "$FORK" "refs/heads/$OUR_BRANCH"
-git switch --quiet "$OUR_BRANCH"
+git switch --quiet "$OUR_BRANCH" 2>/dev/null || git switch --quiet -c "$OUR_BRANCH" FETCH_HEAD
 git merge --quiet --ff-only FETCH_HEAD
 
 if git merge-base --is-ancestor "$upstream" HEAD; then
