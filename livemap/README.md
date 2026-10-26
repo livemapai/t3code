@@ -11,8 +11,11 @@
   an Ideas discussion. ari-specific work stays here.
 - `livemap/sync-upstream.sh` mirrors upstream `main` and merges it into `livemap` (merge, not
   rebase, so nobody's checkout is rewritten). Vanessa's Hermes `coder` profile runs it daily at
-  07:00 Europe/Zurich (script-only job `t3code_fork_sync.sh`). A clean day stays silent. On a
-  conflict nothing is pushed to `livemap`, and Tomas gets the conflicting files, the commits on
-  both sides and a suggested next step on Slack; resolving conflicts automatically is not set up yet.
+  07:00 Europe/Zurich (script-only job `t3code_fork_sync.sh`). A clean day stays silent.
+- On a conflict nothing is pushed to `livemap`; Tomas gets the details on Slack, and at 06:20 UTC
+  Vanessa's conflict job takes over: `t3code_conflict_prepare.sh` merges in a fresh worktree on the
+  host, a boxd agent resolves the markers and runs `vp run check:changed`, and
+  `t3code_conflict_publish.sh` records a real merge commit on `sync/upstream-<sha>` and opens a PR
+  into `livemap`. Tomas reviews and merges it; nothing merges on its own.
 - `livemap` is the repo's default branch. GitHub Actions are disabled so upstream's CI and release
   workflows don't run here.
