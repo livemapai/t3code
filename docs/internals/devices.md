@@ -49,9 +49,10 @@ machine, which EAS does not expose, so they are unavailable there.
 A [Limrun host](../../apps/server/src/device/LimrunDeviceHost.ts) has neither a
 machine nor a remote daemon: agent-device drives Limrun instances itself, from
 credentials in its environment. So the host runs one HTTP agent-device daemon
-per instance, started with that instance's URL and token and without the API
-key, and binds each agent session to it with `connect limrun` before
-`device_open` returns. The agent's config names the daemon and the state
+per instance, started with that instance's URL and token plus the API key that
+app uploads need, and binds each agent session to it with `connect limrun`
+before `device_open` returns. Agents reach the daemon over HTTP and never see
+its environment. The agent's config names the daemon and the state
 directory holding those connections, and passes no device selector, which
 would conflict with the session's binding. Instances carry a label derived
 from the environment id and host id; that label, not a ledger, finds leftovers.
