@@ -19,3 +19,7 @@
   into `livemap`. Tomas reviews and merges it; nothing merges on its own.
 - `livemap` is the repo's default branch. GitHub Actions are disabled so upstream's CI and release
   workflows don't run here.
+- Vanessa's T3 server runs a build of `livemap`. `livemap/deploy-vanessa.sh build` cross-builds the
+  upstream release archive for linux-x64 on a Mac, and `install <archive>` backs up userdata,
+  switches `t3code.service`, and prints the matching `rollback` command. The previous runtime stays
+  installed for rollback.
