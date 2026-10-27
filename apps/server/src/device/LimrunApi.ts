@@ -184,6 +184,22 @@ export interface LimrunApi {
 const collection = (platform: DevicePlatform) =>
   `${LIMRUN_API_URL}/v1/${platform === "ios" ? "ios" : "android"}_instances`;
 
+const RefusalWire = Schema.fromJsonString(Schema.Struct({ message: Schema.String }));
+const decodeRefusal = Schema.decodeUnknownOption(RefusalWire);
+
+/** Limrun explains a refusal as `{ message, reason }`, e.g. an organization out of credits. */
+const refusalMessage = (body: string): string | undefined =>
+  decodeRefusal(body).pipe(
+    Option.map(({ message }) =>
+      message
+        .replace(/[^\x20-\x7e]+/g, " ")
+        .trim()
+        .slice(0, 300),
+    ),
+    Option.filter((message) => message !== ""),
+    Option.getOrUndefined,
+  );
+
 /**
  * Errors carry no cause: a transport error holds the request with its
  * credential header, and these errors also reach clients as RPC defects.
@@ -210,12 +226,18 @@ export const makeLimrunApi = (http: HttpClient.HttpClient, credential: LimrunCre
                   }),
               ),
             )
-          : Effect.fail(
-              new LimrunApiError({
-                operation,
-                detail: `HTTP ${response.status}`,
-                status: response.status,
-                rejected: response.status < 500,
+          : response.text.pipe(
+              Effect.orElseSucceed(() => ""),
+              Effect.flatMap((body) => {
+                const reason = refusalMessage(body);
+                return Effect.fail(
+                  new LimrunApiError({
+                    operation,
+                    detail: `HTTP ${response.status}${reason ? `: ${reason}` : ""}`,
+                    status: response.status,
+                    rejected: response.status < 500,
+                  }),
+                );
               }),
             ),
       ),
