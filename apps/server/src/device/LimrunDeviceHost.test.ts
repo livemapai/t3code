@@ -3,6 +3,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { LimrunDeviceHostConfig } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";
+import * as Redacted from "effect/Redacted";
 import * as Layer from "effect/Layer";
 import * as Scope from "effect/Scope";
 import * as TestClock from "effect/testing/TestClock";
@@ -10,7 +11,7 @@ import { HttpClient, HttpClientResponse } from "effect/http";
 
 import * as ServerConfig from "../config.ts";
 import * as ProcessRunner from "../processRunner.ts";
-import { readLimLoginKey } from "./LimrunApi.ts";
+import { makeLimrunApi, readLimLoginKey } from "./LimrunApi.ts";
 import * as LimrunDeviceHost from "./LimrunDeviceHost.ts";
 
 const config = (overrides: Partial<LimrunDeviceHostConfig> = {}): LimrunDeviceHostConfig => ({
@@ -271,4 +272,49 @@ describe("lim login credential", () => {
     expect(readLimLoginKey('region: eu\napi-key: "lim_quoted"\n')).toBe("lim_quoted");
     expect(readLimLoginKey("region: eu\n")).toBeNull();
   });
+});
+
+describe("Limrun API errors", () => {
+  const refusing = (response: Response) =>
+    makeLimrunApi(
+      HttpClient.make((request) => Effect.succeed(HttpClientResponse.fromWeb(request, response))),
+      { source: "settings", apiKey: Redacted.make("lim-key") },
+    );
+  const start = (response: Response) =>
+    refusing(response)
+      .create({
+        platform: "ios",
+        displayName: "t3",
+        labels: {},
+        hardTimeoutMinutes: 30,
+        inactivityTimeoutMinutes: 10,
+        jurisdiction: undefined,
+      })
+      .pipe(Effect.flip);
+
+  it.effect("passes on why Limrun refused", () =>
+    Effect.gen(function* () {
+      const error = yield* start(
+        Response.json(
+          {
+            message:
+              "cannot create an instance when organization has no remaining credits and no active subscription.",
+            reason: "NoSubscription",
+          },
+          { status: 400 },
+        ),
+      );
+      expect(error.message).toBe(
+        "Limrun could not start an instance: HTTP 400: cannot create an instance when organization has no remaining credits and no active subscription.",
+      );
+      expect(error.rejected).toBe(true);
+    }),
+  );
+
+  it.effect("falls back to the status when the refusal has no message", () =>
+    Effect.gen(function* () {
+      const error = yield* start(new Response("<html>bad gateway</html>", { status: 502 }));
+      expect(error.message).toBe("Limrun could not start an instance: HTTP 502");
+    }),
+  );
 });
