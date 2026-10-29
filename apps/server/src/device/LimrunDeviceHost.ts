@@ -164,6 +164,8 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
   const startLock = yield* Semaphore.make(1);
   const reapLock = yield* Semaphore.make(1);
   const daemonLock = yield* Semaphore.make(1);
+  // Threads share an instance's session; two opens at once must not both run `connect`.
+  const connectLock = yield* Semaphore.make(1);
   const background = yield* FiberSet.make<void, never>();
   let reapedAt = 0;
   let closed = false;
@@ -564,7 +566,7 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
       Option.match(runningFor(deviceId), {
         onNone: () => Effect.fail(unavailable("This Limrun device is no longer running.")),
         onSome: (running) =>
-          ensureSession(running).pipe(
+          connectLock.withPermit(ensureSession(running)).pipe(
             // agent-device picks the instance from the session; device selectors would conflict.
             Effect.map((daemon) => ({
               baseUrl: daemon.baseUrl,
