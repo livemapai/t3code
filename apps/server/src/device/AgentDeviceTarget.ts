@@ -12,7 +12,7 @@ const encodeEndpoint = Schema.encodeEffect(
     Schema.Struct({
       daemonBaseUrl: Schema.String,
       daemonAuthToken: Schema.String,
-      stateDir: Schema.optional(Schema.String),
+      stateDir: Schema.optionalKey(Schema.String),
     }),
   ),
 );
@@ -44,7 +44,7 @@ export const agentDeviceSession = (threadId: string, hostId: string, deviceId: s
 
 export const writeAgentDeviceConfig = Effect.fn("AgentDeviceTarget.writeConfig")(function* (
   file: string,
-  endpoint: AgentDaemonEndpoint,
+  endpoint: AgentDaemonEndpoint & { readonly stateDir?: string | undefined },
 ) {
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;

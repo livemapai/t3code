@@ -82,11 +82,17 @@ export interface DeviceOpenContext {
   readonly workspaceRoot?: string | undefined;
 }
 
-export interface AgentDaemonEndpoint {
-  readonly baseUrl: string;
-  readonly token: string;
-  /** Where agent-device keeps the connection profiles of hosts that reach devices through a provider. */
+export type AgentDaemonEndpoint = Pick<AgentDeviceEndpoint, "baseUrl" | "token">;
+
+export interface AgentDeviceBinding extends AgentDaemonEndpoint {
+  /** Null when the session alone picks the device and selector flags would be refused. */
+  readonly agentDeviceId: string | null;
+  /** The one session the device is leased to, shared by every thread. */
+  readonly session?: string;
+  /** agent-device state holding that session's connection. */
   readonly stateDir?: string;
+  /** agent-device accepts installs into the session only from the directory that opened it. */
+  readonly installDirectory?: string;
 }
 
 /** Where the proxy sends a device hub request, for hosts that serve several upstreams. */
@@ -125,16 +131,11 @@ export interface DeviceOperations {
   /**
    * For hosts that run one agent-device daemon per device instead of one per
    * host. `agentDeviceId` is the id agent-device selects the device by, when
-   * it differs from the host's device id, or null when the session alone
-   * selects it. `session` is the agent-device session the caller will use.
+   * it differs from the host's device id.
    */
   readonly agentEndpoint?: (
     deviceId: string,
-    session: string,
-  ) => Effect.Effect<
-    AgentDaemonEndpoint & { readonly agentDeviceId: string | null },
-    DeviceHostUnavailableError
-  >;
+  ) => Effect.Effect<AgentDeviceBinding, DeviceHostUnavailableError>;
   /**
    * Set by hosts that end devices on their own (EAS stops sessions at their
    * limits), so a session on a device the host stops listing is dropped.

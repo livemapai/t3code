@@ -16,6 +16,8 @@ export function DeviceWorkspace(props: {
   environmentId: EnvironmentId;
   device: DeviceSummary;
   hostLabel: string;
+  /** Leased from a Simlock pool: serve-sim input, no host commands. */
+  simlock?: boolean;
   hostDiagnostics: string | undefined;
   visible: boolean;
   onFloat: () => void;
@@ -88,6 +90,7 @@ export function DeviceWorkspace(props: {
             deviceId={props.device.id}
             hostId={props.device.hostId}
             visible={props.visible}
+            serveSimOnly={props.simlock === true}
             axOverlay={axOverlay}
             allowPhoneView
             renderControls={(view) => (
@@ -103,6 +106,7 @@ export function DeviceWorkspace(props: {
                 onFloat={props.onFloat}
                 onClose={props.onClose}
                 onPowerOff={props.onPowerOff}
+                inputOnly={props.simlock === true}
               />
             )}
           />

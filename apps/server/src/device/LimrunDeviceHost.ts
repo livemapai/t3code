@@ -91,8 +91,8 @@ interface AgentDaemon {
   readonly dir: string;
   readonly baseUrl: string;
   readonly token: string;
-  /** Sessions `connect limrun` has bound to this instance. */
-  readonly sessions: Set<string>;
+  /** Set once `connect limrun` has bound the instance's agent session. */
+  connected: boolean;
 }
 
 interface RunningInstance {
@@ -265,17 +265,18 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
           dir,
           baseUrl: `http://127.0.0.1:${file.httpPort}`,
           token: file.token,
-          sessions: new Set(),
+          connected: false,
         };
         running.daemon = daemon;
         return daemon;
       }),
     );
 
-  /** Binds an agent session to the instance; agents then need no credential of their own. */
+  const agentSession = (running: RunningInstance) => `t3-limrun-${running.instance.id}`;
+
+  /** Binds the instance's one agent session; agents need no credential of their own. */
   const ensureSession = Effect.fn("LimrunDeviceHost.ensureSession")(function* (
     running: RunningInstance,
-    session: string,
   ) {
     if (running.instance.platform === "android" && !sdk.adb) {
       return yield* unavailable(
@@ -283,7 +284,7 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
       );
     }
     const daemon = yield* ensureDaemon(running);
-    if (daemon.sessions.has(session)) return daemon;
+    if (daemon.connected) return daemon;
     const connectConfig = path.join(daemon.dir, "connect.json");
     yield* fs
       .writeFileString(
@@ -302,13 +303,13 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
       "--state-dir",
       path.join(daemon.dir, "client"),
       "--session",
-      session,
+      agentSession(running),
       "--json",
     ]);
     if (result.code !== 0) {
       return yield* unavailable("agent-device could not connect to the Limrun instance.", result);
     }
-    daemon.sessions.add(session);
+    daemon.connected = true;
     return daemon;
   });
 
@@ -559,17 +560,18 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
           ),
         onSome: screenshot,
       }),
-    agentEndpoint: (deviceId, session) =>
+    agentEndpoint: (deviceId) =>
       Option.match(runningFor(deviceId), {
         onNone: () => Effect.fail(unavailable("This Limrun device is no longer running.")),
         onSome: (running) =>
-          ensureSession(running, session).pipe(
+          ensureSession(running).pipe(
             // agent-device picks the instance from the session; device selectors would conflict.
             Effect.map((daemon) => ({
               baseUrl: daemon.baseUrl,
               token: daemon.token,
               stateDir: path.join(daemon.dir, "client"),
               agentDeviceId: null,
+              session: agentSession(running),
             })),
           ),
       }),
