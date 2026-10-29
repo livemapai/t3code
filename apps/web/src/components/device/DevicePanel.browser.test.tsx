@@ -62,14 +62,17 @@ const deviceState: DeviceServiceState = {
   revision: 1,
 };
 let currentState = deviceState;
-// One probe per environment, however many views mount it; each probe sends one list.
+// One probe per environment and host set, however many views mount it; each probe sends one list.
 vi.mock("~/state/device", async () => {
   const Effect = await import("effect/Effect");
   const { AsyncResult, Atom } = await import("effect/reactivity");
   return {
     deviceEnvironment: { list: "list", open: "open", close: "close" },
-    deviceHostProbeAtom: Atom.family((environmentId: string) =>
-      Atom.make(() => Effect.promise(() => mocks.list({ environmentId, input: {} }))),
+    deviceHostIds: (state: DeviceServiceState) => state.hosts.map((host) => host.id).join("\n"),
+    deviceHostProbeAtom: Atom.family((key: { readonly environmentId: string }) =>
+      Atom.make(() =>
+        Effect.promise(() => mocks.list({ environmentId: key.environmentId, input: {} })),
+      ),
     ),
     NO_DEVICE_PROBE_ATOM: Atom.make(AsyncResult.initial<void, never>()),
     useDeviceState: () => ({ state: currentState, loaded: true }),
@@ -211,5 +214,20 @@ describe("DevicePanel host probe", () => {
     expect(mocks.list.mock.calls).toEqual([
       [{ environmentId: threadRef.environmentId, input: {} }],
     ]);
+  });
+
+  it("probes again when a host appears, so its devices list without a refresh", async () => {
+    setup();
+    const threadRef = { ...threadA, environmentId: EnvironmentId.make("environment-new-host") };
+    await using screen = await render(devicePanel(threadRef), { container });
+    await vi.waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(1));
+
+    currentState = {
+      ...deviceState,
+      hosts: [...deviceState.hosts, { ...deviceState.hosts[0]!, id: "cloud", kind: "eas" }],
+    };
+    await screen.rerender(devicePanel(threadRef));
+
+    await vi.waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
   });
 });

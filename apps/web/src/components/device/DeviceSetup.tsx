@@ -12,7 +12,12 @@ import { MorphIcon } from "~/components/MorphIcon";
 import { WizardHeader, WizardPanel, WizardSteps, WizardFooter } from "~/components/ui/wizard";
 import { Spinner } from "~/components/ui/spinner";
 import { Switch } from "~/components/ui/switch";
-import { deviceEnvironment, deviceHostProbeAtom, NO_DEVICE_PROBE_ATOM } from "~/state/device";
+import {
+  deviceEnvironment,
+  deviceHostIds,
+  deviceHostProbeAtom,
+  NO_DEVICE_PROBE_ATOM,
+} from "~/state/device";
 import { useAtomCommand } from "~/state/use-atom-command";
 import { readEnvironmentScope, useEnvironmentScope } from "~/state/session";
 import { cn } from "~/lib/utils";
@@ -144,7 +149,14 @@ export function DeviceSetup(props: {
     (host) => host.kind === "local" && !host.platforms.some((platform) => platform.available),
   );
 
-  useAtomMount(enabled ? deviceHostProbeAtom(props.environmentId) : NO_DEVICE_PROBE_ATOM);
+  useAtomMount(
+    enabled
+      ? deviceHostProbeAtom({
+          environmentId: props.environmentId,
+          hostIds: deviceHostIds(props.state),
+        })
+      : NO_DEVICE_PROBE_ATOM,
+  );
 
   const update = async (
     kind: NonNullable<typeof pending>,

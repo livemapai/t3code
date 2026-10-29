@@ -142,20 +142,26 @@ export const deviceDetailReadAtom = Atom.family((key: DeviceDetailKey) =>
 
 /**
  * Probes the environment's device hosts while mounted. Remote hosts report
- * their platforms only after a probe. Probing never installs or starts helpers.
+ * their platforms and devices only after a probe, so a host that appears later
+ * (added in Settings, or back after a server restart) gets a probe of its own.
+ * Probing never installs or starts helpers.
  */
-export const deviceHostProbeAtom = Atom.family((environmentId: EnvironmentId) =>
-  Atom.make((get) =>
-    Effect.promise(() =>
-      runAtomCommand(
-        get.registry,
-        deviceEnvironment.list,
-        { environmentId, input: {} },
-        { reportFailure: false },
-      ),
-    ).pipe(Effect.asVoid),
-  ).pipe(Atom.withLabel(`device-host-probe:${environmentId}`)),
+export const deviceHostProbeAtom = Atom.family(
+  ({ environmentId }: { readonly environmentId: EnvironmentId; readonly hostIds: string }) =>
+    Atom.make((get) =>
+      Effect.promise(() =>
+        runAtomCommand(
+          get.registry,
+          deviceEnvironment.list,
+          { environmentId, input: {} },
+          { reportFailure: false },
+        ),
+      ).pipe(Effect.asVoid),
+    ).pipe(Atom.withLabel(`device-host-probe:${environmentId}`)),
 );
+
+export const deviceHostIds = (state: Pick<DeviceServiceState, "hosts">) =>
+  state.hosts.map((host) => host.id).join("\n");
 
 export const NO_DEVICE_PROBE_ATOM = Atom.make(AsyncResult.initial<void, never>()).pipe(
   Atom.withLabel("device-host-probe:none"),

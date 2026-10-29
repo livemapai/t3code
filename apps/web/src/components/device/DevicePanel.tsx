@@ -24,6 +24,7 @@ import { cn } from "~/lib/utils";
 import { focusPanelTerminalAfterClose } from "~/lib/terminalFocus";
 import {
   deviceEnvironment,
+  deviceHostIds,
   deviceHostProbeAtom,
   NO_DEVICE_PROBE_ATOM,
   useDeviceState,
@@ -69,7 +70,7 @@ export function DevicePanel(props: {
 
   useAtomMount(
     props.visible && loaded && !hostDisabled
-      ? deviceHostProbeAtom(environmentId)
+      ? deviceHostProbeAtom({ environmentId, hostIds: deviceHostIds(state) })
       : NO_DEVICE_PROBE_ATOM,
   );
 
