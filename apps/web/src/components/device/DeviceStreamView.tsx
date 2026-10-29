@@ -257,7 +257,7 @@ export function DeviceStreamView(props: {
             streaming: status === "streaming",
             phoneUnavailableReason,
             foldingControls:
-              props.platform === "android" && access ? (
+              props.platform === "android" && access && transport === "hub" ? (
                 <DeviceAndroidFoldControls
                   key={`${props.hostId}:${props.deviceId}`}
                   access={access}
