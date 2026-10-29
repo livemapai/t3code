@@ -46,6 +46,7 @@ export function DeviceStreamWebView({
     platform: props.platform,
     deviceId: props.deviceId,
     ...(props.serveSimOnly ? { serveSimOnly: true } : {}),
+    ...(props.transport === "limrun" ? { transport: "limrun" } : {}),
     colors: props.colors,
   });
   return (
@@ -162,6 +163,9 @@ function DeviceStreamDocumentView({
         scrollEnabled={false}
         bounces={false}
         mixedContentMode="always"
+        // Limrun paints from a muted WebRTC <video>; WKWebView otherwise blocks or fullscreens it.
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
         allowUniversalAccessFromFileURLs
         contentInsetAdjustmentBehavior="never"
         setSupportMultipleWindows={false}

@@ -8,6 +8,8 @@ export interface DeviceStreamConfiguration {
   readonly deviceId: string;
   /** See `DeviceStreamTarget.serveSimOnly`. */
   readonly serveSimOnly?: boolean;
+  /** See `DeviceStreamTarget.transport`. */
+  readonly transport?: "hub" | "limrun";
   readonly colors: {
     readonly background: string;
     readonly foreground: string;
