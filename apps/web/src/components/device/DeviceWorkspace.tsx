@@ -1,10 +1,10 @@
-import type { DeviceSummary, EnvironmentId } from "@t3tools/contracts";
+import type { DeviceHostSummary, DeviceSummary, EnvironmentId } from "@t3tools/contracts";
 import { useRef, useState } from "react";
 import {
   captureDeviceScreenshot,
   DeviceScreenshotError,
 } from "@t3tools/client-runtime/device/screenshot";
-import { refreshDeviceHubAccess, useDeviceHubAccess, useDeviceState } from "~/state/device";
+import { refreshDeviceHubAccess, useDeviceHubAccess } from "~/state/device";
 import { DeviceControlsRail } from "./DeviceControlsRail";
 import { DeviceStreamView } from "./DeviceStreamView";
 import { DeviceToolsPanel } from "./DeviceToolsPanel";
@@ -16,8 +16,7 @@ export function DeviceWorkspace(props: {
   environmentId: EnvironmentId;
   device: DeviceSummary;
   hostLabel: string;
-  /** Leased from a Simlock pool: serve-sim input, no host commands. */
-  simlock?: boolean;
+  hostKind: DeviceHostSummary["kind"] | undefined;
   hostDiagnostics: string | undefined;
   visible: boolean;
   onFloat: () => void;
@@ -31,10 +30,13 @@ export function DeviceWorkspace(props: {
   // A capture always finishes, even if the panel hides or closes meanwhile; the user asked for it.
   const capturing = useRef(false);
   const access = useDeviceHubAccess(props.environmentId, props.device.hostId);
-  const hostKind = useDeviceState(props.environmentId).state.hosts.find(
-    (host) => host.id === props.device.hostId,
-  )?.kind;
-  const controls = useDeviceControls({ ...props, access });
+  // Settings and tools run commands on the device's own machine, which EAS and Simlock do not expose.
+  const runsHostCommands = props.hostKind === "local" || props.hostKind === "ssh";
+  const controls = useDeviceControls({
+    ...props,
+    access,
+    visible: props.visible && runsHostCommands,
+  });
   const saveScreenshot = () => {
     if (!access || capturing.current || !props.visible) return;
     capturing.current = true;
@@ -45,7 +47,7 @@ export function DeviceWorkspace(props: {
         access,
         platform: props.device.platform,
         deviceId: props.device.id,
-        transport: hostKind === "limrun" ? "limrun" : "hub",
+        transport: props.hostKind === "limrun" ? "limrun" : "hub",
       },
       // Never aborted: see `capturing` above.
       new AbortController().signal,
@@ -90,12 +92,13 @@ export function DeviceWorkspace(props: {
             deviceId={props.device.id}
             hostId={props.device.hostId}
             visible={props.visible}
-            serveSimOnly={props.simlock === true}
+            serveSimOnly={props.hostKind === "simlock"}
             axOverlay={axOverlay}
             allowPhoneView
             renderControls={(view) => (
               <DeviceControlsRail
                 platform={props.device.platform}
+                hostKind={props.hostKind}
                 handle={view.handle}
                 view={view}
                 controls={controls}
@@ -106,7 +109,6 @@ export function DeviceWorkspace(props: {
                 onFloat={props.onFloat}
                 onClose={props.onClose}
                 onPowerOff={props.onPowerOff}
-                inputOnly={props.simlock === true}
               />
             )}
           />
