@@ -3794,10 +3794,13 @@ const buildDesktopArtifactUnlocked = Effect.fn("buildDesktopArtifactUnlocked")(f
   const stageProdResourcesDir = path.join(stageAppDir, "apps/desktop/prod-resources");
   yield* fs.copy(stageResourcesDir, stageProdResourcesDir);
 
+  const macSigningEnv =
+    options.platform === "mac" && options.signed ? loadRepoEnv({ repoRoot }) : undefined;
+  // Livemap fork: passkeys need a provisioning profile for upstream's bundle id, which only their Apple team can make.
   const configuredMacPasskeySigning =
-    options.platform === "mac" && options.signed
+    macSigningEnv && macSigningEnv.T3CODE_MACOS_PASSKEYS !== "off"
       ? yield* Effect.try({
-          try: () => resolveMacPasskeySigningConfiguration(loadRepoEnv({ repoRoot })),
+          try: () => resolveMacPasskeySigningConfiguration(macSigningEnv),
           catch: MacPasskeySigningConfigurationResolutionError.fromCause,
         })
       : undefined;

@@ -17,9 +17,26 @@
   host, a boxd agent resolves the markers and runs `vp run check:changed`, and
   `t3code_conflict_publish.sh` records a real merge commit on `sync/upstream-<sha>` and opens a PR
   into `livemap`. Tomas reviews and merges it; nothing merges on its own.
-- `livemap` is the repo's default branch. GitHub Actions are disabled so upstream's CI and release
-  workflows don't run here.
+- `livemap` is the repo's default branch.
 - Vanessa's T3 server runs a build of `livemap`. `livemap/deploy-vanessa.sh build` cross-builds the
   upstream release archive for linux-x64 on a Mac, and `install <archive>` backs up userdata,
   switches `t3code.service`, and prints the matching `rollback` command. The previous runtime stays
   installed for rollback.
+
+## Releases
+
+Every push to `livemap` runs `.github/workflows/livemap-release.yml` and publishes the repo's
+latest GitHub Release: the signed macOS arm64 app, the Linux x64 app, and the CLI archives for
+macOS arm64 and Linux x64. It reuses upstream's `release-desktop.yml` for packaging.
+
+- Our build has upstream's app identity and `~/.t3`, so it installs over the official app and
+  keeps threads and settings. From then on the app updates from this repo's latest release.
+  `t3 update` and `scripts/install.sh` read the same release (`packages/shared/src/cliRelease.ts`).
+- Versions are `<upstream's newest stable + 1 patch>-livemap.<commit count>`, so each build
+  outranks the upstream release it is based on and the one before it.
+- It is signed with Livemap's Developer ID (repo secrets `CSC_LINK`, `CSC_KEY_PASSWORD`,
+  `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`). Unsigned macOS builds cannot
+  update themselves. Passkeys are off (`T3CODE_MACOS_PASSKEYS=off`): their provisioning profile
+  needs upstream's Apple team, so T3 Connect passkey sign-in does not work in our build.
+- Only `livemap-release.yml` should be enabled under Actions. Upstream's workflows are disabled with
+  `gh workflow disable`; disable any new one a sync brings in.
