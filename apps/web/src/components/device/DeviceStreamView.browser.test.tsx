@@ -6,10 +6,15 @@ import { expect, it, vi } from "vite-plus/test";
 
 import { act, render, stubGlobal } from "../../../test/render";
 
-vi.mock(import("~/state/device"), async (original) => ({
-  ...(await original()),
-  useDeviceHubAccess: () => access,
-}));
+vi.mock(import("~/state/device"), async (original) => {
+  const actual = await original();
+  return {
+    ...actual,
+    useDeviceHubAccess: () => access,
+    // No host list ever loads here; an empty one streams over the hub protocol, as these tests need.
+    useDeviceState: (environmentId) => ({ ...actual.useDeviceState(environmentId), loaded: true }),
+  };
+});
 vi.mock(import("./DevicePhoneViewport"), () => ({
   DevicePhoneViewport: () => <></>,
 }));
