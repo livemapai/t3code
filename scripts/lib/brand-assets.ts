@@ -23,6 +23,14 @@ export const BRAND_ASSET_PATHS = {
   nightlyWebFavicon32Png: "assets/nightly/nightly-web-favicon-32x32.png",
   nightlyWebAppleTouchIconPng: "assets/nightly/nightly-web-apple-touch-180.png",
 
+  livemapMacIconPng: "assets/livemap/livemap-macos-1024.png",
+  livemapLinuxIconPng: "assets/livemap/livemap-universal-1024.png",
+  livemapWindowsIconIco: "assets/livemap/livemap-windows.ico",
+  livemapWebFaviconIco: "assets/livemap/livemap-web-favicon.ico",
+  livemapWebFavicon16Png: "assets/livemap/livemap-web-favicon-16x16.png",
+  livemapWebFavicon32Png: "assets/livemap/livemap-web-favicon-32x32.png",
+  livemapWebAppleTouchIconPng: "assets/livemap/livemap-web-apple-touch-180.png",
+
   developmentDesktopIconPng: "assets/dev/blueprint-macos-1024.png",
   developmentWindowsIconIco: "assets/dev/blueprint-windows.ico",
   developmentWebFaviconIco: "assets/dev/blueprint-web-favicon.ico",
@@ -31,7 +39,7 @@ export const BRAND_ASSET_PATHS = {
   developmentWebAppleTouchIconPng: "assets/dev/blueprint-web-apple-touch-180.png",
 } as const;
 
-export type WebAssetBrand = "development" | "nightly" | "production";
+export type WebAssetBrand = "development" | "livemap" | "nightly" | "production";
 
 export const WEB_ASSET_CHANNELS = ["latest", "nightly"] as const;
 
@@ -59,6 +67,12 @@ const WEB_ICON_SOURCE_PATHS_BY_BRAND = {
     favicon16Png: BRAND_ASSET_PATHS.developmentWebFavicon16Png,
     favicon32Png: BRAND_ASSET_PATHS.developmentWebFavicon32Png,
     appleTouchIconPng: BRAND_ASSET_PATHS.developmentWebAppleTouchIconPng,
+  },
+  livemap: {
+    faviconIco: BRAND_ASSET_PATHS.livemapWebFaviconIco,
+    favicon16Png: BRAND_ASSET_PATHS.livemapWebFavicon16Png,
+    favicon32Png: BRAND_ASSET_PATHS.livemapWebFavicon32Png,
+    appleTouchIconPng: BRAND_ASSET_PATHS.livemapWebAppleTouchIconPng,
   },
   nightly: {
     faviconIco: BRAND_ASSET_PATHS.nightlyWebFaviconIco,

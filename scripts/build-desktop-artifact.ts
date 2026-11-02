@@ -2713,8 +2713,10 @@ export function isDesktopPreviewVersion(version: string): boolean {
   return /-pr\./.test(version) || /-preview\.\d{8}\.\d+$/.test(version);
 }
 
+// Livemap fork: every non-nightly desktop build carries the Livemap brand, not upstream's black T3.
 export function resolveDesktopWebAssetBrand(version: string): WebAssetBrand {
-  return resolveWebAssetBrandForChannel(resolveDesktopUpdateChannel(version));
+  const brand = resolveWebAssetBrandForChannel(resolveDesktopUpdateChannel(version));
+  return brand === "production" ? "livemap" : brand;
 }
 
 export function resolveDesktopBuildIconAssets(version: string): DesktopBuildIconAssets {
@@ -2727,9 +2729,9 @@ export function resolveDesktopBuildIconAssets(version: string): DesktopBuildIcon
   }
 
   return {
-    macIconPng: BRAND_ASSET_PATHS.productionMacIconPng,
-    linuxIconPng: BRAND_ASSET_PATHS.productionLinuxIconPng,
-    windowsIconIco: BRAND_ASSET_PATHS.productionWindowsIconIco,
+    macIconPng: BRAND_ASSET_PATHS.livemapMacIconPng,
+    linuxIconPng: BRAND_ASSET_PATHS.livemapLinuxIconPng,
+    windowsIconIco: BRAND_ASSET_PATHS.livemapWindowsIconIco,
   };
 }
 

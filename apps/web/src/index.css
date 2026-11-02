@@ -703,6 +703,9 @@ html[data-mobile-composer-route-transition="true"]::view-transition-old(t3-mobil
     --stage-night-glow-highlight: oklch(0.553749 0.176543 271.958);
     --stage-night-glow-secondary: oklch(0.345571 0.117466 273.568);
     --stage-night-sparkle: oklch(0.880867 0.057747 269.011);
+    --stage-livemap-top: #2f2540;
+    --stage-livemap-bottom: #211a2a;
+    --stage-livemap-sun: #f6f261;
 
     @variant dark {
       --stage-art-top: oklch(0.581473 0.149124 256.9);
