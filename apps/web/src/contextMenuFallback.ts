@@ -92,6 +92,10 @@ const ICON_PATHS: Record<string, ReadonlyArray<{ tag: string; attrs: Record<stri
       },
     },
   ],
+  flag: [
+    { tag: "path", attrs: { d: "M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" } },
+    { tag: "line", attrs: { x1: "4", x2: "4", y1: "22", y2: "15" } },
+  ],
   "pin-off": [
     { tag: "path", attrs: { d: "M12 17v5" } },
     { tag: "path", attrs: { d: "M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89" } },

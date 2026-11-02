@@ -1,4 +1,9 @@
 import type { ContextMenuItem } from "@t3tools/contracts";
+import {
+  THREAD_FLAGS,
+  THREAD_FLAG_LABELS,
+  type ThreadFlag,
+} from "@t3tools/client-runtime/state/thread-flags";
 import type { SnoozePreset } from "@t3tools/client-runtime/state/thread-settled";
 
 export type ThreadActionMenuId =
@@ -17,6 +22,8 @@ export type ThreadActionMenuId =
   | "snooze"
   | `snooze:${string}`
   | "unsnooze"
+  | "flag"
+  | `flag:${ThreadFlag | "none"}`
   | "rename"
   | "regenerate-title"
   | "mark-unread"
@@ -78,6 +85,7 @@ export interface ThreadActionMenuState {
   readonly isPinned: boolean;
   readonly isSettled: boolean;
   readonly autoSettleEnabled: boolean;
+  readonly flag: ThreadFlag | null;
   readonly isSnoozed: boolean;
   readonly canSnoozeNow: boolean;
   readonly isRegeneratingTitle: boolean;
@@ -88,6 +96,7 @@ export interface ThreadActionMenuState {
     readonly autoSettleOptOut: boolean;
     readonly snooze: boolean;
     readonly pinning: boolean;
+    readonly flags: boolean;
     readonly titleRegeneration: boolean;
   };
   readonly snoozePresets: ReadonlyArray<SnoozePreset>;
@@ -164,6 +173,28 @@ export function buildThreadActionMenuItems(
                   },
                 ],
               },
+        ]
+      : []),
+    ...(state.supports.flags
+      ? [
+          {
+            id: "flag" as const,
+            label: "Flag",
+            icon: "flag",
+            children: [
+              ...THREAD_FLAGS.map((flag) => ({
+                id: `flag:${flag}` as const,
+                label: THREAD_FLAG_LABELS[flag],
+                checked: state.flag === flag,
+              })),
+              {
+                id: "flag:none" as const,
+                label: "No flag",
+                checked: state.flag === null,
+                separatorBefore: true,
+              },
+            ],
+          },
         ]
       : []),
     { id: "rename", label: "Rename thread", icon: "pencil", separatorBefore: true },
