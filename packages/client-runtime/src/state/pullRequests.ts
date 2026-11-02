@@ -165,6 +165,7 @@ export interface PullRequestAnswerHandlers {
   readonly detail?: QueryAnswerHandler<PullRequestRef, PullRequestDetail>;
   readonly checks?: QueryAnswerHandler<PullRequestRef, PullRequestChecks | null>;
   readonly reviewGuide?: QueryAnswerHandler<PullRequestRef, PullRequestReviewGuideResult>;
+  readonly actionSucceeded?: (input: PullRequestActionInput) => void;
 }
 
 export function createPullRequestStackAtomFamily<R, E>(
@@ -475,6 +476,7 @@ export function createPullRequestEnvironmentAtoms<R, E>(
         Effect.sync(() => {
           registry.refresh(preview({ environmentId, input }));
           registry.refresh(previewCard({ environmentId, input }));
+          onAnswer.actionSucceeded?.(input);
         }),
       scheduler: commandScheduler,
       concurrency: serialPerEnvironment,

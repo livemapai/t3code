@@ -363,7 +363,7 @@ export function PullRequestPrimaryAction({
                         {pendingAction === "merge"
                           ? "Merging..."
                           : inlineConfirm.isArmed("merge")
-                            ? "Confirm merge?"
+                            ? "SHHHHHIPPPPP ITTTTTTTTT 🚀🚀🚀"
                             : selectedMergeMethodLabel}
                       </span>
                     </span>
@@ -377,7 +377,7 @@ export function PullRequestPrimaryAction({
               (pendingAction === "merge"
                 ? "Merging..."
                 : inlineConfirm.isArmed("merge")
-                  ? "Confirm merge?"
+                  ? "SHHHHHIPPPPP ITTTTTTTTT 🚀🚀🚀"
                   : selectedMergeMethodLabel)}
           </TooltipPopup>
         </Tooltip>
