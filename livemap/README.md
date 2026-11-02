@@ -53,3 +53,11 @@ Only the names users see changed. The bundle id `com.t3tools.t3code`, the `t3cod
 `~/.t3`, and the `T3-Code-*` artifact names stay upstream's, so data, saved connections, and the
 updater feed carry over, and upstream syncs stay small. The MIT `LICENSE` notice must stay.
 `T3Wordmark.tsx` keeps its upstream name but draws the Ari mark.
+
+## boxd VMs
+
+Agents can run work on a private boxd VM in the Livemap AG org, linked to your T3 as a linked
+environment and billed to your own Claude subscription: ask for one ("run this on a boxd VM"), and
+the [`boxd-vm`](../.agents/skills/boxd-vm/SKILL.md) skill walks you through the one-time setup
+(boxd CLI, `boxd auth login`, `boxd manage integrations connect claude`, Settings → Labs → Linked
+environments) and does the rest.
