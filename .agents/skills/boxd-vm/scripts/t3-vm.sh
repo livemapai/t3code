@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Private boxd VMs in Livemap's org that run a T3 server under the caller's own Claude login.
-# Usage: t3-vm.sh check | up <name> [ttl] | pair <name> | serve <name> | status <name> | list | down <name>
+# Usage: t3-vm.sh check | up <name> [ttl] | connect <name> | pair <name> | serve <name> | status <name> | list | down <name>
 set -euo pipefail
 
 ORG="Livemap AG"
@@ -49,7 +49,7 @@ serve() {
 }
 
 up() {
-  local name=$1 ttl=${2:-4h} project
+  local name=$1 ttl=${2:-4h} project env_id
   check >/dev/null
   # Private on purpose: boxd serves the owner's Claude login only to private machines.
   boxd new "$name" --from-snapshot "$SNAPSHOT" --delete-after "$ttl" --label "$LABEL" >/dev/null
@@ -74,8 +74,9 @@ up() {
     curl -fs -o /dev/null --max-time 5 "$(url "$name")/.well-known/t3/environment" && break
     sleep 2
   done
-  curl -fsS -o /dev/null --max-time 5 "$(url "$name")/.well-known/t3/environment" || die "$(url "$name") does not answer"
-  printf '{"name":"%s","url":"%s","projectId":"%s","deleteAfter":"%s"}\n' "$name" "$(url "$name")" "$project" "$ttl"
+  env_id=$(curl -fsS --max-time 5 "$(url "$name")/.well-known/t3/environment" | grep -oE '"environmentId":"[^"]+"' | cut -d'"' -f4) ||
+    die "$(url "$name") does not answer"
+  printf '{"name":"%s","url":"%s","environmentId":"%s","projectId":"%s","deleteAfter":"%s"}\n' "$name" "$(url "$name")" "$env_id" "$project" "$ttl"
 }
 
 # Writes a 30-minute pairing code to a private file; the code itself never reaches stdout.
@@ -87,6 +88,18 @@ pair() {
   echo "code in $file ($(grep '^Expires' "$file"))"
 }
 
+# Opens a t3code://pair link in the desktop app, which asks the user to confirm the host. Its
+# standard scopes include access:write, so the link card can then mint its own code there.
+connect() {
+  local name=$1 pairing_url link
+  pairing_url=$(vm "$name" ". ~/.config/vite-plus/env; cd /task/repos/t3code; T3CODE_HOME=/task/t3home node apps/server/src/bin.ts auth pairing create --ttl 10m --label boxd-app --base-url $(url "$name")" |
+    sed -n 's/^Pair URL: *//p')
+  [ -n "$pairing_url" ] || die "no pairing URL minted"
+  link="t3code://pair?pairingUrl=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$pairing_url")"
+  if command -v open >/dev/null; then open "$link"; else xdg-open "$link"; fi
+  echo "opened the desktop app's pairing prompt for $(url "$name") (valid 10 minutes)"
+}
+
 status() {
   local name=$1
   boxd machine get "$name"
@@ -96,6 +109,7 @@ status() {
 case "${1:-}" in
   check) check ;;
   up) [ -n "${2:-}" ] || die "usage: up <name> [ttl]"; up "$2" "${3:-}" ;;
+  connect) [ -n "${2:-}" ] || die "usage: connect <name>"; connect "$2" ;;
   pair) [ -n "${2:-}" ] || die "usage: pair <name>"; pair "$2" ;;
   serve) [ -n "${2:-}" ] || die "usage: serve <name>"; serve "$2" ;;
   status) [ -n "${2:-}" ] || die "usage: status <name>"; status "$2" ;;
