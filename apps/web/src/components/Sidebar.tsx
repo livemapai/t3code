@@ -30,6 +30,7 @@ import {
   effectiveSnoozed,
   threadWokeAt,
 } from "@t3tools/client-runtime/state/thread-settled";
+import { THREAD_FLAGS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import {
   createInboxReturnTracker,
   isThreadWorking,
@@ -940,6 +941,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     unpinThread,
     confirmAndUnpinThread,
     setThreadAutoSettle,
+    setThreadFlag,
     turnThreadIntoProject,
     reorderPinnedThread,
     reorderActiveThread,
@@ -2635,6 +2637,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                     }
                   : null,
               isPinned,
+              flag: threadFlagOf(thread.source.tags),
               isSettled,
               autoSettleEnabled: thread.autoSettleDisabledAt == null,
               isSnoozed,
@@ -2650,6 +2653,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 autoSettleOptOut: supportsAutoSettleOptOut,
                 snooze: configLoaded,
                 pinning: configLoaded,
+                flags: configLoaded,
                 titleRegeneration: configLoaded,
               },
               snoozePresets,
@@ -2739,6 +2743,24 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 stackedThreadToast({
                   type: "error",
                   title: "Could not turn thread into a project",
+                  description: error instanceof Error ? error.message : "An error occurred.",
+                }),
+              );
+            }
+            return;
+          }
+          case "flag:urgent":
+          case "flag:later":
+          case "flag:working":
+          case "flag:none": {
+            const picked = THREAD_FLAGS.find((flag) => clicked.value === `flag:${flag}`) ?? null;
+            const result = await setThreadFlag(threadRef, picked, threadFlagOf(thread.source.tags));
+            if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+              const error = squashAtomCommandFailure(result);
+              toastManager.add(
+                stackedThreadToast({
+                  type: "error",
+                  title: "Failed to flag thread",
                   description: error instanceof Error ? error.message : "An error occurred.",
                 }),
               );
