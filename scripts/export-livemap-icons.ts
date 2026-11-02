@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Renders the Livemap app icon into assets/livemap. Icon Composer cannot export it, so the
-// design lives here: a plum body in the Livemap design system, a sun-yellow T3, map contours.
+// design lives here: a plum body in the Livemap design system, the sun-yellow Ari mark, map contours.
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Console from "effect/Console";
@@ -19,7 +19,9 @@ const SIZE = 1024;
 // macOS pre-Tahoe icons keep a 100px safe area around an 824px body, with a native-style shadow.
 const MACOS_INSET = 100;
 
-const GLYPH_SOURCE = "assets/prod/app-icon.icon/Assets/text.svg";
+const MARK_SOURCE = "assets/livemap/ari-mark.svg";
+// Mark width as a fraction of the icon body.
+const MARK_WIDTH = 0.64;
 
 function contours(cx: number, cy: number, scale: number) {
   let rings = "";
@@ -43,17 +45,18 @@ function contours(cx: number, cy: number, scale: number) {
   return rings;
 }
 
-function iconSvg(input: {
-  readonly glyphPath: string;
-  readonly inset: number;
-  readonly shadow: boolean;
-}) {
+interface Mark {
+  readonly paths: ReadonlyArray<string>;
+  readonly width: number;
+  readonly height: number;
+}
+
+function iconSvg(input: { readonly mark: Mark; readonly inset: number; readonly shadow: boolean }) {
   const body = SIZE - 2 * input.inset;
   const scale = body / SIZE;
   const radius = body * 0.2237;
-  const glyphScale = 8.47 * scale;
-  // The glyph's bounding box center in text.svg's 128-unit viewBox.
-  const [glyphCx, glyphCy] = [62.7, 65.5];
+  const markScale = (body * MARK_WIDTH) / input.mark.width;
+  const markPaths = input.mark.paths.map((d) => `<path d="${d}"/>`).join("");
   const bodyRect = `x="${input.inset}" y="${input.inset}" width="${body}" height="${body}" rx="${radius}"`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
 <defs>
@@ -69,7 +72,7 @@ ${input.shadow ? `<rect ${bodyRect} fill="#000" filter="url(#bodyShadow)"/>` : "
   <rect width="${SIZE}" height="${SIZE}" fill="url(#bg)"/>
   <rect width="${SIZE}" height="${SIZE}" fill="url(#glow)"/>
   ${contours(input.inset + body * 0.84, input.inset + body * 0.94, scale)}
-  <path transform="translate(${SIZE / 2} ${SIZE / 2 + 12 * scale}) scale(${glyphScale}) translate(${-glyphCx} ${-glyphCy})" d="${input.glyphPath}" fill="url(#glyph)" filter="url(#drop)"/>
+  <g transform="translate(${SIZE / 2} ${SIZE / 2 + 12 * scale}) scale(${markScale}) translate(${-input.mark.width / 2} ${-input.mark.height / 2})" fill="url(#glyph)" filter="url(#drop)">${markPaths}</g>
   <rect ${bodyRect} fill="none" stroke="#fff" stroke-opacity="0.1" stroke-width="3"/>
 </g>
 </svg>`;
@@ -82,12 +85,16 @@ const exportLivemapIcons = Effect.gen(function* () {
   const path = yield* Path.Path;
   const repoRoot = path.resolve(import.meta.dirname, "..");
 
-  const glyphSvg = yield* fs.readFileString(path.join(repoRoot, GLYPH_SOURCE));
-  const glyphPath = /\sd="([^"]+)"/.exec(glyphSvg)?.[1];
-  if (!glyphPath) return yield* Effect.die(new Error(`${GLYPH_SOURCE} has no glyph path.`));
+  const markSvg = yield* fs.readFileString(path.join(repoRoot, MARK_SOURCE));
+  const viewBox = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(markSvg);
+  const paths = Array.from(markSvg.matchAll(/\sd="([^"]+)"/g), (match) => match[1]!);
+  if (!viewBox || paths.length === 0) {
+    return yield* Effect.die(new Error(`${MARK_SOURCE} needs a 0-origin viewBox and paths.`));
+  }
+  const mark = { paths, width: Number(viewBox[1]), height: Number(viewBox[2]) };
 
-  const macos = yield* render(iconSvg({ glyphPath, inset: MACOS_INSET, shadow: true }));
-  const universal = yield* render(iconSvg({ glyphPath, inset: 0, shadow: false }));
+  const macos = yield* render(iconSvg({ mark, inset: MACOS_INSET, shadow: true }));
+  const universal = yield* render(iconSvg({ mark, inset: 0, shadow: false }));
   const resized = (size: number) =>
     Effect.promise(() => sharp(universal).resize(size, size).png().toBuffer());
   const ico = encodePngIco(
