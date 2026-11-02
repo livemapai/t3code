@@ -72,7 +72,7 @@ ${input.shadow ? `<rect ${bodyRect} fill="#000" filter="url(#bodyShadow)"/>` : "
   <rect width="${SIZE}" height="${SIZE}" fill="url(#bg)"/>
   <rect width="${SIZE}" height="${SIZE}" fill="url(#glow)"/>
   ${contours(input.inset + body * 0.84, input.inset + body * 0.94, scale)}
-  <g transform="translate(${SIZE / 2} ${SIZE / 2 + 12 * scale}) scale(${markScale}) translate(${-input.mark.width / 2} ${-input.mark.height / 2})" fill="url(#glyph)" filter="url(#drop)">${markPaths}</g>
+  <g filter="url(#drop)"><g transform="translate(${SIZE / 2} ${SIZE / 2 + 12 * scale}) scale(${markScale}) translate(${-input.mark.width / 2} ${-input.mark.height / 2})" fill="url(#glyph)">${markPaths}</g></g>
   <rect ${bodyRect} fill="none" stroke="#fff" stroke-opacity="0.1" stroke-width="3"/>
 </g>
 </svg>`;
