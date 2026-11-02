@@ -28,6 +28,8 @@ export function LabsSettingsPanel() {
       </SettingsSection>
       <SettingsSection id="ari" title="Ari">
         <ShipItSoundRow />
+        <ThreadFlagsRow />
+        <LibraryLinksRow />
       </SettingsSection>
       <LegacyFeaturesSection />
     </SettingsPageContainer>
@@ -46,6 +48,44 @@ function ShipItSoundRow() {
           checked={settings.ariShipItSoundEnabled}
           onCheckedChange={(checked) => updateSettings({ ariShipItSoundEnabled: Boolean(checked) })}
           aria-label="Ship it sound"
+        />
+      }
+    />
+  );
+}
+
+function ThreadFlagsRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-thread-flags")}
+      description="Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar."
+      control={
+        <Switch
+          checked={settings.ariThreadFlagsEnabled}
+          onCheckedChange={(checked) => updateSettings({ ariThreadFlagsEnabled: Boolean(checked) })}
+          aria-label="Thread flags"
+        />
+      }
+    />
+  );
+}
+
+function LibraryLinksRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-library-links")}
+      description="Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally."
+      control={
+        <Switch
+          checked={settings.ariLibraryLinksInAppEnabled}
+          onCheckedChange={(checked) =>
+            updateSettings({ ariLibraryLinksInAppEnabled: Boolean(checked) })
+          }
+          aria-label="Open Ari Library links in the app"
         />
       }
     />

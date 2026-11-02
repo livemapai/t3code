@@ -21,7 +21,12 @@ export interface ResolveLinkTargetInput {
 
 export function resolveLinkTarget(input: ResolveLinkTargetInput): BrowserLinkTarget {
   if (input.event.metaKey || input.event.ctrlKey || input.event.button === 1) return "system";
-  if (input.preference !== "app" && !isAriLibraryUrl(input.url)) return "system";
+  if (
+    input.preference !== "app" &&
+    !(getClientSettings().ariLibraryLinksInAppEnabled && isAriLibraryUrl(input.url))
+  ) {
+    return "system";
+  }
   if (!input.canOpenInApp) return "system";
   if (!isWebUrl(input.url)) return "system";
   return "app";

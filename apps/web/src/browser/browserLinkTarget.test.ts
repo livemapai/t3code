@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { resolveLinkTarget } from "./browserLinkTarget";
 
-const settings = vi.hoisted(() => ({ browserLinkTarget: "system" as BrowserLinkTarget }));
+const settings = vi.hoisted(() => ({
+  browserLinkTarget: "system" as BrowserLinkTarget,
+  ariLibraryLinksInAppEnabled: true,
+}));
 
 vi.mock("~/hooks/useSettings", () => ({
   ensureClientSettingsHydrated: vi.fn(async () => undefined),
@@ -27,6 +30,9 @@ describe("resolveLinkTarget", () => {
       resolveLinkTarget({ url, event, preference: "system", canOpenInApp });
 
     expect(resolve(library)).toBe("app");
+    settings.ariLibraryLinksInAppEnabled = false;
+    expect(resolve(library)).toBe("system");
+    settings.ariLibraryLinksInAppEnabled = true;
     expect(resolve(library, { ...click, metaKey: true })).toBe("system");
     expect(resolve(library, click, false)).toBe("system");
     for (const url of [

@@ -20,6 +20,7 @@ import {
   resolveThreadProviderStack,
 } from "@t3tools/client-runtime/state/models";
 import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environment";
+import { useClientSettings } from "~/hooks/useSettings";
 import { THREAD_FLAG_LABELS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import {
   AuthOrchestrationOperateScope,
@@ -1128,7 +1129,8 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     )
   ) : null;
 
-  const flag = threadFlagOf(thread.source.tags);
+  const flagsEnabled = useClientSettings((settings) => settings.ariThreadFlagsEnabled);
+  const flag = flagsEnabled ? threadFlagOf(thread.source.tags) : null;
   const FlagStatusIcon =
     flag === "urgent" ? FlagIcon : flag === "later" ? BookmarkIcon : HammerIcon;
   const flagIndicator =

@@ -65,6 +65,8 @@ const clientSettings: ClientSettings = {
   boringSidebarEnabled: false,
   boringSidebarMultilineRows: false,
   ariShipItSoundEnabled: true,
+  ariThreadFlagsEnabled: true,
+  ariLibraryLinksInAppEnabled: true,
   threadDetailsUsageEnabled: false,
   threadDetailsItems: {},
   legacySidebarEnabled: false,
