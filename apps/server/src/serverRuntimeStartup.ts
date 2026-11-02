@@ -43,6 +43,7 @@ import * as GitVcsDriver from "./vcs/GitVcsDriver.ts";
 import * as ProjectStore from "./orchestration-v2/ProjectStore.ts";
 import * as AgentAwarenessRelay from "./relay/AgentAwarenessRelay.ts";
 import * as ServerLifecycleEvents from "./serverLifecycleEvents.ts";
+import { installAriTheme } from "./livemapAriTheme.ts";
 import * as ServerSettings from "./serverSettings.ts";
 import { forkParked, forkParkedFiber } from "./serverActivation.ts";
 import * as AnalyticsService from "./telemetry/AnalyticsService.ts";
@@ -497,6 +498,16 @@ const make = Effect.fn("serverRuntimeStartup.make")(function* (options?: Startup
             detail: error.detail,
             cause: error.cause,
           }),
+        ),
+      ),
+    );
+
+    // Before settings start, so the default it writes loads with them.
+    yield* runStartupPhase(
+      "livemap.ari-theme",
+      installAriTheme().pipe(
+        Effect.catchCause((cause) =>
+          Effect.logWarning("failed to install the Ari theme", { cause: Cause.pretty(cause) }),
         ),
       ),
     );

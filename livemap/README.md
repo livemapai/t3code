@@ -54,6 +54,21 @@ Only the names users see changed. The bundle id `com.t3tools.t3code`, the `t3cod
 updater feed carry over, and upstream syncs stay small. The MIT `LICENSE` notice must stay.
 `T3Wordmark.tsx` keeps its upstream name but draws the Ari mark.
 
+## Ari theme
+
+Every install defaults to the Ari theme, so the app's colours match the icon and sidebar above.
+`livemap/themes/ari.json` is the palette (plum, blurple, orange and the warm neutrals from the
+Livemap design system) as a T3 environment theme, so it needs no edits to upstream theme code and
+no mobile regeneration. Light is the base palette and dark is its variant, both complete.
+
+`apps/server/src/livemapAriTheme.ts` runs at server start. It republishes `ari.json` into
+`~/.t3/userdata/themes/` whenever it differs, so palette changes ship with the app, and sets
+`defaultTheme` to `ari` once, on the first start that finds no `ari.json` there. Each client then
+applies it once; choosing another theme, or `t3 theme clear`, sticks. A default an administrator
+already set is kept. Delete `themes/ari.json` to make the next start default to Ari again.
+
+The mobile app ignores environment themes and keeps its own.
+
 ## boxd VMs
 
 Agents can run work on a private boxd VM in the Livemap AG org, linked to your T3 as a linked
