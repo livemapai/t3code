@@ -20,4 +20,22 @@ describe("resolveLinkTarget", () => {
       );
     }
   });
+
+  it("opens Ari Library files in the app even when links default to the system browser", () => {
+    const library = "https://www.myari.app/en/assets?id=70b38675-9375-4dc9-9b34-0e6ca73c9fdd";
+    const resolve = (url: string, event = click, canOpenInApp = true) =>
+      resolveLinkTarget({ url, event, preference: "system", canOpenInApp });
+
+    expect(resolve(library)).toBe("app");
+    expect(resolve(library, { ...click, metaKey: true })).toBe("system");
+    expect(resolve(library, click, false)).toBe("system");
+    for (const url of [
+      "https://www.myari.app/en/places",
+      "http://www.myari.app/en/assets?id=1",
+      "https://myari.app.evil.example/en/assets?id=1",
+      "https://example.com/en/assets?id=1",
+    ]) {
+      expect(resolve(url)).toBe("system");
+    }
+  });
 });
