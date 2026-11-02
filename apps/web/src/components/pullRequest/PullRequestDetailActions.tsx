@@ -23,6 +23,7 @@ import {
 } from "../ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import type { resolvePullRequestPrimaryControl } from "./pullRequestDetail.logic";
+import { useMergeShoutLabel } from "./mergeShout";
 import { PullRequestGlyph } from "./pullRequestIcons";
 import type { resolvePullRequestState } from "./pullRequestPresentation";
 import type { PickableEnvironment } from "./pullRequestProjectAssignment.logic";
@@ -216,6 +217,7 @@ export function PullRequestPrimaryAction({
   resolveConflicts: ReactNode;
 }) {
   const inlineConfirm = useInlineActionConfirm(pullRequestKey);
+  const mergeShoutLabel = useMergeShoutLabel();
   const actionPending = pendingAction !== null;
   return (
     <>
@@ -363,7 +365,7 @@ export function PullRequestPrimaryAction({
                         {pendingAction === "merge"
                           ? "Merging..."
                           : inlineConfirm.isArmed("merge")
-                            ? "SHHHHHIPPPPP ITTTTTTTTT 🚀🚀🚀"
+                            ? mergeShoutLabel
                             : selectedMergeMethodLabel}
                       </span>
                     </span>
@@ -377,7 +379,7 @@ export function PullRequestPrimaryAction({
               (pendingAction === "merge"
                 ? "Merging..."
                 : inlineConfirm.isArmed("merge")
-                  ? "SHHHHHIPPPPP ITTTTTTTTT 🚀🚀🚀"
+                  ? mergeShoutLabel
                   : selectedMergeMethodLabel)}
           </TooltipPopup>
         </Tooltip>
