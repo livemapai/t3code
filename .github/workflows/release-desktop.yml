@@ -608,7 +608,22 @@ jobs:
             echo "Signing disabled for ${{ inputs.platform }}."
           fi
 
-          vp run dist:desktop:artifact "${args[@]}"
+          # Notarization staples its ticket over the network (api.apple-cloudkit.com),
+          # which drops connections on hosted runners. Retry only the signed mac build.
+          attempts=1
+          if [[ "${{ inputs.platform }}" == "mac" && " ${args[*]} " == *" --signed "* ]]; then
+            attempts=3
+          fi
+          for attempt in $(seq 1 "$attempts"); do
+            if vp run dist:desktop:artifact "${args[@]}"; then
+              exit 0
+            fi
+            if [[ "$attempt" -lt "$attempts" ]]; then
+              echo "::warning::Desktop build failed (attempt $attempt/$attempts); retrying."
+              sleep 15
+            fi
+          done
+          exit 1
 
       # Warm installs only touch the store index, so new content means a fetch.
       - name: Check staged install cache for new content
