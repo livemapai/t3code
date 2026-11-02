@@ -39,6 +39,7 @@ import { writePullRequestDetailSnapshot } from "../components/pullRequest/pullRe
 import { pullRequestChecksState } from "../components/pullRequest/pullRequestPresentation";
 import { useGuideRunStore } from "../components/pullRequest/guide/guideRunStore";
 import shipItUrl from "../assets/ship-it.mp3?url";
+import { getClientSettings } from "../hooks/useSettings";
 import { formatEnvironmentQueryError } from "./query";
 import { environmentThreadShells } from "./threads";
 
@@ -420,7 +421,7 @@ export const pullRequestEnvironment = createPullRequestEnvironmentAtoms(connecti
       });
     }),
   actionSucceeded: ({ action }) => {
-    if (action !== "merge") return;
+    if (action !== "merge" || !getClientSettings().ariShipItSoundEnabled) return;
     new Audio(shipItUrl).play().catch(() => undefined);
   },
 });

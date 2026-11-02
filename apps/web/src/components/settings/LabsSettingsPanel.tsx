@@ -26,8 +26,29 @@ export function LabsSettingsPanel() {
         <LinkedEnvironmentsRow />
         <SimlockHostsRow />
       </SettingsSection>
+      <SettingsSection id="ari" title="Ari">
+        <ShipItSoundRow />
+      </SettingsSection>
       <LegacyFeaturesSection />
     </SettingsPageContainer>
+  );
+}
+
+function ShipItSoundRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-ship-it-sound")}
+      description="Play a “ship it” shout when you merge a pull request."
+      control={
+        <Switch
+          checked={settings.ariShipItSoundEnabled}
+          onCheckedChange={(checked) => updateSettings({ ariShipItSoundEnabled: Boolean(checked) })}
+          aria-label="Ship it sound"
+        />
+      }
+    />
   );
 }
 

@@ -480,6 +480,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta link another machine vps peer agents work there delegate"],
   },
   {
+    id: "ari-ship-it-sound",
+    title: "Ship it sound",
+    to: "/settings/labs",
+    searchTerms: ["ari livemap merge pull request sound audio shout"],
+  },
+  {
     id: "simlock-hosts",
     title: "Simlock device hosts (alpha)",
     to: "/settings/labs",
