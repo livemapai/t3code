@@ -220,6 +220,6 @@ jobs:
           gh release create "v$VERSION" "${files[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "T3 Code (Livemap) $VERSION" \
+            --title "Ari Code $VERSION" \
             --generate-notes \
             --latest

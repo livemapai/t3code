@@ -43,7 +43,13 @@ macOS arm64 and Linux x64. It reuses upstream's `release-desktop.yml` for packag
 
 ## Branding
 
-Every non-nightly build is "T3 Code (Livemap)": a plum icon with a sun-yellow T3 and map contours, and
+Every non-nightly build is "Ari Code": a plum icon with the sun-yellow Ari mark and map contours, and
 a plum sidebar header with the same contours (`SidebarStageBackdrop.tsx`). Colours come from the
 Livemap design system (plum `#211a2a`, sun `#f6f261`). Icon Composer cannot export this icon, so
-`vp run icons:export:livemap` renders `assets/livemap/`; rerun it after changing the design.
+`vp run icons:export:livemap` renders `assets/livemap/` from `assets/livemap/ari-mark.svg`; rerun it
+after changing the design.
+
+Only the names users see changed. The bundle id `com.t3tools.t3code`, the `t3code://` scheme,
+`~/.t3`, and the `T3-Code-*` artifact names stay upstream's, so data, saved connections, and the
+updater feed carry over, and upstream syncs stay small. The MIT `LICENSE` notice must stay.
+`T3Wordmark.tsx` keeps its upstream name but draws the Ari mark.
