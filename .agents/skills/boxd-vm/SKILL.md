@@ -23,9 +23,9 @@ For several VMs, run each step for all of them before the next; `up` runs in par
 
 1. **Check.** Run `t3-vm.sh check`. Done when it prints `ok:`. Each failure names its fix; see
    [Prerequisites](#prerequisites) for who does it.
-2. **Up.** Run `t3-vm.sh up <name> [ttl]` (ttl defaults to `4h`, such as `90m` or `1d`). Pick a
-   short name like `t3-<user>-<task>`. Done when it prints JSON with `url`, `environmentId` and
-   `projectId`; keep all three. It takes about a minute.
+2. **Up.** Run `t3-vm.sh up <name>`. Pick a short name like `t3-<user>-<task>`. Done when it
+   prints JSON with `url`, `environmentId` and `projectId`; keep all three. It takes about a minute.
+   See [Sleep and deletion](#sleep-and-deletion) for its options.
 3. **Connect.** Run `t3-vm.sh connect <name>`. It opens a `t3code://pair` link, and the desktop app
    asks the user to confirm the host; the link stays valid 10 minutes. Tell the user to confirm it.
    Done when the user confirms. Without the desktop app (web or mobile only), use the
@@ -40,12 +40,25 @@ For several VMs, run each step for all of them before the next; `up` runs in par
    and `target.providerInstanceId: "claudeAgent"`. Match the model to the work and the user's
    budget; Haiku for smoke tests.
 7. **Tear down** when the user is finished: `t3_environment_unlink` with the `environmentId` if it
-   was linked, then `t3-vm.sh down <name>`. Done when `t3-vm.sh list` no longer shows it. Every VM
-   also deletes itself when its ttl runs out. The app keeps a saved entry for it, which the user
-   removes in Settings → Environments.
+   was linked, then `t3-vm.sh down <name>`. Done when `t3-vm.sh list` no longer shows it. The app
+   keeps a saved entry for it, which the user removes in Settings → Environments.
 
 `t3-vm.sh list` shows the user's VMs from this skill; `status <name>` shows one, with whether its
 URL answers; `serve <name>` restarts its T3 server after a reboot.
+
+### Sleep and deletion
+
+A VM sleeps and deletes itself on its own; pass these to `up` only when the user wants otherwise:
+
+- **Standby** after 10 minutes without network traffic, then **hibernated** after `--idle`
+  (default `1h`). Both keep its memory, so the T3 server is still running when the first request
+  wakes it, in about a second. An open app connection or a running agent turn is traffic and keeps
+  it awake; a link alone is not.
+- **Deleted** `--keep` (default `2d`) after it last started or woke. The count runs while it is
+  awake too, so raise it for a VM someone works in for days on end.
+- `--delete-after <dur>` adds a hard deletion time whatever its state, for throwaway tests.
+- Work with no network traffic for longer than `--idle` (a long local build) gets hibernated
+  mid-work; raise `--idle` for it, or `--idle 0` to never sleep.
 
 ### Pairing code fallback
 
@@ -75,8 +88,8 @@ The code stays in the file and the clipboard. Mint a new one when it expires.
 - **Connecting and linking go through the app.** `t3 environment link` opens the local database
   directly, which belongs to the running live server.
 - **The VM answers on the public internet** with bot protection off (boxd's browser check blocks
-  T3's server-to-server calls). Pairing is the only gate: keep codes out of chat, keep ttl short,
-  tear down when done.
+  T3's server-to-server calls). Pairing is the only gate: keep codes out of chat, tear down when
+  done.
 - **Links below full access** cannot create projects or change settings on the VM. `up` registers
   the checkout as a project from inside the VM for that reason; changing VM settings goes through
   `boxd machine exec <name> -- ...` the same way.
