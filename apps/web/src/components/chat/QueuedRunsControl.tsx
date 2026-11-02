@@ -15,6 +15,7 @@ import type {
 import { resolveUserMessagePresentation } from "@t3tools/client-runtime/user-message";
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowDownUpIcon,
   ArrowUpIcon,
   CalendarClockIcon,
   ChevronDownIcon,
@@ -36,6 +37,7 @@ import { Button, InlineButton } from "../ui/button";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
 import type { TimestampFormat } from "@t3tools/contracts/settings";
 import { GuestMessageName } from "./guestMessageStyle";
+import { parseRelayMessage } from "./relayMessage";
 import { TimelineRowTimestamp } from "./TimelineRowParts";
 import { FoldedMessageHeader, useScheduledTaskTitle } from "./TimelineUserMessageRow";
 
@@ -408,6 +410,8 @@ function QueuedMessage(props: {
   const presentation = props.message ? resolveUserMessagePresentation(props.message) : null;
   const attribution = presentation?.attribution ?? null;
   const scheduledTaskId = presentation?.scheduledTaskId;
+  const relay =
+    attribution === "agent" && props.message ? parseRelayMessage(props.message.text) : null;
   const senderThreadId = props.message?.senderThreadId;
   const [expanded, setExpanded] = useState(false);
   const taskTitle = useScheduledTaskTitle(props.environmentId, scheduledTaskId);
@@ -423,13 +427,19 @@ function QueuedMessage(props: {
           label: "Automation",
           summary: taskTitle ?? props.previewText.split(/\r?\n/, 1)[0] ?? "",
         }
-      : attribution === "agent"
+      : relay
         ? {
-            icon: MessagesSquareIcon,
-            label: senderShell?.title.trim() || "Agent",
-            summary: props.previewText.split(/\r?\n/).find((line) => line.trim()) ?? "",
+            icon: ArrowDownUpIcon,
+            label: relay.self ? "Your other thread" : relay.from,
+            summary: relay.body.split(/\r?\n/).find((line) => line.trim()) ?? "",
           }
-        : null;
+        : attribution === "agent"
+          ? {
+              icon: MessagesSquareIcon,
+              label: senderShell?.title.trim() || "Agent",
+              summary: props.previewText.split(/\r?\n/).find((line) => line.trim()) ?? "",
+            }
+          : null;
   const bodyVisible = fold === null || expanded;
 
   return (
