@@ -52,6 +52,8 @@ import {
   SnapShotAttachmentDetails,
 } from "./SnapShotAttachmentDetails";
 import { GuestMessageName, guestBubbleClassName } from "./guestMessageStyle";
+import { RelayMessageCard } from "./RelayMessageCard";
+import { parseRelayMessage } from "./relayMessage";
 import { MessageCopyButton } from "./MessageCopyButton";
 import { promptLinkFor } from "../promptLinks/copyPromptLink";
 import { PierreEntryIcon } from "./PierreEntryIcon";
@@ -262,14 +264,18 @@ export function UserMessageRow({ row }: { row: Extract<TimelineRow, { kind: "mes
 
 function UserMessageContent({ row }: { row: Extract<TimelineRow, { kind: "message" }> }) {
   const ctx = use(TimelineRowCtx);
+  const { attribution } = resolveUserMessagePresentation(row.message);
+  const relay = attribution === "agent" ? parseRelayMessage(row.message.text) : null;
   return ctx.workflowOpening?.messageId === row.message.id ? (
     <WorkflowOpeningBlock
       opening={ctx.workflowOpening}
       environmentId={ctx.activeThreadEnvironmentId}
       onOpenThread={(threadId) => ctx.onOpenThread(ThreadId.make(threadId))}
     />
-  ) : resolveUserMessagePresentation(row.message).attribution === "automation" ? (
+  ) : attribution === "automation" ? (
     <AutomationMessageRow row={row} />
+  ) : relay ? (
+    <RelayMessageCard row={row} relay={relay} />
   ) : (
     <UserTimelineRow row={row} />
   );
