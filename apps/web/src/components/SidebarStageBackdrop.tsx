@@ -6,8 +6,8 @@ import { APP_STAGE_LABEL } from "../branding";
 import { resolveServerBackedAppStageLabel } from "../branding.logic";
 import { primaryServerConfigAtom } from "../state/server";
 
-export type SidebarStageBackdropVariant = "nightly" | "dev";
-export type EnvironmentIdentificationPillLabel = "Dev" | "Nightly";
+export type SidebarStageBackdropVariant = "nightly" | "dev" | "livemap";
+export type EnvironmentIdentificationPillLabel = "Dev" | "Livemap" | "Nightly";
 
 const STAGE_BACKDROP_VIEW_BOX = "0 0 8192 96";
 
@@ -21,6 +21,7 @@ export function resolveSidebarStageBackdropVariant(
   const normalized = stageLabel.trim().toLowerCase();
   if (normalized === "nightly") return "nightly";
   if (normalized === "dev") return "dev";
+  if (normalized === "livemap") return "livemap";
   return null;
 }
 
@@ -29,6 +30,7 @@ export function resolveEnvironmentIdentificationPillLabel(
 ): EnvironmentIdentificationPillLabel | null {
   const normalized = stageLabel.trim().toLowerCase();
   if (normalized === "dev") return "Dev";
+  if (normalized === "livemap") return "Livemap";
   if (normalized === "nightly") return "Nightly";
   return null;
 }
@@ -61,10 +63,12 @@ export function SidebarStageBackdrop({ variant }: { variant: SidebarStageBackdro
 }
 
 function StageBackdropArt({ variant }: { variant: SidebarStageBackdropVariant }) {
+  if (variant === "livemap") return <LivemapContourArt />;
   return variant === "nightly" ? <NightlySkyArt /> : <DevBlueprintArt />;
 }
 
 export function StageBackdropButtonArt({ variant }: { variant: SidebarStageBackdropVariant }) {
+  if (variant === "livemap") return <LivemapContourArt compact />;
   return variant === "nightly" ? <NightlySkyArt compact /> : <DevBlueprintArt compact />;
 }
 
@@ -207,6 +211,94 @@ function NightlySkyArt({ compact = false }: { compact?: boolean }) {
           fillOpacity="0.8"
         />
       </g>
+    </svg>
+  );
+}
+
+function livemapContourPath(cx: number, cy: number, radius: number, seed: number) {
+  const points = Array.from({ length: 48 }, (_, step) => {
+    const angle = (step / 48) * Math.PI * 2;
+    const wobble =
+      1 + 0.07 * Math.sin(3 * angle + seed * 1.7) + 0.045 * Math.sin(5 * angle + seed * 0.9 + 1);
+    const x = cx + Math.cos(angle) * radius * wobble;
+    const y = cy + Math.sin(angle) * radius * wobble * 0.82;
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+  return `M${points.join("L")}Z`;
+}
+
+const LIVEMAP_CONTOUR_CLUSTERS: ReadonlyArray<{ cx: number; cy: number; radii: number[] }> = [
+  { cx: 250, cy: 104, radii: [14, 30, 46, 62, 78, 94, 110] },
+  { cx: 28, cy: -6, radii: [12, 26, 40, 54] },
+];
+
+const LIVEMAP_CONTOURS = LIVEMAP_CONTOUR_CLUSTERS.flatMap(({ cx, cy, radii }, cluster) =>
+  radii.map((radius, ring) => ({
+    d: livemapContourPath(cx, cy, radius, ring + cluster * 3),
+    opacity: 0.3 - ring * 0.03,
+  })),
+);
+
+function LivemapContourArt({ compact = false }: { compact?: boolean }) {
+  const idPrefix = useId().replaceAll(":", "");
+  const groundId = `${idPrefix}-stage-livemap-ground`;
+  const glowId = `${idPrefix}-stage-livemap-glow`;
+  const glowsId = `${idPrefix}-stage-livemap-glows`;
+  const contoursId = `${idPrefix}-stage-livemap-contours`;
+
+  return (
+    <svg
+      data-stage-art="livemap"
+      className="h-full w-full"
+      fill="none"
+      preserveAspectRatio="xMinYMin slice"
+      viewBox={compact ? "96 0 8192 96" : STAGE_BACKDROP_VIEW_BOX}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <defs>
+        <linearGradient
+          id={groundId}
+          x1="24"
+          y1="0"
+          x2="264"
+          y2="96"
+          gradientUnits="userSpaceOnUse"
+          spreadMethod="reflect"
+        >
+          <stop style={{ stopColor: "var(--stage-livemap-bottom)" }} />
+          <stop offset="1" style={{ stopColor: "var(--stage-livemap-top)" }} />
+        </linearGradient>
+        <radialGradient
+          id={glowId}
+          cx="0"
+          cy="0"
+          r="1"
+          gradientTransform="translate(250 104) scale(140 88)"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop style={{ stopColor: "var(--stage-livemap-sun)" }} stopOpacity="0.26" />
+          <stop
+            offset="0.55"
+            style={{ stopColor: "var(--stage-livemap-sun)" }}
+            stopOpacity="0.07"
+          />
+          <stop offset="1" style={{ stopColor: "var(--stage-livemap-sun)" }} stopOpacity="0" />
+        </radialGradient>
+        <pattern id={glowsId} width="640" height="96" patternUnits="userSpaceOnUse">
+          <rect width="640" height="96" fill={`url(#${glowId})`} />
+        </pattern>
+        <pattern id={contoursId} width="640" height="96" patternUnits="userSpaceOnUse">
+          <g style={{ stroke: "var(--stage-livemap-sun)" }} strokeWidth="0.6">
+            {LIVEMAP_CONTOURS.map((contour) => (
+              <path key={contour.d} d={contour.d} strokeOpacity={contour.opacity} />
+            ))}
+          </g>
+        </pattern>
+      </defs>
+
+      <rect width="100%" height="96" fill={`url(#${groundId})`} />
+      <rect width="100%" height="96" fill={`url(#${glowsId})`} />
+      <rect width="100%" height="96" fill={`url(#${contoursId})`} />
     </svg>
   );
 }

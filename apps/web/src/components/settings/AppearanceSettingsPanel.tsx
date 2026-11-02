@@ -46,7 +46,7 @@ const ENVIRONMENT_IDENTIFICATION_LABELS: Record<EnvironmentIdentificationMode, s
 };
 
 // The default "artwork" follows the running channel, so it is labeled as that channel's art,
-// or as "None" on Latest. The other channel's art is offered as a fixed choice.
+// or as "None" on Latest. The other channels' art is offered as fixed choices.
 function environmentIdentificationOptions(
   stageVariant: SidebarStageBackdropVariant | null,
 ): ReadonlyArray<readonly [EnvironmentIdentificationMode, string]> {
@@ -61,6 +61,15 @@ function environmentIdentificationOptions(
   if (stageVariant === "nightly") {
     return [
       ["artwork", "Nightly artwork"],
+      ["dev-artwork", "Dev artwork"],
+      ["pill", "Version pill"],
+      ["none", "None"],
+    ];
+  }
+  if (stageVariant === "livemap") {
+    return [
+      ["artwork", "Livemap artwork"],
+      ["nightly-artwork", "Nightly artwork"],
       ["dev-artwork", "Dev artwork"],
       ["pill", "Version pill"],
       ["none", "None"],
@@ -119,7 +128,7 @@ export function AppearanceSettingsPanel() {
       ? "Only built-in themes show artwork, so this theme shows the version pill."
       : "Only built-in themes show artwork."
     : environmentStageVariant
-      ? "Choose how Dev and Nightly environments are identified."
+      ? "Choose how Dev, Nightly, and Livemap environments are identified."
       : "Show Dev or Nightly artwork in the sidebar header.";
   const glassOpacityRatio =
     (settings.glassOpacity - MIN_GLASS_OPACITY) / (MAX_GLASS_OPACITY - MIN_GLASS_OPACITY);

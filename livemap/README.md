@@ -40,3 +40,10 @@ macOS arm64 and Linux x64. It reuses upstream's `release-desktop.yml` for packag
   needs upstream's Apple team, so T3 Connect passkey sign-in does not work in our build.
 - Only `livemap-release.yml` should be enabled under Actions. Upstream's workflows are disabled with
   `gh workflow disable`; disable any new one a sync brings in.
+
+## Branding
+
+Every non-nightly build is "T3 Code (Livemap)": a plum icon with a sun-yellow T3 and map contours, and
+a plum sidebar header with the same contours (`SidebarStageBackdrop.tsx`). Colours come from the
+Livemap design system (plum `#211a2a`, sun `#f6f261`). Icon Composer cannot export this icon, so
+`vp run icons:export:livemap` renders `assets/livemap/`; rerun it after changing the design.
