@@ -58,6 +58,7 @@ vi.mock("../state/entities", () => ({
     worktreePath: null,
     runtime: null,
     latestRun: null,
+    source: {},
   }),
   useProjects: () => [{ id: "project", environmentId: "secondary" }],
 }));
@@ -116,6 +117,7 @@ vi.mock("./useSettings", () => ({
       confirmThreadDelete: true,
       confirmThreadArchive: true,
       timestampFormat: "12-hour",
+      ariThreadFlagsEnabled: true,
     }),
 }));
 vi.mock("./useThreadActions", () => ({

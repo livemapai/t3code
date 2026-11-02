@@ -7,6 +7,7 @@ const baseState: ThreadActionMenuState = {
   branch: null,
   projectFilter: null,
   isPinned: false,
+  flag: null,
   isSettled: false,
   autoSettleEnabled: true,
   isSnoozed: false,
@@ -18,6 +19,7 @@ const baseState: ThreadActionMenuState = {
     autoSettleOptOut: true,
     snooze: true,
     pinning: true,
+    flags: true,
     titleRegeneration: true,
   },
   snoozePresets: [
@@ -41,6 +43,7 @@ describe("buildThreadActionMenuItems", () => {
             "unpin",
             "unsettle",
             "unsnooze",
+            "flag",
             "rename",
             "regenerate-title",
             "auto-settle",
@@ -51,6 +54,7 @@ describe("buildThreadActionMenuItems", () => {
             "pin",
             "settle",
             "snooze",
+            "flag",
             "rename",
             "regenerate-title",
             "auto-settle",
@@ -73,5 +77,14 @@ describe("buildThreadActionMenuItems", () => {
     });
     expect(items.find((item) => item.id === "archive")?.disabled).toBe(true);
     expect(items.find((item) => item.id === "turn-into-project")?.disabled).toBe(true);
+  });
+
+  it("checks the thread's current flag", () => {
+    const items = buildThreadActionMenuItems({ ...baseState, flag: "later" });
+    const checked = items
+      .find((item) => item.id === "flag")
+      ?.children?.filter((child) => child.checked)
+      .map((child) => child.id);
+    expect(checked).toEqual(["flag:later"]);
   });
 });

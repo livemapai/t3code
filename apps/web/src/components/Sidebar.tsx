@@ -30,6 +30,7 @@ import {
   effectiveSnoozed,
   threadWokeAt,
 } from "@t3tools/client-runtime/state/thread-settled";
+import { THREAD_FLAGS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import {
   createInboxReturnTracker,
   isThreadWorking,
@@ -132,7 +133,11 @@ import { useTerminalFocus } from "../hooks/useTerminalFocus";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { registerSettleAndAdvance } from "../settleAndAdvance";
 import { startNewThreadFromContext } from "../lib/chatThreadActions";
-import { useBoringSidebarEnabled, useClientSettings } from "../hooks/useSettings";
+import {
+  getClientSettings,
+  useBoringSidebarEnabled,
+  useClientSettings,
+} from "../hooks/useSettings";
 import { useCopyToClipboard } from "../hooks/useCopyToClipboard";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNowMinute } from "../hooks/useNowMinute";
@@ -940,6 +945,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     unpinThread,
     confirmAndUnpinThread,
     setThreadAutoSettle,
+    setThreadFlag,
     turnThreadIntoProject,
     reorderPinnedThread,
     reorderActiveThread,
@@ -2635,6 +2641,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                     }
                   : null,
               isPinned,
+              flag: threadFlagOf(thread.source.tags),
               isSettled,
               autoSettleEnabled: thread.autoSettleDisabledAt == null,
               isSnoozed,
@@ -2650,6 +2657,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 autoSettleOptOut: supportsAutoSettleOptOut,
                 snooze: configLoaded,
                 pinning: configLoaded,
+                flags: configLoaded && getClientSettings().ariThreadFlagsEnabled,
                 titleRegeneration: configLoaded,
               },
               snoozePresets,
@@ -2739,6 +2747,24 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 stackedThreadToast({
                   type: "error",
                   title: "Could not turn thread into a project",
+                  description: error instanceof Error ? error.message : "An error occurred.",
+                }),
+              );
+            }
+            return;
+          }
+          case "flag:urgent":
+          case "flag:later":
+          case "flag:working":
+          case "flag:none": {
+            const picked = THREAD_FLAGS.find((flag) => clicked.value === `flag:${flag}`) ?? null;
+            const result = await setThreadFlag(threadRef, picked, threadFlagOf(thread.source.tags));
+            if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+              const error = squashAtomCommandFailure(result);
+              toastManager.add(
+                stackedThreadToast({
+                  type: "error",
+                  title: "Failed to flag thread",
                   description: error instanceof Error ? error.message : "An error occurred.",
                 }),
               );

@@ -20,6 +20,8 @@ import {
   resolveThreadProviderStack,
 } from "@t3tools/client-runtime/state/models";
 import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environment";
+import { useClientSettings } from "~/hooks/useSettings";
+import { THREAD_FLAG_LABELS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -32,13 +34,16 @@ import {
   AlarmClockIcon,
   AlarmClockOffIcon,
   ArrowRightLeftIcon,
+  BookmarkIcon,
   CheckIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   CircleDashedIcon,
   CircleDotDashedIcon,
   ClockIcon,
+  FlagIcon,
   GitBranchIcon,
+  HammerIcon,
   MessageCircleQuestionIcon,
   PinIcon,
   PinOffIcon,
@@ -1124,6 +1129,25 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     )
   ) : null;
 
+  const flagsEnabled = useClientSettings((settings) => settings.ariThreadFlagsEnabled);
+  const flag = flagsEnabled ? threadFlagOf(thread.source.tags) : null;
+  const FlagStatusIcon =
+    flag === "urgent" ? FlagIcon : flag === "later" ? BookmarkIcon : HammerIcon;
+  const flagIndicator =
+    flag === null ? null : (
+      <FlagStatusIcon
+        role="img"
+        aria-label={`Flagged ${THREAD_FLAG_LABELS[flag]}`}
+        data-testid={`sidebar-flag-${flag}`}
+        className={cn(
+          "size-3 shrink-0",
+          flag === "urgent" && "text-error",
+          flag === "later" && "text-secondary-label",
+          flag === "working" && "text-warning",
+        )}
+      />
+    );
+
   const remoteMachineIcon =
     isRemote && !showsScratchMachine ? (
       <span className="inline-flex shrink-0 items-center text-sidebar-muted-foreground/70">
@@ -1250,6 +1274,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {draftIndicator}
               {title}
               {multiline ? titleLineIcons : null}
+              {flagIndicator}
               {pinIndicator}
               {multiline ? null : terminalStatusIcon}
               {isRegeneratingTitle ? (
@@ -1434,6 +1459,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               ) : null}
               {/* Left of the status slot, the pin would slide when hover swaps the
                 label for the wider row controls. */}
+              {flagIndicator}
               {pinIndicator}
               {props.projectDisplayName ? (
                 <span

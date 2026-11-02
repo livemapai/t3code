@@ -480,6 +480,24 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["beta link another machine vps peer agents work there delegate"],
   },
   {
+    id: "ari-ship-it-sound",
+    title: "Ship it sound",
+    to: "/settings/labs",
+    searchTerms: ["ari livemap merge pull request sound audio shout"],
+  },
+  {
+    id: "ari-thread-flags",
+    title: "Thread flags",
+    to: "/settings/labs",
+    searchTerms: ["ari livemap flag urgent later working mark sidebar icon"],
+  },
+  {
+    id: "ari-library-links",
+    title: "Open Ari Library links in the app",
+    to: "/settings/labs",
+    searchTerms: ["ari livemap myari library files docs browser panel links system"],
+  },
+  {
     id: "simlock-hosts",
     title: "Simlock device hosts (alpha)",
     to: "/settings/labs",

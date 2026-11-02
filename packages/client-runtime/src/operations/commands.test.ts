@@ -38,6 +38,7 @@ import { v2Now, v2Projection, v2ThreadId } from "../state/orchestrationV2TestFix
 import {
   archiveThread,
   interruptThreadTurn,
+  setThreadFlag,
   revertThreadCheckpoint,
   resumeThreadQueue,
   startThreadTurn,
@@ -558,6 +559,31 @@ describe("V2 environment commands", () => {
           commandId: "stop-outside-history-window",
           threadId: v2ThreadId,
         },
+      ]);
+    }).pipe(Effect.provide(layerTestCrypto)),
+  );
+
+  it.effect("swaps a thread's flag by clearing the old one and setting the new one", () =>
+    Effect.gen(function* () {
+      const commands: OrchestrationV2Command[] = [];
+      const supervisor = yield* makeSupervisor({ commands, projects: [], projectionRequests: [] });
+      const provided = Effect.provideService(
+        EnvironmentSupervisor.EnvironmentSupervisor,
+        supervisor,
+      );
+
+      yield* setThreadFlag({ threadId: v2ThreadId, flag: "later", previous: "urgent" }).pipe(
+        provided,
+      );
+      yield* setThreadFlag({ threadId: v2ThreadId, flag: "later", previous: "later" }).pipe(
+        provided,
+      );
+      yield* setThreadFlag({ threadId: v2ThreadId, flag: null, previous: "later" }).pipe(provided);
+
+      expect(commands.map((c) => c.type === "thread.tag.set" && [c.tag, c.tagged])).toEqual([
+        ["flag:urgent", false],
+        ["flag:later", true],
+        ["flag:later", false],
       ]);
     }).pipe(Effect.provide(layerTestCrypto)),
   );

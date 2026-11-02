@@ -1,4 +1,5 @@
 import { remapComposerContextAttachments } from "@t3tools/shared/composerContextReferences";
+import { threadFlagTag, type ThreadFlag } from "../state/threadFlags.ts";
 import {
   type ThreadLinkedPullRequest,
   CommandId,
@@ -519,6 +520,36 @@ export const setThreadAutoSettle = Effect.fn("EnvironmentCommands.setThreadAutoS
     threadId: input.threadId,
     enabled: input.enabled,
   });
+});
+
+export interface SetThreadFlagInput extends ThreadCommandInput {
+  readonly flag: ThreadFlag | null;
+  /** The flag the thread shows now, removed first so a thread never holds two. */
+  readonly previous: ThreadFlag | null;
+}
+export const setThreadFlag = Effect.fn("EnvironmentCommands.setThreadFlag")(function* (
+  input: SetThreadFlagInput,
+) {
+  const { previous, flag } = input;
+  const cleared =
+    previous !== null && previous !== flag
+      ? yield* dispatch({
+          type: "thread.tag.set",
+          commandId: yield* allocateCommandId({}),
+          threadId: input.threadId,
+          tag: threadFlagTag(previous),
+          tagged: false,
+        })
+      : null;
+  return flag !== null && flag !== previous
+    ? yield* dispatch({
+        type: "thread.tag.set",
+        commandId: yield* allocateCommandId({}),
+        threadId: input.threadId,
+        tag: threadFlagTag(flag),
+        tagged: true,
+      })
+    : cleared;
 });
 
 export const reorderPinnedThread = Effect.fn("EnvironmentCommands.reorderPinnedThread")(function* (

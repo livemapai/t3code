@@ -7,6 +7,7 @@ import {
   settlePromise,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
+import { THREAD_FLAGS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import { canSnooze, effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
 import {
   AuthOrchestrationOperateScope,
@@ -82,6 +83,7 @@ export function useThreadActionMenu(input: {
     pinThread,
     confirmAndUnpinThread,
     setThreadAutoSettle,
+    setThreadFlag,
     archiveThread,
     deleteThread,
     markThreadUnread,
@@ -94,6 +96,7 @@ export function useThreadActionMenu(input: {
   const confirmThreadDelete = useClientSettings((s) => s.confirmThreadDelete);
   const confirmThreadArchive = useClientSettings((s) => s.confirmThreadArchive);
   const timestampFormat = useClientSettings((s) => s.timestampFormat);
+  const threadFlagsEnabled = useClientSettings((s) => s.ariThreadFlagsEnabled);
   const { copyToClipboard: copyPathToClipboard } = useCopyToClipboard<{ path: string }>({
     onCopy: ({ path }) => {
       toastManager.add({ type: "success", title: "Path copied", description: path });
@@ -128,6 +131,7 @@ export function useThreadActionMenu(input: {
         autoSettleOptOut: readEnvironmentSupportsAutoSettleOptOut(threadRef.environmentId),
         snooze: configLoaded,
         pinning: configLoaded,
+        flags: configLoaded && threadFlagsEnabled,
         titleRegeneration: configLoaded,
       };
       const isRegeneratingTitle = thread.titleRegeneration != null;
@@ -138,6 +142,7 @@ export function useThreadActionMenu(input: {
         branch: thread.branch ?? null,
         projectFilter: null,
         isPinned: thread.pinnedAt != null,
+        flag: threadFlagOf(thread.source.tags),
         isSettled: supports.settlement && thread.settledOverride === "settled",
         autoSettleEnabled: thread.autoSettleDisabledAt == null,
         isSnoozed: supports.snooze && effectiveSnoozed(thread, { now: now.toISOString() }),
@@ -235,6 +240,16 @@ export function useThreadActionMenu(input: {
           return;
         case "unpin": {
           await reportFailure("Failed to unpin thread", () => confirmAndUnpinThread(threadRef));
+          return;
+        }
+        case "flag:urgent":
+        case "flag:later":
+        case "flag:working":
+        case "flag:none": {
+          const picked = THREAD_FLAGS.find((flag) => action === `flag:${flag}`) ?? null;
+          await reportFailure("Failed to flag thread", () =>
+            setThreadFlag(threadRef, picked, threadFlagOf(thread.source.tags)),
+          );
           return;
         }
         case "auto-settle:enabled":

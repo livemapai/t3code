@@ -21,10 +21,29 @@ export interface ResolveLinkTargetInput {
 
 export function resolveLinkTarget(input: ResolveLinkTargetInput): BrowserLinkTarget {
   if (input.event.metaKey || input.event.ctrlKey || input.event.button === 1) return "system";
-  if (input.preference !== "app") return "system";
+  if (
+    input.preference !== "app" &&
+    !(getClientSettings().ariLibraryLinksInAppEnabled && isAriLibraryUrl(input.url))
+  ) {
+    return "system";
+  }
   if (!input.canOpenInApp) return "system";
   if (!isWebUrl(input.url)) return "system";
   return "app";
+}
+
+/** Ari Library files open beside the thread whatever the link preference; Cmd/Ctrl-click still opens myari.app itself. */
+function isAriLibraryUrl(url: string): boolean {
+  try {
+    const { protocol, hostname, pathname } = new URL(url);
+    return (
+      protocol === "https:" &&
+      (hostname === "myari.app" || hostname === "www.myari.app") &&
+      /^\/([a-z]{2}\/)?assets(\/|$)/.test(pathname)
+    );
+  } catch {
+    return false;
+  }
 }
 
 export function isWebUrl(url: string): boolean {
