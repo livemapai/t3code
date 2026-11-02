@@ -1,39 +1,58 @@
 ---
 name: boxd-vm
-description: Run T3 Code work on a private boxd VM in Livemap's org, under the user's own Claude login, linked to this environment so agents here can delegate to it. Use when the user wants a boxd VM, a cloud machine, or to delegate work off this machine; also to list or tear down those VMs.
+description: Run T3 Code work on private boxd VMs in Livemap's org, under the user's own Claude login, connected to the user's app and optionally linked so agents here can delegate to them. Use when the user wants one or more boxd VMs, cloud machines, or to delegate work off this machine; also to list or tear down those VMs.
 ---
 
-# boxd VMs as linked environments
+# boxd VMs for T3 Code
 
-Each VM is restored from the `t3code` snapshot, stays **private** to the user who made it, runs a
-T3 server on `https://<name>.boxd.sh`, and is linked here as a linked environment. boxd serves the
-owner's own Claude Code login to their private machines, so agent turns there bill the user's own
-Claude subscription. `scripts/t3-vm.sh` (in this skill's folder) does all boxd work; run it from the
-repository root as `.agents/skills/boxd-vm/scripts/t3-vm.sh`.
+Each VM is restored from the `t3code` snapshot, stays **private** to the user who made it, and runs
+a T3 server on `https://<name>.boxd.sh`. boxd serves the owner's own Claude Code login to their
+private machines, so agent turns there bill the user's own Claude subscription. `scripts/t3-vm.sh`
+(in this skill's folder) does all boxd work; run it from the repository root as
+`.agents/skills/boxd-vm/scripts/t3-vm.sh`.
+
+Two ways in, and the user picks by what they want:
+
+- **Connected** (step 3): the VM shows in their app with its threads, they can start threads there,
+  and Settings → Environments → Load balancing can spread new threads across machines.
+- **Linked** (step 4, on top): agents here can also delegate tasks to it.
 
 ## Steps
+
+For several VMs, run each step for all of them before the next; `up` runs in parallel.
 
 1. **Check.** Run `t3-vm.sh check`. Done when it prints `ok:`. Each failure names its fix; see
    [Prerequisites](#prerequisites) for who does it.
 2. **Up.** Run `t3-vm.sh up <name> [ttl]` (ttl defaults to `4h`, such as `90m` or `1d`). Pick a
-   short name like `t3-<user>-<task>`. Done when it prints JSON with `url` and `projectId`; keep
-   both. It takes about a minute.
-3. **Link.** Run `t3-vm.sh pair <name>`; it writes a 30-minute pairing code to a private file and
-   prints that file's path. Call `t3_environment_link` with `url` set to the VM's URL, then tell the
-   user to paste the `Token:` line from that file into the card and approve. The code stays in the
-   file. Done when the link outcome message arrives with the VM's `environmentId`. A code that
-   expired before the user got to it: run `pair` again and send a new card.
-4. **Verify.** Call `orchestrator_capabilities` with that `environmentId`. Done when `claudeAgent`
+   short name like `t3-<user>-<task>`. Done when it prints JSON with `url`, `environmentId` and
+   `projectId`; keep all three. It takes about a minute.
+3. **Connect.** Run `t3-vm.sh connect <name>`. It opens a `t3code://pair` link, and the desktop app
+   asks the user to confirm the host; the link stays valid 10 minutes. Tell the user to confirm it.
+   Done when the user confirms. Without the desktop app (web or mobile only), use the
+   [pairing code fallback](#pairing-code-fallback) in their Settings → Environments → Add
+   environment instead.
+4. **Link**, when the user wants agents here to delegate there. Call `t3_environment_link` with
+   `environmentId` from step 2 (an address alone makes the card ask for a code). The connected app
+   makes the code itself, so the user only approves. Done when the link outcome message arrives.
+5. **Verify.** Call `orchestrator_capabilities` with the `environmentId`. Done when `claudeAgent`
    has `canRunChildTask: true` and no constraints.
-5. **Delegate.** Call `delegate_task` with `target.environmentId`, `target.projectId` from step 2,
+6. **Delegate.** Call `delegate_task` with `target.environmentId`, `target.projectId` from step 2,
    and `target.providerInstanceId: "claudeAgent"`. Match the model to the work and the user's
    budget; Haiku for smoke tests.
-6. **Tear down** when the user is finished: `t3_environment_unlink` with the `environmentId`, then
-   `t3-vm.sh down <name>`. Done when `t3-vm.sh list` no longer shows it. Every VM also deletes
-   itself when its ttl runs out.
+7. **Tear down** when the user is finished: `t3_environment_unlink` with the `environmentId` if it
+   was linked, then `t3-vm.sh down <name>`. Done when `t3-vm.sh list` no longer shows it. Every VM
+   also deletes itself when its ttl runs out. The app keeps a saved entry for it, which the user
+   removes in Settings → Environments.
 
 `t3-vm.sh list` shows the user's VMs from this skill; `status <name>` shows one, with whether its
 URL answers; `serve <name>` restarts its T3 server after a reboot.
+
+### Pairing code fallback
+
+`t3-vm.sh pair <name>` writes a 30-minute code to a private file and prints the file's path. The
+user pastes its `Token:` line where a code is asked for; on macOS,
+`grep '^Token:' <file> | sed 's/^Token: *//' | tr -d '\n' | pbcopy` puts it on their clipboard.
+The code stays in the file and the clipboard. Mint a new one when it expires.
 
 ## Prerequisites
 
@@ -53,12 +72,12 @@ URL answers; `serve <name>` restarts its T3 server after a reboot.
 
 - **Private only.** Sharing a VM wipes the agent logins on it, and boxd serves none to shared
   machines, so a shared VM has no working provider.
-- **Linking goes through the card.** `t3 environment link` opens the local database directly,
-  which belongs to the running live server.
+- **Connecting and linking go through the app.** `t3 environment link` opens the local database
+  directly, which belongs to the running live server.
 - **The VM answers on the public internet** with bot protection off (boxd's browser check blocks
-  T3's server-to-server calls). The pairing code is the only gate: keep it in the file, keep ttl
-  short, tear down when done.
-- **Approval-required links** cannot create projects or change settings on the VM. `up` registers
+  T3's server-to-server calls). Pairing is the only gate: keep codes out of chat, keep ttl short,
+  tear down when done.
+- **Links below full access** cannot create projects or change settings on the VM. `up` registers
   the checkout as a project from inside the VM for that reason; changing VM settings goes through
   `boxd machine exec <name> -- ...` the same way.
 - **Scope.** The VM has the `livemap` branch of this repository at `/task/repos/t3code`, refreshed
