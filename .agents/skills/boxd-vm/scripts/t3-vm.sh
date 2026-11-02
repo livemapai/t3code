@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Private boxd VMs in Livemap's org that run a T3 server under the caller's own Claude login.
-# Usage: t3-vm.sh check | up <name> [ttl] | connect <name> | pair <name> | serve <name> | status <name> | list | down <name>
+# Usage: t3-vm.sh check | up <name> [--idle 1h] [--keep 2d] [--delete-after <dur>] | connect <name> | pair <name> | serve <name> | status <name> | list | down <name>
 set -euo pipefail
 
 ORG="Livemap AG"
@@ -13,6 +13,14 @@ PAIR_DIR=${TMPDIR:-/tmp}; PAIR_DIR=${PAIR_DIR%/}
 export PATH="$HOME/.local/bin:$PATH"
 
 die() { echo "error: $*" >&2; exit 1; }
+# 90m, 2h, 3d or plain seconds, as seconds.
+seconds() {
+  case "$1" in
+    *[0-9]d) echo $((${1%d} * 86400)) ;; *[0-9]h) echo $((${1%h} * 3600)) ;;
+    *[0-9]m) echo $((${1%m} * 60)) ;; *[0-9]s) echo "${1%s}" ;; *[!0-9]* | "") die "not a duration: $1" ;;
+    *) echo "$1" ;;
+  esac
+}
 url() { echo "https://$1.boxd.sh"; }
 vm() { local name=$1; shift; boxd machine exec "$name" -- bash -lc "$*"; }
 
@@ -49,10 +57,22 @@ serve() {
 }
 
 up() {
-  local name=$1 ttl=${2:-4h} project env_id
+  local name=$1 idle=1h keep=2d hard="" project env_id
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --idle) idle=$2; shift 2 ;; --keep) keep=$2; shift 2 ;; --delete-after) hard=$2; shift 2 ;;
+      *) die "unknown option: $1" ;;
+    esac
+  done
   check >/dev/null
   # Private on purpose: boxd serves the owner's Claude login only to private machines.
-  boxd new "$name" --from-snapshot "$SNAPSHOT" --delete-after "$ttl" --label "$LABEL" >/dev/null
+  # Idle timers count network traffic both ways: an open app connection or a running agent turn
+  # keeps it awake; standby and hibernation keep memory, so the T3 server wakes with it.
+  # --keep is boxd's auto-destroy: it counts from the last start or wake, not from going idle.
+  boxd new "$name" --from-snapshot "$SNAPSHOT" --label "$LABEL" \
+    --auto-suspend-timeout 600 --auto-hibernate-timeout "$(seconds "$idle")" \
+    --auto-destroy-timeout "$(seconds "$keep")" ${hard:+--delete-after "$hard"} >/dev/null
   # A browser check on the public URL would block T3's server-to-server requests.
   boxd machine config set "$name" bot-protection off >/dev/null
   # The snapshot inherits the dispatcher's port-9 lock on the default proxy.
@@ -76,7 +96,8 @@ up() {
   done
   env_id=$(curl -fsS --max-time 5 "$(url "$name")/.well-known/t3/environment" | grep -oE '"environmentId":"[^"]+"' | cut -d'"' -f4) ||
     die "$(url "$name") does not answer"
-  printf '{"name":"%s","url":"%s","environmentId":"%s","projectId":"%s","deleteAfter":"%s"}\n' "$name" "$(url "$name")" "$env_id" "$project" "$ttl"
+  printf '{"name":"%s","url":"%s","environmentId":"%s","projectId":"%s","hibernatesAfterIdle":"%s","deletedAfterLastWake":"%s","deleteAfter":"%s"}\n' \
+    "$name" "$(url "$name")" "$env_id" "$project" "$idle" "$keep" "${hard:-none}"
 }
 
 # Writes a 30-minute pairing code to a private file; the code itself never reaches stdout.
@@ -108,7 +129,7 @@ status() {
 
 case "${1:-}" in
   check) check ;;
-  up) [ -n "${2:-}" ] || die "usage: up <name> [ttl]"; up "$2" "${3:-}" ;;
+  up) [ -n "${2:-}" ] || die "usage: up <name> [--idle 1h] [--keep 2d] [--delete-after <dur>]"; shift; up "$@" ;;
   connect) [ -n "${2:-}" ] || die "usage: connect <name>"; connect "$2" ;;
   pair) [ -n "${2:-}" ] || die "usage: pair <name>"; pair "$2" ;;
   serve) [ -n "${2:-}" ] || die "usage: serve <name>"; serve "$2" ;;
