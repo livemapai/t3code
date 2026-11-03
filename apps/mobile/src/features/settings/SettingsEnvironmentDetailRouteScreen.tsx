@@ -1,3 +1,4 @@
+import { AriHostSection } from "./AriHostSection";
 import * as Dialog from "../../components/ui/Dialog";
 import { useAtom, useAtomValue } from "@effect/atom-react";
 import { useNavigation, type StaticScreenProps } from "@react-navigation/native";
@@ -185,6 +186,7 @@ function EnvironmentDetail({ environmentId }: { readonly environmentId: Environm
           </Text>
         ) : (
           <>
+            <AriHostSection environmentId={environmentId} />
             <SettingsSection title="Connection">
               <ConnectionEnvironmentRow
                 environment={environment}

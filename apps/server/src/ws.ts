@@ -1,3 +1,4 @@
+import * as AriState from "./ari/AriState.ts";
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as Crypto from "effect/Crypto";
@@ -1268,6 +1269,7 @@ export const layerWsRpc = (
 ) =>
   Layer.effectContext(
     Effect.gen(function* () {
+      const ariState = yield* AriState.AriState;
       const currentSessionId = currentSession.sessionId;
       const sql = yield* SqlClient.SqlClient;
       const threadManagement = yield* ThreadManagementService.ThreadManagementService;
@@ -3139,6 +3141,7 @@ export const layerWsRpc = (
               );
             }),
           ),
+        [WS_METHODS.ariSubscribe]: () => ariState.subscribe,
         [WS_METHODS.subscribeServerConfig]: (input) =>
           Stream.unwrap(
             Effect.gen(function* () {

@@ -219,6 +219,10 @@
       "types": "./src/state/presentation.ts",
       "default": "./src/state/presentation.ts"
     },
+    "./state/ari": {
+      "types": "./src/state/ari.ts",
+      "default": "./src/state/ari.ts"
+    },
     "./state/device": {
       "types": "./src/state/device.ts",
       "default": "./src/state/device.ts"

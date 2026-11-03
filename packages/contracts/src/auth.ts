@@ -44,6 +44,7 @@ export const AuthFilesystemWriteScope = "filesystem:write" as const;
 const AuthReviewWriteScope = "review:write" as const;
 export const AuthAccessReadScope = "access:read" as const;
 export const AuthAccessWriteScope = "access:write" as const;
+export const AuthAriReadScope = "ari:read" as const;
 export const AuthRelayReadScope = "relay:read" as const;
 export const AuthRelayWriteScope = "relay:write" as const;
 export const AuthEnvironmentScope = Schema.Literals([
@@ -62,6 +63,7 @@ export const AuthEnvironmentScope = Schema.Literals([
   AuthSourceControlWriteScope,
   AuthAccessReadScope,
   AuthAccessWriteScope,
+  AuthAriReadScope,
   AuthRelayReadScope,
   AuthRelayWriteScope,
 ]);
@@ -112,7 +114,10 @@ const legacyParents: Partial<Record<AuthEnvironmentScope, AuthEnvironmentScope>>
 /** Keep permission denials decodable by clients with the original scope enum. */
 export function authScopeRequiredResponse(requiredPermission: AuthEnvironmentScope) {
   return {
-    requiredScope: legacyParents[requiredPermission] ?? requiredPermission,
+    requiredScope:
+      requiredPermission === AuthAriReadScope
+        ? AuthOrchestrationReadScope
+        : (legacyParents[requiredPermission] ?? requiredPermission),
     requiredPermission,
   };
 }
@@ -148,6 +153,7 @@ export function sessionHasLegacyPermissions(session: SessionGrantInput): boolean
 
 // Shell and full-access agent scopes already confer access and relay authority.
 export const AuthStandardClientScopes = [
+  AuthAriReadScope,
   AuthOrchestrationReadScope,
   AuthOrchestrationOperateScope,
   AuthSettingsWriteScope,

@@ -1,3 +1,5 @@
+import * as AriState from "./ari/AriState.ts";
+import * as AriClient from "./ari/AriClient.ts";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
 import type { RelayManagedEndpointRuntimeConfig } from "@t3tools/contracts/relay";
 import * as Random from "effect/Random";
@@ -1176,6 +1178,9 @@ const layerMakeServer = Layer.unwrap(
     return layerServerApplication.pipe(
       Layer.provide(CloudLink.layer.pipe(Layer.provideMerge(ConnectReachability.layer))),
       Layer.provideMerge(layerRuntimeServices),
+      Layer.provide(
+        AriState.layer.pipe(Layer.provide(AriClient.layer), Layer.provide(layerServerEnvironment)),
+      ),
       Layer.provideMerge(
         McpSessionRegistry.layer.pipe(
           Layer.provide(ServerEnvironment.layer.pipe(Layer.provide(ServerSecretStore.layer))),

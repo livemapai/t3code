@@ -1,3 +1,4 @@
+import { AriState } from "./ari.ts";
 import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,
@@ -606,6 +607,7 @@ export const WS_METHODS = {
   subscribePreviewEvents: "subscribePreviewEvents",
   subscribeDiscoveredLocalServers: "subscribeDiscoveredLocalServers",
   subscribeDeviceState: "subscribeDeviceState",
+  ariSubscribe: "ari.subscribe",
   subscribeServerConfig: "subscribeServerConfig",
   subscribeServerLifecycle: "subscribeServerLifecycle",
   subscribeAuthAccess: "subscribeAuthAccess",
@@ -1859,6 +1861,13 @@ const WsSubscribeTerminalMetadataRpc = Rpc.make(WS_METHODS.subscribeTerminalMeta
   stream: true,
 });
 
+const WsAriSubscribeRpc = Rpc.make(WS_METHODS.ariSubscribe, {
+  payload: Schema.Struct({}),
+  success: AriState,
+  error: EnvironmentAuthorizationError,
+  stream: true,
+});
+
 export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerConfig, {
   payload: Schema.Struct({
     /** Opt-in protects older clients that reject unknown theme event types. */
@@ -2155,6 +2164,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsDeviceDetailRpc,
   WsDeviceActionRpc,
   WsSubscribeDeviceStateRpc,
+  WsAriSubscribeRpc,
   WsSubscribeServerConfigRpc,
   WsSubscribeServerLifecycleRpc,
   WsSubscribeAuthAccessRpc,

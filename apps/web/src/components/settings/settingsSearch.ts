@@ -16,6 +16,7 @@ import { commandLabel } from "./KeybindingsSettings.logic";
 import type { ResolvedSettingsScope } from "./settingsScope";
 
 export type SettingsPath =
+  | "/settings/ari"
   | "/settings/projects"
   | "/settings/general"
   | "/settings/diagnostics"
@@ -86,6 +87,7 @@ export interface SettingsSearchAvailability {
 }
 
 export const SETTINGS_SECTION_LABELS: Readonly<Record<SettingsPath, string>> = {
+  "/settings/ari": "Ari",
   "/settings/diagnostics": "Diagnostics",
   "/settings/projects": "Projects",
   "/settings/general": "General",
@@ -133,6 +135,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
       "/settings/threads",
       "/settings/browser",
       "/settings/devices",
+      "/settings/ari",
       "/settings/scheduled-tasks",
     ],
   },
@@ -216,6 +219,12 @@ const SOURCE_CONTROL_HOST_TERMS = sourceControlClients.definitions
   .join(" ");
 
 export const SETTINGS_SEARCH_ITEMS = [
+  {
+    id: "ari-host",
+    title: "Ari agent host",
+    to: "/settings/ari",
+    searchTerms: ["ari", "relay", "held", "sign in"],
+  },
   {
     id: "storage-worktree-keep-when",
     targetId: "storage-worktrees",
@@ -1201,6 +1210,7 @@ const SETTINGS_CATEGORY_SCOPES: Readonly<Record<SettingsPath, SettingsSearchScop
   "/settings/providers": null,
   "/settings/threads": null,
   "/settings/browser": null,
+  "/settings/ari": null,
   "/settings/devices": null,
   "/settings/source-control": "environment-defaults",
   "/settings/worktrees": "project-defaults",

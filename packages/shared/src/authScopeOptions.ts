@@ -1,4 +1,5 @@
 import {
+  AuthAriReadScope,
   AuthAccessReadScope,
   AuthAccessWriteScope,
   AuthDiagnosticsReadScope,
@@ -23,6 +24,11 @@ export const AUTH_SCOPE_OPTIONS: ReadonlyArray<{
   readonly title: string;
   readonly description: string;
 }> = [
+  {
+    scope: AuthAriReadScope,
+    title: "View Ari",
+    description: "Read this host’s Ari account and relay status.",
+  },
   {
     scope: AuthOrchestrationReadScope,
     title: "View environment",

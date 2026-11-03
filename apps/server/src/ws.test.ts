@@ -1,3 +1,4 @@
+import * as AriState from "./ari/AriState.ts";
 import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, it } from "@effect/vitest";
@@ -722,7 +723,10 @@ it.effect.each(["pending", "cached"] as const)(
             {},
             yield* ServerBrowser.ServerBrowser,
             () => Effect.void,
-          ).pipe(Layer.provide(configRpcServices)),
+          ).pipe(
+            Layer.provide(configRpcServices),
+            Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+          ),
         ),
       );
       const requestId = RpcMessage.RequestId("config");
@@ -906,7 +910,10 @@ it.effect("on-demand clients get provider config without workspace snapshots", (
           {},
           yield* ServerBrowser.ServerBrowser,
           () => Effect.void,
-        ).pipe(Layer.provide(configRpcServices)),
+        ).pipe(
+          Layer.provide(configRpcServices),
+          Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+        ),
       ),
     );
     const configRequest = RpcMessage.RequestId("config");
