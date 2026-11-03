@@ -54,6 +54,7 @@ import {
   pullRequestActionMenuHasGroup,
   readableFailure,
 } from "./pullRequestDetail.logic";
+import { useMergeShoutLabel } from "./mergeShout";
 import { PullRequestGlyph } from "./pullRequestIcons";
 import type { PickableEnvironment } from "./pullRequestProjectAssignment.logic";
 import { PullRequestThreadLinks } from "./PullRequestThreadLinks";
@@ -157,6 +158,7 @@ export function PullRequestActionsMenu({
 }) {
   const keybindings = useAtomValue(primaryServerKeybindingsAtom);
   const inlineConfirm = useInlineActionConfirm(pullRequestKey);
+  const mergeShoutLabel = useMergeShoutLabel();
   const actionPending = pendingAction !== null;
   const maintainerEditsHintId = useId();
   const updatePullRequest = useAtomCommand(pullRequestEnvironment.update, {
@@ -335,7 +337,7 @@ export function PullRequestActionsMenu({
                 {...inlineConfirm.props("merge", () => void perform("merge", selectedMergeMethod))}
               >
                 <PullRequestGlyph.merged className="size-3.5" />
-                {inlineConfirm.isArmed("merge") ? "SHHHHHIPPPPP ITTTTTTTTT 🚀🚀🚀" : "Merge now"}
+                {inlineConfirm.isArmed("merge") ? mergeShoutLabel : "Merge now"}
               </MenuItem>
             ) : null}
             {autoMergeArmed && can("disable-auto-merge") ? (

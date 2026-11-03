@@ -4,7 +4,9 @@ import { managedCapabilityDenial } from "@t3tools/contracts";
 
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
+import { MERGE_SHOUTS, previewMergeShout } from "../pullRequest/mergeShout";
 import { Button } from "../ui/button";
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
@@ -27,7 +29,7 @@ export function LabsSettingsPanel() {
         <SimlockHostsRow />
       </SettingsSection>
       <SettingsSection id="ari" title="Ari">
-        <ShipItSoundRow />
+        <MergeShoutRow />
         <ThreadFlagsRow />
         <LibraryLinksRow />
       </SettingsSection>
@@ -36,19 +38,41 @@ export function LabsSettingsPanel() {
   );
 }
 
-function ShipItSoundRow() {
+function MergeShoutRow() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
+  const shout = MERGE_SHOUTS[settings.ariMergeShout];
   return (
     <SettingsRow
       {...searchableSetting("ari-ship-it-sound")}
-      description="Play a “ship it” shout when you merge a pull request."
+      description="What the merge button shouts when you merge a pull request."
       control={
-        <Switch
-          checked={settings.ariShipItSoundEnabled}
-          onCheckedChange={(checked) => updateSettings({ ariShipItSoundEnabled: Boolean(checked) })}
-          aria-label="Ship it sound"
-        />
+        <Select
+          value={settings.ariShipItSoundEnabled ? settings.ariMergeShout : "off"}
+          onValueChange={(value) => {
+            if (value === "off") {
+              updateSettings({ ariShipItSoundEnabled: false });
+            } else if (value === "ship-it" || value === "bomboclaat") {
+              updateSettings({ ariShipItSoundEnabled: true, ariMergeShout: value });
+              previewMergeShout(value);
+            }
+          }}
+        >
+          <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Merge shout">
+            <SelectValue>{settings.ariShipItSoundEnabled ? shout.name : "Off"}</SelectValue>
+          </SelectTrigger>
+          <SelectPopup align="end" alignItemWithTrigger={false}>
+            <SelectItem hideIndicator value="ship-it">
+              {MERGE_SHOUTS["ship-it"].name}
+            </SelectItem>
+            <SelectItem hideIndicator value="bomboclaat">
+              {MERGE_SHOUTS.bomboclaat.name}
+            </SelectItem>
+            <SelectItem hideIndicator value="off">
+              Off
+            </SelectItem>
+          </SelectPopup>
+        </Select>
       }
     />
   );

@@ -481,9 +481,9 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "ari-ship-it-sound",
-    title: "Ship it sound",
+    title: "Merge shout",
     to: "/settings/labs",
-    searchTerms: ["ari livemap merge pull request sound audio shout"],
+    searchTerms: ["ari livemap merge pull request sound audio ship it bomboclaat bomboclaaaat"],
   },
   {
     id: "ari-thread-flags",

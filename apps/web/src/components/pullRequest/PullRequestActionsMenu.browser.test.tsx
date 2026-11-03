@@ -25,6 +25,7 @@ vi.mock(import("~/state/server"), async () => {
   return { primaryServerKeybindingsAtom: Atom.make([]) } as never;
 });
 vi.mock(import("./PullRequestThreadLinks"), () => ({ PullRequestThreadLinks: () => null }));
+vi.mock(import("./mergeShout"), () => ({ useMergeShoutLabel: () => "Ship it" }) as never);
 vi.mock(
   import("./PullRequestDetailActions"),
   () => ({ ActOnEnvironmentPicker: () => null }) as never,
