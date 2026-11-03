@@ -1,3 +1,4 @@
+import { AriProvenanceBadge } from "./AriProvenanceBadge";
 import type {
   EditorId,
   EnvironmentId,
@@ -162,6 +163,7 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
         return (
           <>
             <div className="group/details-items">
+              <AriProvenanceBadge environmentId={props.environmentId} threadId={props.threadId} />
               {show.environment || show.openIn || show.scripts ? (
                 <ThreadDetailsSection
                   headingId="thread-details-workspace-heading"

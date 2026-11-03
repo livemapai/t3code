@@ -1,3 +1,5 @@
+import { AriProvenanceBadge } from "./AriProvenanceBadge";
+import { EnvironmentId, ThreadId } from "@t3tools/contracts";
 import { useMemo } from "react";
 import { AppBar } from "../../components/ui/AppBar";
 import { ScreenHeaderButton } from "../../components/ui/ScreenHeaderButton";
@@ -103,6 +105,12 @@ export function ThreadHeader(
         hideBottomBorder
         compact={composerKeyboardActive}
       />
+      {!props.draft && (
+        <AriProvenanceBadge
+          environmentId={EnvironmentId.make(String(props.gitControls.environmentId))}
+          threadId={ThreadId.make(String(props.gitControls.threadId))}
+        />
+      )}
       {native.fallback}
     </>
   );

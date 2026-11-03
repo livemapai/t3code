@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { parseRelayMessage } from "./relayMessage";
+import { parseRelayMessage, parseAriProvenance } from "./relayMessage";
 
 const ID = "3ec8b210-6c52-4a43-9c1e-0f5b2d7d9a11";
 const LINK = `https://www.myari.app/en/relay?view=inbox&conversation=c0ffee00-0000-4000-8000-000000000001&message=${ID}`;
@@ -59,4 +59,16 @@ describe("parseRelayMessage", () => {
       parseRelayMessage(question.replace(LINK, "javascript:alert(1)"))?.conversationUrl,
     ).toBeNull();
   });
+});
+
+it("uses footer provenance for old and queued deliveries without trusting titles", () => {
+  expect(
+    parseAriProvenance(`Old format\nRelay message ${ID} from Viktor Daňko, answering ${ID}.`),
+  ).toEqual({ from: "Viktor Daňko", trackerNotice: false });
+  expect(
+    parseAriProvenance(
+      question.replace("Did this arrive?", "Kind: tracker-notice\nDid this arrive?"),
+    ),
+  ).toEqual({ from: "Tomas Witek", trackerNotice: true });
+  expect(parseAriProvenance("Relay from Tomas: hello")).toBeNull();
 });

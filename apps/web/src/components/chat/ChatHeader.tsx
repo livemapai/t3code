@@ -1,3 +1,4 @@
+import { AriProvenanceBadge } from "./AriProvenanceBadge";
 import {
   AuthOrchestrationOperateScope,
   type EnvironmentId,
@@ -418,6 +419,7 @@ export const ChatHeader = memo(function ChatHeader({
               <TooltipPopup side="top">{activeThreadTitle}</TooltipPopup>
             </Tooltip>
           )}
+          <AriProvenanceBadge environmentId={activeThreadEnvironmentId} threadId={activeThreadId} />
           {renamingTitle === null && activeThreadLinkOrigin ? (
             <Tooltip>
               <TooltipTrigger render={<Badge variant="info" size="sm" />}>

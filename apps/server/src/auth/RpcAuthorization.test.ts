@@ -1,3 +1,4 @@
+import { AuthAriReadScope } from "@t3tools/contracts";
 import {
   AuthEnvironmentMaintainScope,
   AuthDiagnosticsReadScope,
@@ -31,6 +32,9 @@ import {
 import * as RpcAuthorization from "./RpcAuthorization.ts";
 
 describe("RPC authorization scopes", () => {
+  it("requires Ari read independently of thread access", () => {
+    expect(requiredScopeForRpcMethod(WS_METHODS.ariSubscribe)).toBe(AuthAriReadScope);
+  });
   it("declares exactly one scope for every RPC in the server group", () => {
     expect(new Set(Object.keys(RPC_REQUIRED_SCOPES))).toEqual(new Set(WsRpcGroup.requests.keys()));
   });

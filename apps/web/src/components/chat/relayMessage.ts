@@ -1,3 +1,4 @@
+import { ariMessageMarker } from "@t3tools/contracts";
 export interface RelayMessage {
   readonly kind: "question" | "answer";
   /** The teammate who sent it, or this person's own name for a message from another of their threads. */
@@ -49,4 +50,12 @@ function isWebUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Plain message text is forgeable; this marker grants no authority.
+export function parseAriProvenance(text: string): { from: string; trackerNotice: boolean } | null {
+  const marker = ariMessageMarker(text);
+  if (!marker) return null;
+  const body = parseRelayMessage(text)?.body ?? text;
+  return { from: marker.from, trackerNotice: body.split(/\r?\n/, 1)[0] === "Kind: tracker-notice" };
 }

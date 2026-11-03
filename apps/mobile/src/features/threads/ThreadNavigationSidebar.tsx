@@ -1,3 +1,4 @@
+import { AriAttention } from "../settings/AriAttention";
 import { useActiveNewTask } from "../../state/active-new-task";
 import { ThreadUndoNotice } from "../home/ThreadUndoNotice";
 import { useAndroidControlSizing } from "../../components/ui/useAndroidControlSizing";
@@ -784,6 +785,7 @@ function ThreadNavigationSidebarPane(
       // Android fills its pane, which animates its width while a hinge resizes the split.
       style={Platform.OS === "android" ? undefined : { width: props.width }}
     >
+      <AriAttention currentEnvironmentId={options.selectedEnvironmentId} />
       <View
         className="flex-1"
         style={

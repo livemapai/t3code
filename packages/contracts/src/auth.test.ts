@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import * as Schema from "effect/Schema";
 
 import {
+  AuthAriReadScope,
   AuthEnvironmentScopes,
   AuthEnvironmentScope,
   authScopeRequiredResponse,
@@ -129,4 +130,17 @@ describe("authorization grants", () => {
   ] as const)("sessionGrantsScope accepts $label", ({ session, scope, expected }) => {
     expect(sessionGrantsScope(session, scope)).toBe(expected);
   });
+});
+
+it("requires an explicit Ari grant, including for guests with thread read access", () => {
+  expect(AuthStandardClientScopes).toContain(AuthAriReadScope);
+  expect(
+    sessionGrantsScope(
+      { authenticated: true, permissions: ["orchestration:read"] },
+      AuthAriReadScope,
+    ),
+  ).toBe(false);
+  expect(
+    sessionGrantsScope({ authenticated: true, permissions: [AuthAriReadScope] }, AuthAriReadScope),
+  ).toBe(true);
 });
