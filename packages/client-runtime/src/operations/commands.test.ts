@@ -582,6 +582,6 @@ describe("V2 environment commands", () => {
         ["flag:later", true],
         ["flag:later", false],
       ]);
-    }).pipe(Effect.provide(layerTestCrypto)),
+    }).pipe(Effect.provide(layerTestRandom)),
   );
 });

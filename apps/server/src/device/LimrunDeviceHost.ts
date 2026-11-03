@@ -12,7 +12,7 @@ import {
   type LimrunDeviceHostConfig,
 } from "@t3tools/contracts";
 import * as Clock from "effect/Clock";
-import * as Crypto from "effect/Crypto";
+import * as Digest from "effect/crypto/Digest";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";
 import * as Hex from "effect/encoding/Hex";
@@ -128,7 +128,7 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
   const path = yield* Path.Path;
   const server = yield* ServerConfig.ServerConfig;
   const runner = yield* ProcessRunner.ProcessRunner;
-  const crypto = yield* Crypto.Crypto;
+  const crypto = yield* Digest.Digest;
   // agent-device reaches Limrun's Android emulators through a local adb.
   const sdk = yield* androidSdk;
   const environment = deviceHostEnvironment(
@@ -152,7 +152,7 @@ export const make = Effect.fn("LimrunDeviceHost.make")(function* (config: Limrun
     .pipe(Effect.orElseSucceed(() => server.stateDir))).trim();
   const owner = Hex.encode(
     yield* crypto
-      .digest("SHA-256", new TextEncoder().encode(`${serverId}\u0000${hostId}`))
+      .digest(Digest.sha256, new TextEncoder().encode(`${serverId}\u0000${hostId}`))
       .pipe(Effect.orDie),
   ).slice(0, 32);
   const labels = { [OWNER_LABEL]: owner };

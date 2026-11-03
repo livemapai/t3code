@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type { LimrunDeviceHostConfig } from "@t3tools/contracts";
 import * as Effect from "effect/Effect";
@@ -116,7 +117,7 @@ const fakeLimrun = (options: { readonly leftovers?: ReadonlyArray<FakeInstance> 
 const layer = Layer.mergeAll(
   ProcessRunner.layer,
   ServerConfig.layerTest(process.cwd(), { prefix: "t3-limrun-host-" }),
-).pipe(Layer.provideMerge(NodeServices.layer));
+).pipe(Layer.provideMerge(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer)));
 
 const makeHost = (
   limrun: ReturnType<typeof fakeLimrun>,
