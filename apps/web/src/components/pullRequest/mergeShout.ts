@@ -14,7 +14,9 @@ export const MERGE_SHOUTS: Record<
 };
 
 export function useMergeShoutLabel(): string {
-  return MERGE_SHOUTS[useClientSettings((settings) => settings.ariMergeShout)].label;
+  return useClientSettings((settings) =>
+    settings.ariMergeSoundEnabled ? MERGE_SHOUTS[settings.ariMergeShout].label : "Confirm merge?",
+  );
 }
 
 export function previewMergeShout(shout: ClientSettings["ariMergeShout"]): void {
@@ -23,5 +25,5 @@ export function previewMergeShout(shout: ClientSettings["ariMergeShout"]): void 
 
 export function playMergeShout(): void {
   const settings = getClientSettings();
-  if (settings.ariShipItSoundEnabled) previewMergeShout(settings.ariMergeShout);
+  if (settings.ariMergeSoundEnabled) previewMergeShout(settings.ariMergeShout);
 }

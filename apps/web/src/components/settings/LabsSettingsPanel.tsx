@@ -48,18 +48,18 @@ function MergeShoutRow() {
       description="What the merge button shouts when you merge a pull request."
       control={
         <Select
-          value={settings.ariShipItSoundEnabled ? settings.ariMergeShout : "off"}
+          value={settings.ariMergeSoundEnabled ? settings.ariMergeShout : "off"}
           onValueChange={(value) => {
             if (value === "off") {
-              updateSettings({ ariShipItSoundEnabled: false });
+              updateSettings({ ariMergeSoundEnabled: false });
             } else if (value === "ship-it" || value === "bomboclaat") {
-              updateSettings({ ariShipItSoundEnabled: true, ariMergeShout: value });
+              updateSettings({ ariMergeSoundEnabled: true, ariMergeShout: value });
               previewMergeShout(value);
             }
           }}
         >
           <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Merge shout">
-            <SelectValue>{settings.ariShipItSoundEnabled ? shout.name : "Off"}</SelectValue>
+            <SelectValue>{settings.ariMergeSoundEnabled ? shout.name : "Off"}</SelectValue>
           </SelectTrigger>
           <SelectPopup align="end" alignItemWithTrigger={false}>
             <SelectItem hideIndicator value="ship-it">

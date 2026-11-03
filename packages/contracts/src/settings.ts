@@ -485,7 +485,7 @@ export const ClientSettingsSchema = Schema.Struct({
     Schema.withDecodingDefault(Effect.succeed(false)),
   ),
   // Livemap fork features, switched in Settings > Labs > Ari.
-  ariShipItSoundEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  ariMergeSoundEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   ariMergeShout: Schema.Literals(["ship-it", "bomboclaat"]).pipe(
     Schema.withDecodingDefault(Effect.succeed("ship-it")),
   ),
@@ -1829,7 +1829,7 @@ export const ClientSettingsPatch = Schema.Struct({
   showSkillsInSlashMenu: Schema.optionalKey(Schema.Boolean),
   boringSidebarEnabled: Schema.optionalKey(Schema.Boolean),
   boringSidebarMultilineRows: Schema.optionalKey(Schema.Boolean),
-  ariShipItSoundEnabled: Schema.optionalKey(Schema.Boolean),
+  ariMergeSoundEnabled: Schema.optionalKey(Schema.Boolean),
   ariMergeShout: Schema.optionalKey(Schema.Literals(["ship-it", "bomboclaat"])),
   ariThreadFlagsEnabled: Schema.optionalKey(Schema.Boolean),
   ariLibraryLinksInAppEnabled: Schema.optionalKey(Schema.Boolean),

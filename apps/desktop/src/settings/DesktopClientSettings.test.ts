@@ -65,7 +65,7 @@ const clientSettings: ClientSettings = {
   sidebarThreadSortOrder: "created_at",
   boringSidebarEnabled: false,
   boringSidebarMultilineRows: false,
-  ariShipItSoundEnabled: true,
+  ariMergeSoundEnabled: false,
   ariMergeShout: "ship-it",
   ariThreadFlagsEnabled: true,
   ariLibraryLinksInAppEnabled: true,
