@@ -34,16 +34,13 @@ import {
   AlarmClockIcon,
   AlarmClockOffIcon,
   ArrowRightLeftIcon,
-  BookmarkIcon,
   CheckIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   CircleDashedIcon,
   CircleDotDashedIcon,
   ClockIcon,
-  FlagIcon,
   GitBranchIcon,
-  HammerIcon,
   MessageCircleQuestionIcon,
   PinIcon,
   PinOffIcon,
@@ -113,6 +110,7 @@ import { ProviderInstanceIcon } from "../chat/ProviderInstanceIcon";
 import { getTriggerDisplayModelName } from "../chat/providerIconUtils";
 import { shouldShowInstanceBadge, type ProviderInstanceEntry } from "../../providerInstances";
 import { useThreadRunningTerminalIds } from "../../state/terminalSessions";
+import { FLAG_ICONS, FLAG_ICON_CLASSES } from "./SidebarFlagFilter";
 import { InlineButton } from "../ui/button";
 import { Kbd } from "../ui/kbd";
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuShortcut, MenuTrigger } from "../ui/menu";
@@ -1131,20 +1129,14 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
 
   const flagsEnabled = useClientSettings((settings) => settings.ariThreadFlagsEnabled);
   const flag = flagsEnabled ? threadFlagOf(thread.source.tags) : null;
-  const FlagStatusIcon =
-    flag === "urgent" ? FlagIcon : flag === "later" ? BookmarkIcon : HammerIcon;
+  const FlagStatusIcon = flag === null ? null : FLAG_ICONS[flag];
   const flagIndicator =
-    flag === null ? null : (
+    flag === null || FlagStatusIcon === null ? null : (
       <FlagStatusIcon
         role="img"
         aria-label={`Flagged ${THREAD_FLAG_LABELS[flag]}`}
         data-testid={`sidebar-flag-${flag}`}
-        className={cn(
-          "size-3 shrink-0",
-          flag === "urgent" && "text-error",
-          flag === "later" && "text-secondary-label",
-          flag === "working" && "text-warning",
-        )}
+        className={cn("size-3 shrink-0", FLAG_ICON_CLASSES[flag])}
       />
     );
 

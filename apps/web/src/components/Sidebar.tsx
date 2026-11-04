@@ -31,7 +31,12 @@ import {
   effectiveSnoozed,
   threadWokeAt,
 } from "@t3tools/client-runtime/state/thread-settled";
-import { THREAD_FLAGS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
+import {
+  THREAD_FLAGS,
+  matchesThreadFlagFilter,
+  threadFlagOf,
+  type ThreadFlagFilter,
+} from "@t3tools/client-runtime/state/thread-flags";
 import {
   createInboxReturnTracker,
   isThreadWorking,
@@ -258,6 +263,7 @@ import {
 } from "./ui/combobox";
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
+import { SidebarFlagFilter } from "./sidebar/SidebarFlagFilter";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { TooltipProvider } from "./ui/tooltip";
 import { composerDraftHasUserContent, DraftId, useComposerDraftStore } from "../composerDraftStore";
@@ -353,6 +359,7 @@ type SidebarOptimisticDrop = {
 interface SidebarThreadPartitionInput {
   readonly threads: readonly EnvironmentThreadShell[];
   readonly scopedProjectKeys: ReadonlySet<string> | null;
+  readonly flagFilter: ThreadFlagFilter | null;
   /** Tasks linked environments run for a listed thread; they show under it. */
   readonly delegatedUnderParent: ReadonlySet<string>;
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
@@ -421,6 +428,7 @@ function routeThreadOnly(
 function useSidebarThreads(input: {
   readonly projectScopeKey: string | null;
   readonly scopedProjectKeys: ReadonlySet<string> | null;
+  readonly flagFilter: ThreadFlagFilter | null;
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
   readonly connectedEnvironmentIds: readonly EnvironmentId[];
   readonly optimisticDrop: SidebarOptimisticDrop | null;
@@ -435,6 +443,7 @@ function useSidebarThreads(input: {
   const {
     projectScopeKey,
     scopedProjectKeys,
+    flagFilter,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -497,6 +506,7 @@ function useSidebarThreads(input: {
   const partition = partitionSidebarThreads({
     threads,
     scopedProjectKeys,
+    flagFilter,
     delegatedUnderParent,
     serverConfigs,
     connectedEnvironmentIds,
@@ -634,6 +644,7 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
   const {
     threads,
     scopedProjectKeys,
+    flagFilter,
     delegatedUnderParent,
     serverConfigs,
     optimisticDrop,
@@ -642,7 +653,11 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
     disconnectedEnvironmentIds,
   } = input;
   const preciseNow = new Date().toISOString();
-  const visible = filterSidebarV2VisibleThreads(threads, scopedProjectKeys, delegatedUnderParent);
+  const visible = filterSidebarV2VisibleThreads(
+    threads,
+    scopedProjectKeys,
+    delegatedUnderParent,
+  ).filter((thread) => matchesThreadFlagFilter(thread.source.tags, flagFilter));
   const inboxObservation = inboxReturns.observe(workingShelfEnabled ? threads : null);
   const pinned: EnvironmentThreadShell[] = [];
   const active: EnvironmentThreadShell[] = [];
@@ -1046,6 +1061,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const [optimisticDrop, setOptimisticDrop] = useState<SidebarOptimisticDrop | null>(null);
   const threadSearchInputRef = useRef<HTMLInputElement>(null);
   const [threadSearchQuery, setThreadSearchQuery] = useState("");
+  const flagsEnabled = useClientSettings((s) => s.ariThreadFlagsEnabled);
+  const [flagFilter, setFlagFilter] = useState<ThreadFlagFilter | null>(null);
   const [searchHighlightKey, setSearchHighlightKey] = useState<string | null>(null);
   const connectedEnvironmentIds = useConnectedEnvironmentIds();
   const queuePendingFileDrop = useSidebarPendingFileDropStore((s) => s.queuePendingFileDrop);
@@ -1352,6 +1369,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   } = useSidebarThreads({
     projectScopeKey,
     scopedProjectKeys,
+    flagFilter: flagsEnabled ? flagFilter : null,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -3018,6 +3036,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             <SidebarThreadHeader
               searchFieldRef={headerSearchRef}
               hasProjects={projectGroups.length > 0}
+              flagFilter={
+                flagsEnabled ? (
+                  <SidebarFlagFilter value={flagFilter} onChange={setFlagFilter} />
+                ) : null
+              }
               projectScope={
                 <Combobox
                   items={projectScopeItems}

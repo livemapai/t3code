@@ -14,3 +14,15 @@ export function threadFlagOf(tags: ReadonlyArray<string> | undefined): ThreadFla
   if (tags === undefined) return null;
   return THREAD_FLAGS.find((flag) => tags.includes(threadFlagTag(flag))) ?? null;
 }
+
+/** A sidebar filter on flags: one flag, or `any` for every flagged thread. */
+export type ThreadFlagFilter = ThreadFlag | "any";
+
+export function matchesThreadFlagFilter(
+  tags: ReadonlyArray<string> | undefined,
+  filter: ThreadFlagFilter | null,
+): boolean {
+  if (filter === null) return true;
+  const flag = threadFlagOf(tags);
+  return filter === "any" ? flag !== null : flag === filter;
+}
