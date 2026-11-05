@@ -20,6 +20,7 @@ import {
   type RuntimeMode,
   type ScheduledTaskId,
   ThreadId,
+  type ThreadTag,
 } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
@@ -103,6 +104,7 @@ export interface ThreadLaunchInput {
   readonly linkOrigin?: OrchestrationV2LinkOrigin;
   /** The parent there, when that environment's agent delegated this as a task. */
   readonly delegatedFrom?: OrchestrationV2DelegatedFrom;
+  readonly tags?: ReadonlyArray<ThreadTag>;
 }
 
 type PreparationInput = Pick<
@@ -948,6 +950,7 @@ const make = Effect.gen(function* () {
                 ...(input.delegatedFrom === undefined
                   ? {}
                   : { delegatedFrom: input.delegatedFrom }),
+                ...(input.tags === undefined ? {} : { tags: input.tags }),
                 createdBy: input.createdBy,
                 creationSource: input.creationSource,
               });

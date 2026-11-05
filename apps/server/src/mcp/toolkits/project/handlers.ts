@@ -1,4 +1,6 @@
 import {
+  ARI_RELAY_THREAD_TAG,
+  ariMessageMarker,
   CommandId,
   MessageId,
   ThreadId,
@@ -247,6 +249,10 @@ export const layer = McpToolAccess.toLayer(ProjectToolkit, {
           ...(linkOrigin === undefined ? {} : { linkOrigin }),
           // Kept only alongside linkOrigin: thread.create drops it otherwise.
           ...(input.delegatedFrom === undefined ? {} : { delegatedFrom: input.delegatedFrom }),
+          // Display only: the marker is plain text, so the tag grants nothing.
+          ...(ariMessageMarker(input.message ?? "") === null
+            ? {}
+            : { tags: [ARI_RELAY_THREAD_TAG] }),
         }).pipe(
           Effect.mapError((error) => {
             if (error._tag === "AttachmentClaimError") {

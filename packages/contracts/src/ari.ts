@@ -36,6 +36,9 @@ export function ariAttentionTarget(state: AriState, primary: boolean): "site" | 
   return state.relay.boundHeld > 0 ? (primary ? "site" : "settings") : null;
 }
 
+/** The tag on a thread `ari relay` started, so clients can tell it from the person's own. */
+export const ARI_RELAY_THREAD_TAG = "relay";
+
 /** Text markers are forgeable and confer no permissions. */
 export function ariMessageMarker(text: string): { from: string } | null {
   const marker =

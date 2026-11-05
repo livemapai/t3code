@@ -23,6 +23,7 @@ import { scopeThreadRef, scopedThreadKey } from "@t3tools/client-runtime/environ
 import { useClientSettings } from "~/hooks/useSettings";
 import { THREAD_FLAG_LABELS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import {
+  ARI_RELAY_THREAD_TAG,
   AuthOrchestrationOperateScope,
   type EnvironmentId,
   type EnvironmentMachineKind,
@@ -33,6 +34,7 @@ import type { TimestampFormat } from "@t3tools/contracts/settings";
 import {
   AlarmClockIcon,
   AlarmClockOffIcon,
+  ArrowDownUpIcon,
   ArrowRightLeftIcon,
   CheckIcon,
   CircleAlertIcon,
@@ -1144,6 +1146,14 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
         className={cn("size-3 shrink-0", FLAG_ICON_CLASSES[flag])}
       />
     );
+  const relayIndicator = thread.source.tags?.includes(ARI_RELAY_THREAD_TAG) ? (
+    <ArrowDownUpIcon
+      role="img"
+      aria-label="Started by relay"
+      data-testid="sidebar-relay"
+      className="size-3 shrink-0 text-info-foreground"
+    />
+  ) : null;
 
   const remoteMachineIcon =
     isRemote && !showsScratchMachine ? (
@@ -1271,6 +1281,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {draftIndicator}
               {title}
               {multiline ? titleLineIcons : null}
+              {relayIndicator}
               {flagIndicator}
               {pinIndicator}
               {multiline ? null : terminalStatusIcon}
@@ -1456,6 +1467,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               ) : null}
               {/* Left of the status slot, the pin would slide when hover swaps the
                 label for the wider row controls. */}
+              {relayIndicator}
               {flagIndicator}
               {pinIndicator}
               {props.projectDisplayName ? (

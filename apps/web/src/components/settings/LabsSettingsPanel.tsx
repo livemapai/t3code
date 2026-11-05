@@ -4,9 +4,7 @@ import { managedCapabilityDenial } from "@t3tools/contracts";
 
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { useT3ConnectAuthPrompt } from "../clerk/useT3ConnectAuthPrompt";
-import { MERGE_SHOUTS, previewMergeShout } from "../pullRequest/mergeShout";
 import { Button } from "../ui/button";
-import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { ScopedSwitch } from "./ScopedSwitch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
@@ -28,91 +26,8 @@ export function LabsSettingsPanel() {
         <LinkedEnvironmentsRow />
         <SimlockHostsRow />
       </SettingsSection>
-      <SettingsSection id="ari" title="Ari">
-        <MergeShoutRow />
-        <ThreadFlagsRow />
-        <LibraryLinksRow />
-      </SettingsSection>
       <LegacyFeaturesSection />
     </SettingsPageContainer>
-  );
-}
-
-function MergeShoutRow() {
-  const settings = useScopedSettings();
-  const updateSettings = useUpdateScopedSettings();
-  const shout = MERGE_SHOUTS[settings.ariMergeShout];
-  return (
-    <SettingsRow
-      {...searchableSetting("ari-ship-it-sound")}
-      description="What the merge button shouts when you merge a pull request."
-      control={
-        <Select
-          value={settings.ariMergeSoundEnabled ? settings.ariMergeShout : "off"}
-          onValueChange={(value) => {
-            if (value === "off") {
-              updateSettings({ ariMergeSoundEnabled: false });
-            } else if (value === "ship-it" || value === "bomboclaat") {
-              updateSettings({ ariMergeSoundEnabled: true, ariMergeShout: value });
-              previewMergeShout(value);
-            }
-          }}
-        >
-          <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Merge shout">
-            <SelectValue>{settings.ariMergeSoundEnabled ? shout.name : "Off"}</SelectValue>
-          </SelectTrigger>
-          <SelectPopup align="end" alignItemWithTrigger={false}>
-            <SelectItem hideIndicator value="ship-it">
-              {MERGE_SHOUTS["ship-it"].name}
-            </SelectItem>
-            <SelectItem hideIndicator value="bomboclaat">
-              {MERGE_SHOUTS.bomboclaat.name}
-            </SelectItem>
-            <SelectItem hideIndicator value="off">
-              Off
-            </SelectItem>
-          </SelectPopup>
-        </Select>
-      }
-    />
-  );
-}
-
-function ThreadFlagsRow() {
-  const settings = useScopedSettings();
-  const updateSettings = useUpdateScopedSettings();
-  return (
-    <SettingsRow
-      {...searchableSetting("ari-thread-flags")}
-      description="Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar."
-      control={
-        <Switch
-          checked={settings.ariThreadFlagsEnabled}
-          onCheckedChange={(checked) => updateSettings({ ariThreadFlagsEnabled: Boolean(checked) })}
-          aria-label="Thread flags"
-        />
-      }
-    />
-  );
-}
-
-function LibraryLinksRow() {
-  const settings = useScopedSettings();
-  const updateSettings = useUpdateScopedSettings();
-  return (
-    <SettingsRow
-      {...searchableSetting("ari-library-links")}
-      description="Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally."
-      control={
-        <Switch
-          checked={settings.ariLibraryLinksInAppEnabled}
-          onCheckedChange={(checked) =>
-            updateSettings({ ariLibraryLinksInAppEnabled: Boolean(checked) })
-          }
-          aria-label="Open Ari Library links in the app"
-        />
-      }
-    />
   );
 }
 

@@ -4,7 +4,7 @@ import bomboclaatUrl from "../../assets/bomboclaat.mp3?url";
 import shipItUrl from "../../assets/ship-it.mp3?url";
 import { getClientSettings, useClientSettings } from "../../hooks/useSettings";
 
-/** What an armed merge button says, and what a landed merge sounds like (Labs > Ari). */
+/** What an armed merge button says, and what a landed merge sounds like (Settings > Ari). */
 export const MERGE_SHOUTS: Record<
   ClientSettings["ariMergeShout"],
   { name: string; label: string; soundUrl: string }

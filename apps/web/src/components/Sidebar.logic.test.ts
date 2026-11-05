@@ -30,6 +30,7 @@ import {
   type SidebarListItem,
   type SidebarListMarker,
   type SidebarSection,
+  isRelayShelfThread,
   resolveSidebarDropVerb,
   groupSidebarThreadsByProject,
   resolveSidebarFolderDot,
@@ -1086,6 +1087,36 @@ describe("Working shelf (beta)", () => {
         activeOrder: ["a1", "a2", "p1"],
       });
       expect(resolveSidebarDropVerb("active", "working")).toBeNull();
+    });
+
+    it("never drops into the Relay shelf, and keeps it out of the inbox order", () => {
+      const withRelay = [
+        ...items.slice(0, 7),
+        marker("relay-header"),
+        row("r1", "relay"),
+        ...items.slice(7),
+      ];
+      expect(resolveSidebarDropTarget(withRelay, "a1", "r1")).toBeNull();
+      expect(resolveSidebarDropTarget(withRelay, "p1", "a2")?.activeOrder).toEqual([
+        "a1",
+        "a2",
+        "p1",
+      ]);
+      expect(resolveSidebarDropVerb("active", "relay")).toBeNull();
+    });
+
+    it("keeps a relay thread in the Relay shelf except while it waits for the person", () => {
+      const quiet = {
+        source: { tags: ["relay"] },
+        hasPendingApprovals: false,
+        hasPendingUserInput: false,
+        pendingSubagentRequest: null,
+      };
+      expect(isRelayShelfThread(quiet)).toBe(true);
+      expect(isRelayShelfThread({ ...quiet, hasPendingApprovals: true })).toBe(false);
+      expect(isRelayShelfThread({ ...quiet, hasPendingUserInput: true })).toBe(false);
+      expect(isRelayShelfThread({ ...quiet, source: { tags: ["flag:urgent"] } })).toBe(false);
+      expect(isRelayShelfThread({ ...quiet, source: {} })).toBe(false);
     });
 
     it.each([

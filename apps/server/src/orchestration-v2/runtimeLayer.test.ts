@@ -2590,6 +2590,19 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           step,
         );
       }
+      const bornTaggedId = ThreadId.make("runtime-layer-lifecycle-born-tagged");
+      yield* orchestrator.dispatch({
+        ...create,
+        commandId: CommandId.make("runtime-layer-lifecycle-create-tagged"),
+        threadId: bornTaggedId,
+        tags: ["relay", "relay"],
+      });
+      assert.deepEqual(
+        (yield* orchestrator.getShellSnapshot()).threads.find(
+          (thread) => thread.id === bornTaggedId,
+        )?.tags,
+        ["relay"],
+      );
       const taggedShell = shellOf(yield* orchestrator.getShellSnapshot());
       // Tags are not activity, so the thread keeps its place in thread lists.
       assert.equal(
