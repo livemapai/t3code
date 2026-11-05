@@ -3,8 +3,14 @@ import { useSearch } from "@tanstack/react-router";
 import type { EnvironmentId } from "@t3tools/contracts";
 import { useEnvironments } from "../../state/environments";
 import { useAriState } from "../../state/ari";
+import { MERGE_SHOUTS, previewMergeShout } from "../pullRequest/mergeShout";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
+import { Switch } from "../ui/switch";
+import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
+import { searchableSetting } from "./settingsSearch";
+import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 
 function AriHost({ environmentId, label }: { environmentId: EnvironmentId; label: string }) {
   const query = useAriState(environmentId);
@@ -77,21 +83,124 @@ function AriHost({ environmentId, label }: { environmentId: EnvironmentId; label
     </section>
   );
 }
+function MergeShoutRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  const shout = MERGE_SHOUTS[settings.ariMergeShout];
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-ship-it-sound")}
+      description="What the merge button shouts when you merge a pull request."
+      control={
+        <Select
+          value={settings.ariMergeSoundEnabled ? settings.ariMergeShout : "off"}
+          onValueChange={(value) => {
+            if (value === "off") {
+              updateSettings({ ariMergeSoundEnabled: false });
+            } else if (value === "ship-it" || value === "bomboclaat") {
+              updateSettings({ ariMergeSoundEnabled: true, ariMergeShout: value });
+              previewMergeShout(value);
+            }
+          }}
+        >
+          <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Merge shout">
+            <SelectValue>{settings.ariMergeSoundEnabled ? shout.name : "Off"}</SelectValue>
+          </SelectTrigger>
+          <SelectPopup align="end" alignItemWithTrigger={false}>
+            <SelectItem hideIndicator value="ship-it">
+              {MERGE_SHOUTS["ship-it"].name}
+            </SelectItem>
+            <SelectItem hideIndicator value="bomboclaat">
+              {MERGE_SHOUTS.bomboclaat.name}
+            </SelectItem>
+            <SelectItem hideIndicator value="off">
+              Off
+            </SelectItem>
+          </SelectPopup>
+        </Select>
+      }
+    />
+  );
+}
+
+function ThreadFlagsRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-thread-flags")}
+      description="Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar."
+      control={
+        <Switch
+          checked={settings.ariThreadFlagsEnabled}
+          onCheckedChange={(checked) => updateSettings({ ariThreadFlagsEnabled: Boolean(checked) })}
+          aria-label="Thread flags"
+        />
+      }
+    />
+  );
+}
+
+function RelayShelfRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-relay-shelf")}
+      description="Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads."
+      control={
+        <Switch
+          checked={settings.ariRelayShelfEnabled}
+          onCheckedChange={(checked) => updateSettings({ ariRelayShelfEnabled: Boolean(checked) })}
+          aria-label="Relay section"
+        />
+      }
+    />
+  );
+}
+
+function LibraryLinksRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-library-links")}
+      description="Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally."
+      control={
+        <Switch
+          checked={settings.ariLibraryLinksInAppEnabled}
+          onCheckedChange={(checked) =>
+            updateSettings({ ariLibraryLinksInAppEnabled: Boolean(checked) })
+          }
+          aria-label="Open Ari Library links in the app"
+        />
+      }
+    />
+  );
+}
+
 export function AriSettings() {
   const { environments } = useEnvironments();
   const { machine } = useSearch({ from: "/_chat/settings" });
   return (
-    <div className="space-y-4 p-6">
-      <h1 className="text-xl font-semibold">Ari</h1>
-      {environments
-        .filter((environment) => !machine || environment.environmentId === machine)
-        .map((environment) => (
-          <AriHost
-            key={environment.environmentId}
-            environmentId={environment.environmentId}
-            label={environment.label}
-          />
-        ))}
-    </div>
+    <SettingsPageContainer>
+      <SettingsSection id="ari-features" title="Features">
+        <MergeShoutRow />
+        <ThreadFlagsRow />
+        <RelayShelfRow />
+        <LibraryLinksRow />
+      </SettingsSection>
+      <div className="space-y-4">
+        {environments
+          .filter((environment) => !machine || environment.environmentId === machine)
+          .map((environment) => (
+            <AriHost
+              key={environment.environmentId}
+              environmentId={environment.environmentId}
+              label={environment.label}
+            />
+          ))}
+      </div>
+    </SettingsPageContainer>
   );
 }

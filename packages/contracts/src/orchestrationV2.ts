@@ -2930,6 +2930,7 @@ export const OrchestrationV2Command = Schema.Union([
         metadata: Schema.optional(OrchestrationV2ProviderThreadNativeMetadata),
       }),
     ),
+    tags: Schema.optional(Schema.Array(ThreadTag)),
   }),
   Schema.Struct({
     type: Schema.Literal("thread.archive"),

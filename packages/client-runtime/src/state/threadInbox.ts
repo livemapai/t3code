@@ -30,6 +30,31 @@ export function isThreadWorking(thread: WorkingThreadInput): boolean {
   return !(thread.interactionMode === "plan" && thread.hasActionableProposedPlan && runSettled);
 }
 
+type ActionableThreadInput = Pick<
+  EnvironmentThreadShell,
+  | "hasActionableProposedPlan"
+  | "hasPendingApprovals"
+  | "hasPendingUserInput"
+  | "pendingSubagentRequest"
+  | "interactionMode"
+  | "latestRun"
+  | "runtime"
+> &
+  Partial<Pick<EnvironmentThreadShell, "pendingGuestMessageCount">>;
+
+/** Whether the thread asks something of the person, or failed, so it belongs in front of them. */
+export function isThreadActionable(thread: ActionableThreadInput): boolean {
+  return (
+    thread.hasPendingApprovals ||
+    thread.hasPendingUserInput ||
+    thread.pendingSubagentRequest != null ||
+    (thread.pendingGuestMessageCount ?? 0) > 0 ||
+    (thread.interactionMode === "plan" && thread.hasActionableProposedPlan) ||
+    thread.runtime?.lastError != null ||
+    thread.latestRun?.status === "failed"
+  );
+}
+
 type InboxThreadInput = Pick<
   EnvironmentThreadShell,
   "id" | "environmentId" | "createdAt" | "unsettledAt" | "latestRun"
@@ -199,14 +224,7 @@ export function createInboxReturnTracker() {
                 thread.activeOrderKey,
               ])
             : null;
-        const actionable =
-          thread.hasPendingApprovals ||
-          thread.hasPendingUserInput ||
-          thread.pendingSubagentRequest != null ||
-          (thread.pendingGuestMessageCount ?? 0) > 0 ||
-          (thread.interactionMode === "plan" && thread.hasActionableProposedPlan) ||
-          thread.runtime?.lastError != null ||
-          thread.latestRun?.status === "failed";
+        const actionable = isThreadActionable(thread);
         const moved = previous !== undefined && previous.placement !== placement;
         const excluded =
           thread.archivedAt != null ||

@@ -370,6 +370,38 @@ it.effect("a launch retried with the same clientRequestId replays the first one"
   }),
 );
 
+it.effect("a launch that carries an ari relay message tags its thread", () =>
+  Effect.gen(function* () {
+    const launched: Array<ThreadLaunch.ThreadLaunchInput> = [];
+    const { projectId, dependencies } = clientLaunchHarness({
+      runtimeModeCeiling: "auto",
+      launched,
+    });
+    const toolkit = yield* ProjectToolkit.pipe(
+      Effect.provide(
+        McpToolAccess.HandlersLayer.layer(ProjectHandlers.layer).pipe(Layer.provide(dependencies)),
+      ),
+    );
+    const launch = (message: string) =>
+      toolkit
+        .handle("t3_thread_launch", { title: "Ada: which port?", projectId, message })
+        .pipe(Stream.unwrap, Stream.runCollect, Effect.provide(dependencies));
+    const id = "5f0302db-3552-4468-9672-48f1b977126a";
+
+    yield* launch(
+      [
+        "RELAY QUESTION from Ada. Not from Tomas, whom this thread works for.",
+        `--- question ${id} ---`,
+        "Which port does the dev server use?",
+        `--- end of question ${id} ---`,
+        `Relay message ${id} from Ada.`,
+      ].join("\n"),
+    );
+    yield* launch("Fix the bug");
+    expect(launched.map((input) => input.tags)).toEqual([["relay"], undefined]);
+  }),
+);
+
 it.effect("a launch key of any length or content gives a short id and never a defect", () =>
   Effect.gen(function* () {
     const launched: Array<ThreadLaunch.ThreadLaunchInput> = [];

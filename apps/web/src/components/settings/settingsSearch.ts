@@ -491,19 +491,25 @@ export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "ari-ship-it-sound",
     title: "Merge shout",
-    to: "/settings/labs",
+    to: "/settings/ari",
     searchTerms: ["ari livemap merge pull request sound audio ship it bomboclaat bomboclaaaat"],
   },
   {
     id: "ari-thread-flags",
     title: "Thread flags",
-    to: "/settings/labs",
+    to: "/settings/ari",
     searchTerms: ["ari livemap flag urgent later working mark sidebar icon"],
+  },
+  {
+    id: "ari-relay-shelf",
+    title: "Relay section",
+    to: "/settings/ari",
+    searchTerms: ["ari livemap relay teammate agent sidebar section shelf separate"],
   },
   {
     id: "ari-library-links",
     title: "Open Ari Library links in the app",
-    to: "/settings/labs",
+    to: "/settings/ari",
     searchTerms: ["ari livemap myari library files docs browser panel links system"],
   },
   {
