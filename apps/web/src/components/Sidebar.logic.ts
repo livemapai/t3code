@@ -4,6 +4,7 @@ import {
   resolveThreadWorkingStartedAt,
   type EnvironmentThreadShell,
 } from "@t3tools/client-runtime/state/models";
+import { isThreadActionable } from "@t3tools/client-runtime/state/thread-inbox";
 import { isShownUnderParent } from "@t3tools/client-runtime/state/threads";
 import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
 import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
@@ -173,24 +174,25 @@ export function useRetainedValue<T>(key: string | null, value: T | null): T | nu
 export const animateSidebarLayoutChanges: AnimateLayoutChanges = (args) =>
   args.isSorting ? defaultAnimateLayoutChanges(args) : false;
 
-// Snoozed rows cannot accept drops without a wake time. Working and Relay rows only drag out as chat context.
+type RelayShelfThreadInput = Parameters<typeof isThreadActionable>[0] &
+  Pick<EnvironmentThreadShell, "latestUserAuthoredMessageAt"> & {
+    readonly source: { readonly tags?: ReadonlyArray<string> | undefined };
+  };
 
-export type SidebarSection = "pinned" | "active" | "working" | "relay" | "snoozed" | "settled";
-
-type RelayShelfThreadInput = Pick<
-  EnvironmentThreadShell,
-  "hasPendingApprovals" | "hasPendingUserInput" | "pendingSubagentRequest"
-> & { readonly source: { readonly tags?: ReadonlyArray<string> | undefined } };
-
-/** A thread Ari relay started stays in the Relay shelf, except while it waits for the person. */
+/**
+ * A thread Ari relay started stays in the Relay shelf until it needs the person (a request, a
+ * failure) or they write in it themselves, which makes it theirs.
+ */
 export function isRelayShelfThread(thread: RelayShelfThreadInput): boolean {
   return (
     thread.source.tags?.includes(ARI_RELAY_THREAD_TAG) === true &&
-    !thread.hasPendingApprovals &&
-    !thread.hasPendingUserInput &&
-    thread.pendingSubagentRequest == null
+    thread.latestUserAuthoredMessageAt == null &&
+    !isThreadActionable(thread)
   );
 }
+
+// Snoozed rows cannot accept drops without a wake time. Working and Relay rows only drag out as chat context.
+export type SidebarSection = "pinned" | "active" | "working" | "relay" | "snoozed" | "settled";
 
 export function resolveSidebarThreadSection(input: {
   readonly snoozed: boolean;

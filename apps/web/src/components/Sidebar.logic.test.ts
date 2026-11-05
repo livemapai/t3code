@@ -1105,16 +1105,25 @@ describe("Working shelf (beta)", () => {
       expect(resolveSidebarDropVerb("active", "relay")).toBeNull();
     });
 
-    it("keeps a relay thread in the Relay shelf except while it waits for the person", () => {
+    it("keeps a relay thread in the Relay shelf until it needs the person or they write in it", () => {
       const quiet = {
         source: { tags: ["relay"] },
         hasPendingApprovals: false,
         hasPendingUserInput: false,
         pendingSubagentRequest: null,
-      };
+        hasActionableProposedPlan: false,
+        interactionMode: "default",
+        latestRun: null,
+        runtime: null,
+        latestUserAuthoredMessageAt: null,
+      } satisfies Parameters<typeof isRelayShelfThread>[0];
       expect(isRelayShelfThread(quiet)).toBe(true);
       expect(isRelayShelfThread({ ...quiet, hasPendingApprovals: true })).toBe(false);
       expect(isRelayShelfThread({ ...quiet, hasPendingUserInput: true })).toBe(false);
+      expect(isRelayShelfThread({ ...quiet, pendingGuestMessageCount: 1 })).toBe(false);
+      expect(
+        isRelayShelfThread({ ...quiet, latestUserAuthoredMessageAt: "2026-11-05T10:00:00.000Z" }),
+      ).toBe(false);
       expect(isRelayShelfThread({ ...quiet, source: { tags: ["flag:urgent"] } })).toBe(false);
       expect(isRelayShelfThread({ ...quiet, source: {} })).toBe(false);
     });

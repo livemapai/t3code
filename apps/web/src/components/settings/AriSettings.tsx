@@ -147,7 +147,7 @@ function RelayShelfRow() {
   return (
     <SettingsRow
       {...searchableSetting("ari-relay-shelf")}
-      description="Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that waits for you still shows with your threads."
+      description="Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads."
       control={
         <Switch
           checked={settings.ariRelayShelfEnabled}
