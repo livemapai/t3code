@@ -90,7 +90,7 @@ export function LimrunDeviceHostsSettings(props: { environmentId: EnvironmentId 
       title="Limrun"
       serverScoped
       settingKeys={["limrunDeviceHosts"]}
-      description="Run iOS Simulators and Android Emulators in Limrun's cloud from this environment. Instances bill the Limrun organization until they stop, so each host limits how many run and for how long. Editing or removing a host stops its running instances."
+      description="Run iOS Simulators and Android Emulators in Limrun's cloud. Instances bill the Limrun organization until they stop; each host caps how many run and for how long. Editing or removing a host stops them."
       control={
         <Button
           size="sm"
