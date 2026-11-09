@@ -1,4 +1,4 @@
-import { EnvironmentId, ThreadId } from "@t3tools/contracts";
+import type { ScopedThreadRef } from "@t3tools/contracts";
 import { AriProvenanceBadge } from "./AriProvenanceBadge";
 import { AppBar } from "../../components/ui/AppBar";
 import type { AppBarAction, AppBarMenu } from "../../components/ui/AppBar.types";
@@ -17,6 +17,8 @@ export function ThreadHeader(props: {
   readonly gitControls: ThreadGitControlsProps;
   readonly onReturnToThread?: () => void;
   readonly draft?: boolean;
+  /** Null until the server has the thread; reading detail earlier parks it as missing. */
+  readonly detailRef: ScopedThreadRef | null;
   readonly hasThreadCwd: boolean;
   readonly inspectorMode: ThreadInspectorMode | null;
   readonly onOpenFilesInspector: () => void;
@@ -62,10 +64,10 @@ export function ThreadHeader(props: {
         hideBottomBorder
         compact={composerKeyboardActive}
       />
-      {!props.draft && (
+      {props.detailRef !== null && (
         <AriProvenanceBadge
-          environmentId={EnvironmentId.make(String(props.gitControls.environmentId))}
-          threadId={ThreadId.make(String(props.gitControls.threadId))}
+          environmentId={props.detailRef.environmentId}
+          threadId={props.detailRef.threadId}
         />
       )}
     </>

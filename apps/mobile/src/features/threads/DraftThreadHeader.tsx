@@ -46,6 +46,7 @@ export function DraftThreadHeader(props: {
   return (
     <ThreadHeader
       draft
+      detailRef={null}
       title="New thread"
       subtitle=""
       hasThreadCwd={props.cwd !== null}
