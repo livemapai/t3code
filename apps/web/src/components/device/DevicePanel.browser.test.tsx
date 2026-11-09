@@ -231,3 +231,24 @@ describe("DevicePanel host probe", () => {
     await vi.waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
   });
 });
+
+describe("DevicePanel discovery warning", () => {
+  it("a dismissal hides only the cause it was made for", async () => {
+    setup();
+    const withCause = (detail: string): DeviceServiceState => ({
+      ...deviceState,
+      hostStatuses: { local: { status: "ready", detail, incompletePlatforms: ["ios"] } },
+    });
+    const warning = "iOS list on This Mac may be incomplete.";
+    currentState = withCause("first cause");
+    await using screen = await render(devicePanel(threadA), { container });
+
+    await screen.getByRole("button", { name: "Dismiss device warning for This Mac" }).click();
+    await screen.rerender(devicePanel(threadA));
+    await expect.element(screen.getByText(warning)).not.toBeInTheDocument();
+
+    currentState = withCause("second cause");
+    await screen.rerender(devicePanel(threadA));
+    await expect.element(screen.getByText(warning)).toBeVisible();
+  });
+});

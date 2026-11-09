@@ -419,7 +419,12 @@ export const ChatHeader = memo(function ChatHeader({
               <TooltipPopup side="top">{activeThreadTitle}</TooltipPopup>
             </Tooltip>
           )}
-          <AriProvenanceBadge environmentId={activeThreadEnvironmentId} threadId={activeThreadId} />
+          {isServerThread ? (
+            <AriProvenanceBadge
+              environmentId={activeThreadEnvironmentId}
+              threadId={activeThreadId}
+            />
+          ) : null}
           {renamingTitle === null && activeThreadLinkOrigin ? (
             <Tooltip>
               <TooltipTrigger render={<Badge variant="info" size="sm" />}>
