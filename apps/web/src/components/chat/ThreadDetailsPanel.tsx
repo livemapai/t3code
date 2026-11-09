@@ -163,7 +163,9 @@ export function ThreadDetailsPanel(props: ThreadDetailsPanelProps) {
         return (
           <>
             <div className="group/details-items">
-              <AriProvenanceBadge environmentId={props.environmentId} threadId={props.threadId} />
+              {props.isServerThread ? (
+                <AriProvenanceBadge environmentId={props.environmentId} threadId={props.threadId} />
+              ) : null}
               {show.environment || show.openIn || show.scripts ? (
                 <ThreadDetailsSection
                   headingId="thread-details-workspace-heading"
