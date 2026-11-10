@@ -391,6 +391,8 @@ export const VoiceTranscriptionDestination = Schema.Union([
 ]);
 export type VoiceTranscriptionDestination = typeof VoiceTranscriptionDestination.Type;
 
+export const AriMergeShout = Schema.Literals(["ship-it", "bomboclaat", "chime", "choo-choo"]);
+
 export const ClientSettingsSchema = Schema.Struct({
   notificationMode: NotificationMode.pipe(
     Schema.withDecodingDefault(Effect.succeed("off" as const)),
@@ -521,9 +523,7 @@ export const ClientSettingsSchema = Schema.Struct({
   ),
   // Livemap fork features, switched in Settings > Ari.
   ariMergeSoundEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
-  ariMergeShout: Schema.Literals(["ship-it", "bomboclaat"]).pipe(
-    Schema.withDecodingDefault(Effect.succeed("ship-it")),
-  ),
+  ariMergeShout: AriMergeShout.pipe(Schema.withDecodingDefault(Effect.succeed("ship-it"))),
   ariThreadFlagsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   ariRelayShelfEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   ariLibraryLinksInAppEnabled: Schema.Boolean.pipe(
@@ -2046,7 +2046,7 @@ export const ClientSettingsPatch = Schema.Struct({
   boringSidebarEnabled: Schema.optionalKey(Schema.Boolean),
   boringSidebarMultilineRows: Schema.optionalKey(Schema.Boolean),
   ariMergeSoundEnabled: Schema.optionalKey(Schema.Boolean),
-  ariMergeShout: Schema.optionalKey(Schema.Literals(["ship-it", "bomboclaat"])),
+  ariMergeShout: Schema.optionalKey(AriMergeShout),
   ariThreadFlagsEnabled: Schema.optionalKey(Schema.Boolean),
   ariRelayShelfEnabled: Schema.optionalKey(Schema.Boolean),
   ariLibraryLinksInAppEnabled: Schema.optionalKey(Schema.Boolean),

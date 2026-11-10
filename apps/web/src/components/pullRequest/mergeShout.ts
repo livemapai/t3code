@@ -1,6 +1,8 @@
 import type { ClientSettings } from "@t3tools/contracts";
 
 import bomboclaatUrl from "../../assets/bomboclaat.mp3?url";
+import chimeUrl from "../../assets/chime.mp3?url";
+import chooChooUrl from "../../assets/choo-choo.mp3?url";
 import shipItUrl from "../../assets/ship-it.mp3?url";
 import { getClientSettings, useClientSettings } from "../../hooks/useSettings";
 
@@ -11,6 +13,8 @@ export const MERGE_SHOUTS: Record<
 > = {
   "ship-it": { name: "Ship it", label: "SHHHHHIPPPPP ITTTTTTTTT 🚂🚂🚂🚂", soundUrl: shipItUrl },
   bomboclaat: { name: "Bomboclaaaat", label: "Bomboclaaaat", soundUrl: bomboclaatUrl },
+  chime: { name: "Chime", label: "Ding ding 🔔", soundUrl: chimeUrl },
+  "choo-choo": { name: "Choo-choo", label: "CHOOOO CHOOOOO 🚂🚃🚃🚃", soundUrl: chooChooUrl },
 };
 
 export function useMergeShoutLabel(): string {
