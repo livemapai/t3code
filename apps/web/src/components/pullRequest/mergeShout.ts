@@ -1,21 +1,27 @@
 import type { ClientSettings } from "@t3tools/contracts";
 
 import bomboclaatUrl from "../../assets/bomboclaat.mp3?url";
+import chimeUrl from "../../assets/chime.mp3?url";
+import chooChooUrl from "../../assets/choo-choo.mp3?url";
 import shipItUrl from "../../assets/ship-it.mp3?url";
 import { getClientSettings, useClientSettings } from "../../hooks/useSettings";
 
 /** What an armed merge button says, and what a landed merge sounds like (Settings > Ari). */
 export const MERGE_SHOUTS: Record<
   ClientSettings["ariMergeShout"],
-  { name: string; label: string; soundUrl: string }
+  { name: string; label?: string; soundUrl: string }
 > = {
   "ship-it": { name: "Ship it", label: "SHHHHHIPPPPP ITTTTTTTTT 🚂🚂🚂🚂", soundUrl: shipItUrl },
   bomboclaat: { name: "Bomboclaaaat", label: "Bomboclaaaat", soundUrl: bomboclaatUrl },
+  chime: { name: "Chime", soundUrl: chimeUrl },
+  "choo-choo": { name: "Choo-choo", soundUrl: chooChooUrl },
 };
 
 export function useMergeShoutLabel(): string {
-  return useClientSettings((settings) =>
-    settings.ariMergeSoundEnabled ? MERGE_SHOUTS[settings.ariMergeShout].label : "Confirm merge?",
+  return useClientSettings(
+    (settings) =>
+      (settings.ariMergeSoundEnabled && MERGE_SHOUTS[settings.ariMergeShout].label) ||
+      "Confirm merge?",
   );
 }
 

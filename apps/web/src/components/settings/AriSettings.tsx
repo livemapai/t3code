@@ -1,6 +1,7 @@
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useSearch } from "@tanstack/react-router";
-import type { EnvironmentId } from "@t3tools/contracts";
+import { AriMergeShout, type EnvironmentId } from "@t3tools/contracts";
+import { Schema } from "effect";
 import { useEnvironments } from "../../state/environments";
 import { useAriState } from "../../state/ari";
 import { MERGE_SHOUTS, previewMergeShout } from "../pullRequest/mergeShout";
@@ -83,6 +84,8 @@ function AriHost({ environmentId, label }: { environmentId: EnvironmentId; label
     </section>
   );
 }
+const isMergeShout = Schema.is(AriMergeShout);
+
 function MergeShoutRow() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
@@ -97,7 +100,7 @@ function MergeShoutRow() {
           onValueChange={(value) => {
             if (value === "off") {
               updateSettings({ ariMergeSoundEnabled: false });
-            } else if (value === "ship-it" || value === "bomboclaat") {
+            } else if (isMergeShout(value)) {
               updateSettings({ ariMergeSoundEnabled: true, ariMergeShout: value });
               previewMergeShout(value);
             }
@@ -107,12 +110,11 @@ function MergeShoutRow() {
             <SelectValue>{settings.ariMergeSoundEnabled ? shout.name : "Off"}</SelectValue>
           </SelectTrigger>
           <SelectPopup align="end" alignItemWithTrigger={false}>
-            <SelectItem hideIndicator value="ship-it">
-              {MERGE_SHOUTS["ship-it"].name}
-            </SelectItem>
-            <SelectItem hideIndicator value="bomboclaat">
-              {MERGE_SHOUTS.bomboclaat.name}
-            </SelectItem>
+            {Object.entries(MERGE_SHOUTS).map(([value, { name }]) => (
+              <SelectItem key={value} hideIndicator value={value}>
+                {name}
+              </SelectItem>
+            ))}
             <SelectItem hideIndicator value="off">
               Off
             </SelectItem>
