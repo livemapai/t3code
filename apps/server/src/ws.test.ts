@@ -2030,6 +2030,8 @@ it.effect("ACP session RPCs list a thread missing its history and repair it on i
         ).pipe(
           Layer.provide(services),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+          Layer.provide(Layer.mock(AriTeam.AriTeam)({})),
+          Layer.provide(Layer.mock(AriInvites.AriInvites)({})),
           Layer.merge(
             RpcAuthorization.layer([AuthOrchestrationReadScope, AuthOrchestrationOperateScope]),
           ),
