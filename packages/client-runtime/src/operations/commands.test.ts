@@ -39,6 +39,7 @@ import {
   archiveThread,
   interruptThreadTurn,
   setThreadFlag,
+  setThreadTeamShared,
   revertThreadCheckpoint,
   resumeThreadQueue,
   startThreadTurn,
@@ -560,7 +561,7 @@ describe("V2 environment commands", () => {
     }).pipe(Effect.provide(layerTestRandom)),
   );
 
-  it.effect("swaps a thread's flag by clearing the old one and setting the new one", () =>
+  it.effect("swaps a thread's flag and toggles its team listing through thread tags", () =>
     Effect.gen(function* () {
       const commands: OrchestrationV2Command[] = [];
       const supervisor = yield* makeSupervisor({ commands, projects: [], projectionRequests: [] });
@@ -576,11 +577,15 @@ describe("V2 environment commands", () => {
         provided,
       );
       yield* setThreadFlag({ threadId: v2ThreadId, flag: null, previous: "later" }).pipe(provided);
+      yield* setThreadTeamShared({ threadId: v2ThreadId, shared: true }).pipe(provided);
+      yield* setThreadTeamShared({ threadId: v2ThreadId, shared: false }).pipe(provided);
 
       expect(commands.map((c) => c.type === "thread.tag.set" && [c.tag, c.tagged])).toEqual([
         ["flag:urgent", false],
         ["flag:later", true],
         ["flag:later", false],
+        ["team", true],
+        ["team", false],
       ]);
     }).pipe(Effect.provide(layerTestRandom)),
   );

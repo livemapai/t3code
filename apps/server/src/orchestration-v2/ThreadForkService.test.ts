@@ -151,7 +151,7 @@ it.effect("resets a fork's pin, snooze, settle and delegation state but keeps it
       },
       historyOrigin: "v1_import",
       linkOrigin,
-      tags: ["private"],
+      tags: ["private", "team"],
     };
     const sourceRun = makeSourceRun("completed");
     const result = yield* planFork(sourceRun, {
@@ -169,6 +169,7 @@ it.effect("resets a fork's pin, snooze, settle and delegation state but keeps it
     assert.isUndefined(result.targetThread.delegatedFrom);
     assert.equal(result.targetThread.historyOrigin, "v1_import");
     assert.deepEqual(result.targetThread.linkOrigin, linkOrigin);
+    // Showing a thread to the team is consent for that thread alone.
     assert.deepEqual(result.targetThread.tags, ["private"]);
     assert.equal(result.targetThread.projectId, sourceThread.projectId);
     assert.equal(result.targetThread.providerInstanceId, sourceThread.providerInstanceId);

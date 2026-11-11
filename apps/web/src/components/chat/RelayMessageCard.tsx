@@ -1,4 +1,4 @@
-import { ArrowDownUpIcon } from "lucide-react";
+import { ArrowDownUpIcon, GitBranchIcon, MessagesSquareIcon } from "lucide-react";
 import { use } from "react";
 import ChatMarkdown from "../ChatMarkdown";
 import type { RelayMessage } from "./relayMessage";
@@ -40,7 +40,11 @@ export function RelayMessageCard({
             <p className="truncate text-sm">
               <span className="font-medium">{sender}</span>{" "}
               <span className="text-muted-foreground">
-                {relay.kind === "answer" ? "answered" : "asked"}
+                {relay.kind === "handoff"
+                  ? "handed over work"
+                  : relay.kind === "answer"
+                    ? "answered"
+                    : "asked"}
               </span>
             </p>
             <p className="flex items-center gap-1 text-muted-foreground text-xs">
@@ -67,6 +71,17 @@ export function RelayMessageCard({
             headingLevelOffset={MESSAGE_HEADING_LEVEL}
           />
         </div>
+        {relay.handoff || relay.sharedThread ? (
+          <div className="flex flex-col gap-1 border-t px-3 py-2 text-muted-foreground text-xs">
+            {relay.handoff ? <HandoffDetails handoff={relay.handoff} /> : null}
+            {relay.sharedThread ? (
+              <p className="flex min-w-0 items-center gap-1.5">
+                <MessagesSquareIcon aria-hidden className="size-3.5 shrink-0" />
+                <span className="truncate">Shared thread: {relay.sharedThread.title}</span>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <footer className="flex items-center gap-3 border-t px-3 py-2 text-muted-foreground text-xs">
           <code className="font-mono">{relay.id.slice(0, 8)}</code>
           {relay.conversationUrl ? (
@@ -82,5 +97,35 @@ export function RelayMessageCard({
         </footer>
       </article>
     </div>
+  );
+}
+
+function HandoffDetails({ handoff }: { handoff: NonNullable<RelayMessage["handoff"]> }) {
+  return (
+    <>
+      <p className="flex min-w-0 items-center gap-1.5">
+        <GitBranchIcon aria-hidden className="size-3.5 shrink-0" />
+        <span className="truncate">
+          {handoff.repository} · <code className="font-mono">{handoff.branch}</code>
+        </span>
+        {handoff.pullRequestUrl?.startsWith("https://") ? (
+          <a
+            href={handoff.pullRequestUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="ms-auto shrink-0 text-foreground hover:underline"
+          >
+            Pull request →
+          </a>
+        ) : null}
+      </p>
+      {handoff.workspace ? (
+        <p className="ps-5">
+          {handoff.workspace.kind === "worktree"
+            ? `Works in a new worktree of ${handoff.workspace.project}, waiting for you.`
+            : "Not on this branch: no checkout of it here could be used."}
+        </p>
+      ) : null}
+    </>
   );
 }

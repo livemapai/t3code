@@ -8,6 +8,7 @@ const baseState: ThreadActionMenuState = {
   projectFilter: null,
   isPinned: false,
   flag: null,
+  teamShared: false,
   isSettled: false,
   autoSettleEnabled: true,
   isSnoozed: false,
@@ -20,6 +21,7 @@ const baseState: ThreadActionMenuState = {
     snooze: true,
     pinning: true,
     flags: true,
+    teamThreads: true,
     titleRegeneration: true,
   },
   snoozePresets: [
@@ -37,6 +39,7 @@ describe("buildThreadActionMenuItems", () => {
         isPinned: reversed,
         isSettled: reversed,
         isSnoozed: reversed,
+        teamShared: reversed,
       });
       const expected = reversed
         ? [
@@ -44,6 +47,8 @@ describe("buildThreadActionMenuItems", () => {
             "unsettle",
             "unsnooze",
             "flag",
+            "team:hide",
+            "team:hand-over",
             "rename",
             "regenerate-title",
             "auto-settle",
@@ -55,6 +60,8 @@ describe("buildThreadActionMenuItems", () => {
             "settle",
             "snooze",
             "flag",
+            "team:show",
+            "team:hand-over",
             "rename",
             "regenerate-title",
             "auto-settle",
@@ -77,6 +84,20 @@ describe("buildThreadActionMenuItems", () => {
     });
     expect(items.find((item) => item.id === "archive")?.disabled).toBe(true);
     expect(items.find((item) => item.id === "turn-into-project")?.disabled).toBe(true);
+  });
+
+  it.each([
+    [false, []],
+    [true, ["team:hide"]],
+  ])("with Team threads off, a thread shown to the team (%s) offers %j", (teamShared, offered) => {
+    const items = buildThreadActionMenuItems({
+      ...baseState,
+      teamShared,
+      supports: { ...baseState.supports, teamThreads: false },
+    });
+    expect(items.filter((item) => item.id.startsWith("team:")).map((item) => item.id)).toEqual(
+      offered,
+    );
   });
 
   it("checks the thread's current flag", () => {

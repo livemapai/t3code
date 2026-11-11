@@ -19,8 +19,10 @@ import {
   applyGuestStreamEvent,
   formatGuestExpiry,
   guestFilesProblem,
+  guestJoinHash,
   initialGuestStreamState,
   inviteShareId,
+  readGuestHash,
   parseGuestStreamEvent,
   unplacedGuestMessages,
   type GuestStreamState,
@@ -246,6 +248,15 @@ describe("inviteShareId", () => {
     expect(inviteShareId("no-signature")).toBeNull();
     expect(inviteShareId(".sig")).toBeNull();
     expect(inviteShareId("")).toBeNull();
+  });
+
+  it("reads a name a link carries after the credential, for the name field only", () => {
+    const credential = "k3J9xQ2mT8vL5nR1pW7yZa.sig";
+    expect(readGuestHash(`#${credential}`)).toEqual({ credential, name: "" });
+    const named = `#${guestJoinHash(credential, "Anna & Bo Nováková")}`;
+    expect(readGuestHash(named)).toEqual({ credential, name: "Anna & Bo Nováková" });
+    expect(readGuestHash(`#${guestJoinHash(credential, "x".repeat(60))}`).name).toHaveLength(40);
+    expect(readGuestHash("#%E0%A4%A")).toEqual({ credential: "", name: "" });
   });
 });
 

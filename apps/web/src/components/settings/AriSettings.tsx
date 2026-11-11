@@ -161,6 +161,26 @@ function RelayShelfRow() {
   );
 }
 
+function TeamThreadsRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      serverScoped
+      {...searchableSetting("ari-team-threads")}
+      settingKeys={["ariTeamThreadsEnabled"]}
+      description="Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked."
+      control={
+        <Switch
+          checked={settings.ariTeamThreadsEnabled}
+          onCheckedChange={(checked) => updateSettings({ ariTeamThreadsEnabled: Boolean(checked) })}
+          aria-label="Team threads"
+        />
+      }
+    />
+  );
+}
+
 function LibraryLinksRow() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
@@ -190,6 +210,7 @@ export function AriSettings() {
         <MergeShoutRow />
         <ThreadFlagsRow />
         <RelayShelfRow />
+        <TeamThreadsRow />
         <LibraryLinksRow />
       </SettingsSection>
       <div className="space-y-4">

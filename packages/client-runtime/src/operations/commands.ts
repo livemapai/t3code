@@ -2,6 +2,7 @@ import { remapComposerContextAttachments } from "@t3tools/shared/composerContext
 import { threadFlagTag, type ThreadFlag } from "../state/threadFlags.ts";
 import {
   type ThreadLinkedPullRequest,
+  ARI_TEAM_THREAD_TAG,
   CommandId,
   CheckpointId,
   CheckpointScopeId,
@@ -552,6 +553,21 @@ export const setThreadFlag = Effect.fn("EnvironmentCommands.setThreadFlag")(func
         tagged: true,
       })
     : cleared;
+});
+
+export interface SetThreadTeamSharedInput extends ThreadCommandInput {
+  readonly shared: boolean;
+}
+export const setThreadTeamShared = Effect.fn("EnvironmentCommands.setThreadTeamShared")(function* (
+  input: SetThreadTeamSharedInput,
+) {
+  return yield* dispatch({
+    type: "thread.tag.set",
+    commandId: yield* allocateCommandId({}),
+    threadId: input.threadId,
+    tag: ARI_TEAM_THREAD_TAG,
+    tagged: input.shared,
+  });
 });
 
 export const reorderPinnedThread = Effect.fn("EnvironmentCommands.reorderPinnedThread")(function* (

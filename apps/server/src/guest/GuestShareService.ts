@@ -144,6 +144,16 @@ export class GuestShareService extends Context.Service<
     readonly create: (
       input: GuestShareCreateInput,
     ) => Effect.Effect<GuestShareCreateResult, GuestShareCreateError>;
+    /**
+     * The link of the thread's current share, rebuilt from its id, while it still opens and no
+     * guest has used it, with the thread's title; none otherwise.
+     */
+    readonly inviteLink: (
+      threadId: ThreadId,
+      shareId: GuestShareId,
+    ) => Effect.Effect<
+      Option.Option<{ readonly url: string; readonly title: string; readonly expiresAt: string }>
+    >;
     /** Spends an invite and returns the session token for the guest's cookie. */
     readonly redeem: (
       request: GuestRedeemRequest,
@@ -243,6 +253,8 @@ const make = Effect.gen(function* () {
   // signed claims.
   const signInvite = (shareId: GuestShareId) =>
     inviteSignature(shareId).pipe(Effect.map((signature) => `${shareId}.${signature}`));
+  const inviteUrl = (host: string, shareId: GuestShareId) =>
+    signInvite(shareId).pipe(Effect.map((credential) => `https://${host}/guest#${credential}`));
   const signSession = (claims: SessionClaims) => {
     const payload = base64UrlEncode(JSON.stringify(claims));
     return signer.sign(payload).pipe(
@@ -362,8 +374,27 @@ const make = Effect.gen(function* () {
     if (!thread.guestShare || thread.guestShare.id !== shareId) {
       return yield* new GuestShareCreateError({ reason: "changed" });
     }
-    const credential = yield* signInvite(shareId);
-    return { url: `https://${host}/guest#${credential}`, share: thread.guestShare };
+    return { url: yield* inviteUrl(host, shareId), share: thread.guestShare };
+  });
+
+  const inviteLink = Effect.fn("GuestShareService.inviteLink")(function* (
+    threadId: ThreadId,
+    shareId: GuestShareId,
+  ) {
+    const authorized = yield* authorize(yield* signInvite(shareId), "invite").pipe(Effect.option);
+    if (
+      Option.isNone(authorized) ||
+      authorized.value.thread.id !== threadId ||
+      authorized.value.share.guestName !== null
+    ) {
+      return Option.none();
+    }
+    const { thread, share } = authorized.value;
+    return Option.some({
+      url: yield* inviteUrl(share.host, share.id),
+      title: thread.title,
+      expiresAt: share.expiresAt,
+    });
   });
 
   const redeem = Effect.fn("GuestShareService.redeem")(function* (request: GuestRedeemRequest) {
@@ -752,6 +783,7 @@ const make = Effect.gen(function* () {
 
   return GuestShareService.of({
     create,
+    inviteLink,
     redeem,
     check,
     submit,

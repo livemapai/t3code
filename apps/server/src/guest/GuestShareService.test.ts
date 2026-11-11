@@ -26,6 +26,7 @@ import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";
 import * as Fiber from "effect/Fiber";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Queue from "effect/Queue";
 import * as Ref from "effect/Ref";
 import * as Stream from "effect/Stream";
@@ -299,6 +300,35 @@ it.effect("redeems only a short invite whose signature and share id are both cur
     assert.isTrue(
       Exit.isSuccess(yield* Effect.exit(guestShares.redeem({ credential, name: "Sam" }))),
     );
+  }).pipe(Effect.provide(layerTest)),
+);
+
+it.effect("rebuilds only the thread's current, unused link for an invite", () =>
+  Effect.gen(function* () {
+    const { orchestrator, guestShares, credential: replaced } = yield* shareThread;
+    const { url, share } = yield* guestShares.create({ threadId });
+    const link = yield* guestShares.inviteLink(threadId, share.id);
+    assert.deepEqual(Option.getOrThrow(link), {
+      url,
+      title: "Review me",
+      expiresAt: share.expiresAt,
+    });
+    const replacedShareId = GuestShareId.make(replaced.split(".")[0]!);
+    assert.isTrue(Option.isNone(yield* guestShares.inviteLink(threadId, replacedShareId)));
+    assert.isTrue(
+      Option.isNone(yield* guestShares.inviteLink(ThreadId.make("thread:other"), share.id)),
+    );
+    yield* Ref.set(hostname, null);
+    assert.isTrue(Option.isNone(yield* guestShares.inviteLink(threadId, share.id)));
+    yield* Ref.set(hostname, "env.t3.test");
+    yield* guestShares.redeem({ credential: url.slice(url.indexOf("#") + 1), name: "Sam" });
+    assert.isTrue(Option.isNone(yield* guestShares.inviteLink(threadId, share.id)));
+    yield* orchestrator.dispatch({
+      type: "thread.guest-share.close",
+      commandId: CommandId.make("close-invite-link"),
+      threadId,
+    });
+    assert.isTrue(Option.isNone(yield* guestShares.inviteLink(threadId, share.id)));
   }).pipe(Effect.provide(layerTest)),
 );
 

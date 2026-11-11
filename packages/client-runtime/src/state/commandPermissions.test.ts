@@ -9,6 +9,7 @@ import { vi } from "vite-plus/test";
 import {
   AuthAccessReadScope,
   AuthAccessWriteScope,
+  AuthAriReadScope,
   AuthEnvironmentMaintainScope,
   AuthOrchestrationOperateScope,
   AuthOrchestrationReadScope,
@@ -21,6 +22,7 @@ import {
   ORCHESTRATION_V2_WS_METHODS,
   ScheduledTaskId,
   WS_METHODS,
+  type AuthEnvironmentScope,
   type AuthSessionState,
   type PeerLinkSummary,
 } from "@t3tools/contracts";
@@ -513,24 +515,34 @@ it.effect(
     ),
 );
 
-it.effect("requires access management to answer a link request", () =>
+it.effect.each([
+  { method: WS_METHODS.peerLinksAnswerRequest, also: [] },
+  // A guest link invite hands thread access to a teammate through the person's `ari`.
+  { method: WS_METHODS.ariInvite, also: [AuthAriReadScope] },
+  { method: WS_METHODS.ariUninvite, also: [AuthAriReadScope] },
+])("requires access management for $method", ({ method, also }) =>
   Effect.scoped(
     Effect.gen(function* () {
       const registry = yield* setup;
-      registry.set(sessions(env), AsyncResult.success(grant(true)));
-      const answer = createCommandPermissions(runtime, WS_METHODS.peerLinksAnswerRequest);
+      const withScopes = (scopes: ReadonlyArray<AuthEnvironmentScope>) =>
+        registry.set(
+          sessions(env),
+          AsyncResult.success({ ...grant(false), scopes: [...scopes], permissions: [...scopes] }),
+        );
+      withScopes([AuthOrchestrationOperateScope, ...also]);
+      const answer = createCommandPermissions(runtime, method);
       expect(registry.get(answer.permissionAtom(env))).toBe(false);
       expect((yield* answer.authorize(registry, env).pipe(Effect.flip)).requiredPermission).toBe(
         AuthAccessWriteScope,
       );
-      registry.set(
-        sessions(env),
-        AsyncResult.success({
-          ...grant(false),
-          scopes: [AuthAccessWriteScope],
-          permissions: [AuthAccessWriteScope],
-        }),
-      );
+      for (const missing of also) {
+        withScopes([AuthAccessWriteScope]);
+        expect(registry.get(answer.permissionAtom(env))).toBe(false);
+        expect((yield* answer.authorize(registry, env).pipe(Effect.flip)).requiredPermission).toBe(
+          missing,
+        );
+      }
+      withScopes([AuthAccessWriteScope, ...also]);
       expect(registry.get(answer.permissionAtom(env))).toBe(true);
       yield* answer.authorize(registry, env);
     }),

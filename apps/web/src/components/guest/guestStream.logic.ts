@@ -3,6 +3,7 @@ import {
   GUEST_MEDIA_ROUTE,
   GUEST_MESSAGE_MAX_ATTACHMENT_BYTES,
   GUEST_MESSAGE_MAX_ATTACHMENTS,
+  GUEST_NAME_MAX_LENGTH,
   GUEST_SHARE_PARAM,
   GuestStreamEvent,
   isProviderSendTurnSupportedImageMimeType,
@@ -201,6 +202,33 @@ export function formatGuestExpiry(expiresAt: string, nowMs: number): string {
 export function inviteShareId(credential: string): string | null {
   const [shareId, signature] = credential.split(".");
   return shareId && signature ? shareId : null;
+}
+
+const NAME_HASH_PARAM = "name";
+
+/**
+ * A link a teammate opens through Ari carries their name after the credential,
+ * `#<credential>&name=<name>`, to fill in the name field. The hash never reaches a server.
+ */
+export function guestJoinHash(credential: string, name: string | null): string {
+  return name
+    ? `${credential}&${NAME_HASH_PARAM}=${encodeURIComponent(name.slice(0, GUEST_NAME_MAX_LENGTH))}`
+    : credential;
+}
+
+/** Reads a guest link's hash; a malformed one gives an empty credential, an invalid link. */
+export function readGuestHash(hash: string): { credential: string; name: string } {
+  const [credential = "", ...rest] = hash.replace(/^#/, "").split("&");
+  try {
+    return {
+      credential: decodeURIComponent(credential).trim(),
+      name: (new URLSearchParams(rest.join("&")).get(NAME_HASH_PARAM) ?? "")
+        .trim()
+        .slice(0, GUEST_NAME_MAX_LENGTH),
+    };
+  } catch {
+    return { credential: "", name: "" };
+  }
 }
 
 /** Where the guest page loads a file of the shared thread or of a waiting message. */

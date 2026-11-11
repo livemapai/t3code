@@ -24,6 +24,9 @@ export type ThreadActionMenuId =
   | "unsnooze"
   | "flag"
   | `flag:${ThreadFlag | "none"}`
+  | "team:show"
+  | "team:hide"
+  | "team:hand-over"
   | "rename"
   | "regenerate-title"
   | "mark-unread"
@@ -86,6 +89,8 @@ export interface ThreadActionMenuState {
   readonly isSettled: boolean;
   readonly autoSettleEnabled: boolean;
   readonly flag: ThreadFlag | null;
+  /** Listed for the team through the `team` tag. */
+  readonly teamShared: boolean;
   readonly isSnoozed: boolean;
   readonly canSnoozeNow: boolean;
   readonly isRegeneratingTitle: boolean;
@@ -97,6 +102,7 @@ export interface ThreadActionMenuState {
     readonly snooze: boolean;
     readonly pinning: boolean;
     readonly flags: boolean;
+    readonly teamThreads: boolean;
     readonly titleRegeneration: boolean;
   };
   readonly snoozePresets: ReadonlyArray<SnoozePreset>;
@@ -197,6 +203,15 @@ export function buildThreadActionMenuItems(
             ],
           },
         ]
+      : []),
+    // Hiding stays offered with Team threads off, so a listed thread can always be taken back.
+    ...(state.teamShared
+      ? [{ id: "team:hide" as const, label: "Hide from team", icon: "users" }]
+      : state.supports.teamThreads
+        ? [{ id: "team:show" as const, label: "Show to team", icon: "users" }]
+        : []),
+    ...(state.supports.teamThreads
+      ? [{ id: "team:hand-over" as const, label: "Hand over…", icon: "users" }]
       : []),
     { id: "rename", label: "Rename thread", icon: "pencil", separatorBefore: true },
     ...(state.supports.titleRegeneration

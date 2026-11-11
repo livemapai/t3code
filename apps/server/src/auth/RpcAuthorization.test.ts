@@ -34,6 +34,8 @@ import * as RpcAuthorization from "./RpcAuthorization.ts";
 describe("RPC authorization scopes", () => {
   it("requires Ari read independently of thread access", () => {
     expect(requiredScopeForRpcMethod(WS_METHODS.ariSubscribe)).toBe(AuthAriReadScope);
+    expect(requiredScopeForRpcMethod(WS_METHODS.ariTeam)).toBe(AuthAriReadScope);
+    expect(requiredScopeForRpcMethod(WS_METHODS.ariPeople)).toBe(AuthAriReadScope);
   });
   it("declares exactly one scope for every RPC in the server group", () => {
     expect(new Set(Object.keys(RPC_REQUIRED_SCOPES))).toEqual(new Set(WsRpcGroup.requests.keys()));

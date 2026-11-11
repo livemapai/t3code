@@ -119,6 +119,7 @@ import { getTriggerDisplayModelName } from "../chat/providerIconUtils";
 import { shouldShowInstanceBadge, type ProviderInstanceEntry } from "../../providerInstances";
 import { useThreadRunningTerminalIds } from "../../state/terminalSessions";
 import { FLAG_ICONS, FLAG_ICON_CLASSES } from "./SidebarFlagFilter";
+import { TeamThreadIndicator } from "./TeamThreads";
 import { InlineButton } from "../ui/button";
 import { Kbd } from "../ui/kbd";
 import { Menu, MenuItem, MenuItemDetail, MenuPopup, MenuSeparator, MenuTrigger } from "../ui/menu";
@@ -1296,6 +1297,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {title}
               {multiline ? titleLineIcons : null}
               {relayIndicator}
+              <TeamThreadIndicator tags={thread.source.tags} />
               {flagIndicator}
               {pinIndicator}
               {multiline ? null : terminalStatusIcon}
@@ -1482,6 +1484,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
               {/* Left of the status slot, the pin would slide when hover swaps the
                 label for the wider row controls. */}
               {relayIndicator}
+              <TeamThreadIndicator tags={thread.source.tags} />
               {flagIndicator}
               {pinIndicator}
               {props.projectDisplayName ? (
