@@ -110,13 +110,12 @@ jobs:
       - name: Align package versions to release version
         run: node scripts/update-release-package-versions.ts "${{ needs.version.outputs.version }}"
 
-      - name: Install browser secret helper build libraries
-        run: sudo apt-get update && sudo apt-get install -y libsecret-1-dev pkg-config
-
+      # Bundle only, as upstream's release.yml: the Linux browser secret helper is compiled by
+      # the Linux package job, so this one needs no system packages.
       - name: Build JS bundle
         env:
           T3CODE_TELEMETRY_CHANNEL: dev
-        run: vp run build:desktop
+        run: vp run build:desktop:bundle
 
       - name: Upload JS bundle
         uses: actions/upload-artifact@v7
