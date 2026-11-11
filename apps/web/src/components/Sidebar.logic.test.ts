@@ -1,5 +1,9 @@
 import { presentThreadShell } from "@t3tools/client-runtime/state/models";
-import { isThreadWorking as isSidebarThreadWorking } from "@t3tools/client-runtime/state/thread-inbox";
+import {
+  asLaunchingThread,
+  isThreadActionable,
+  isThreadWorking as isSidebarThreadWorking,
+} from "@t3tools/client-runtime/state/thread-inbox";
 import * as DateTime from "effect/DateTime";
 import { deriveActiveWorkStartedAt } from "../session-logic.ts";
 import { describe, expect, it } from "vite-plus/test";
@@ -1018,6 +1022,33 @@ describe("Working shelf (beta)", () => {
         runtime: { ...runtime, status: "failed" as const, lastError: "boom" },
       }),
     ).toBe(false);
+  });
+
+  it("shelves a launching draft once, by relay before working, and never hides failures", () => {
+    const fresh = makeThreadFixture({ latestUserAuthoredMessageAt: null });
+    expect(fresh.runtime).toBeNull();
+    const launching = asLaunchingThread(fresh);
+    expect(launching.runtime?.status).toBe("preparing");
+    expect(isSidebarThreadWorking(fresh)).toBe(false);
+    expect(isSidebarThreadWorking(launching)).toBe(true);
+    expect(isThreadActionable(launching)).toBe(false);
+    // A relay launch belongs to the Relay shelf, which the sidebar checks before Working.
+    const relayLaunch = asLaunchingThread({
+      ...fresh,
+      source: { ...fresh.source, tags: ["relay"] },
+    });
+    expect(isRelayShelfThread(relayLaunch)).toBe(true);
+    // Once a run exists the overlay steps aside, so a failed first run stays actionable.
+    const failed = makeThreadFixture({
+      latestUserAuthoredMessageAt: null,
+      latestRun: { ...makeLatestRun(), status: "failed" },
+      runtime: { ...runtime, status: "failed", lastError: "boom" },
+      source: { ...fresh.source, tags: ["relay"] },
+    });
+    expect(asLaunchingThread(failed)).toBe(failed);
+    expect(isThreadActionable(failed)).toBe(true);
+    expect(isRelayShelfThread(failed)).toBe(false);
+    expect(isSidebarThreadWorking(failed)).toBe(false);
   });
 
   it("keeps a ready plan in the inbox while background work runs", () => {
