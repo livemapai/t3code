@@ -1,7 +1,7 @@
 import { WS_METHODS } from "@t3tools/contracts";
 import { Atom } from "effect/reactivity";
 import type { EnvironmentRegistry } from "../connection/registry.ts";
-import { requestGuarded, subscribe } from "../rpc/client.ts";
+import { request, subscribe } from "../rpc/client.ts";
 import {
   createEnvironmentQueryAtomFamily,
   createEnvironmentSubscriptionAtomFamily,
@@ -24,6 +24,6 @@ export function createAriTeamEnvironmentAtoms<R, E>(
   return createEnvironmentQueryAtomFamily(runtime, {
     label: "environment-data:ari-team",
     idleTtlMs: 0,
-    execute: (_input: null) => requestGuarded(WS_METHODS.ariTeam, {}),
+    execute: (_input: null) => request(WS_METHODS.ariTeam, {}),
   });
 }
