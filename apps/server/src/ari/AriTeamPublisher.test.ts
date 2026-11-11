@@ -484,16 +484,19 @@ describe("AriTeamPublisher", () => {
     }).pipe(Effect.scoped),
   );
 
-  it.effect("ends with an empty list when Team threads is turned off during a publish", () =>
+  it.effect("sends no list once Team threads is turned off while the threads are read", () =>
     Effect.gen(function* () {
       const { publisher, published, deliver, reads, holdReads, setEnabled } = yield* makeHarness();
       const release = yield* holdReads();
       yield* deliver("thread.tags-updated", listed);
       yield* Queue.take(reads);
+      const sentBefore = published.length;
       yield* setEnabled(false);
       yield* release;
       yield* publisher.drain;
-      assert.deepEqual(published.at(-1)?.threads, []);
+      const after = published.slice(sentBefore);
+      assert.isAbove(after.length, 0);
+      assert.isTrue(after.every((publish) => publish.threads.length === 0));
     }).pipe(Effect.scoped),
   );
 

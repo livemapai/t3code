@@ -200,13 +200,21 @@ export const makeAriTeamPublisher = Effect.fn("AriTeamPublisher.make")(function*
           return entry === null ? [] : [entry];
         })
         .slice(0, ARI_TEAM_PUBLISH_LIMIT);
-    } else {
+    }
+    const listNothing = () => {
       // Off lists nothing; turning it back on reads every thread again.
+      shown = [];
       candidates.clear();
       teamThreadIds = new Set();
       scanAll = true;
+    };
+    if (!enabled) listNothing();
+    let body = yield* encodePublishBody({ threads: shown });
+    // The switch can go off while the threads are read; checked again right before sending.
+    if (!enabled && shown.length > 0) {
+      listNothing();
+      body = yield* encodePublishBody({ threads: shown });
     }
-    const body = yield* encodePublishBody({ threads: shown });
     listedCount = shown.length;
     if (!force && acknowledged && body === published) return;
     yield* client
