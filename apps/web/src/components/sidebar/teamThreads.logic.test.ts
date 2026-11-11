@@ -1,7 +1,13 @@
 import type { AriTeamPerson, AriTeamThread } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { askTeammatePrompt, teamSectionPeople, teamThreadActions } from "./teamThreads.logic";
+import {
+  askTeammatePrompt,
+  handOverDraft,
+  takeOverPrompt,
+  teamSectionPeople,
+  teamThreadActions,
+} from "./teamThreads.logic";
 
 const thread = (threadId: string, updatedAt: string, pullRequestUrl: string | null = null) =>
   ({
@@ -48,24 +54,37 @@ describe("teamSectionPeople", () => {
 
 describe("team thread menu", () => {
   it.each([
-    [null, ["ask", "copy-title"]],
-    ["file:///etc/passwd", ["ask", "copy-title"]],
-    ["https://github.com/livemap/frontend/pull/7", ["ask", "open-pull-request", "copy-title"]],
+    [null, ["ask", "take-over", "copy-title"]],
+    ["file:///etc/passwd", ["ask", "take-over", "copy-title"]],
+    [
+      "https://github.com/livemap/frontend/pull/7",
+      ["ask", "take-over", "open-pull-request", "copy-title"],
+    ],
   ])("with pull request %s offers %j", (url, actions) => {
     expect(teamThreadActions(thread("a", "2026-11-11T07:00:00.000Z", url))).toEqual(actions);
   });
 
-  it("prefills a question for the teammate's agent", () => {
-    expect(
-      askTeammatePrompt(
-        { ...person("Claudio Example", []), handle: "claudio" },
-        {
-          ...thread("a", "2026-11-11T07:00:00.000Z"),
-          title: "Fix the map tiles",
-        },
-      ),
-    ).toBe(
+  it("prefills a question, or a request to take the thread over, for the teammate's agent", () => {
+    const claudio = { ...person("Claudio Example", []), handle: "claudio" };
+    const tiles = { ...thread("a", "2026-11-11T07:00:00.000Z"), title: "Fix the map tiles" };
+    expect(askTeammatePrompt(claudio, tiles)).toBe(
       'Ask Claudio Example (claudio) through ari relay about their thread "Fix the map tiles": ',
     );
+    expect(takeOverPrompt(claudio, tiles)).toBe(
+      'Ask Claudio Example (claudio) through ari relay to hand over their thread "Fix the map tiles" to me: ',
+    );
+  });
+
+  it.each([
+    ["", "Hand this thread over through ari relay to "],
+    ["  ", "Hand this thread over through ari relay to "],
+    ["Keep this", "Keep this\n\nHand this thread over through ari relay to "],
+    ["Hand this thread over through ari relay to ", "Hand this thread over through ari relay to "],
+    [
+      "Keep this\n\nHand this thread over through ari relay to Anna",
+      "Keep this\n\nHand this thread over through ari relay to Anna",
+    ],
+  ])("puts the hand-over request into a draft of %j", (existing, draft) => {
+    expect(handOverDraft(existing)).toBe(draft);
   });
 });

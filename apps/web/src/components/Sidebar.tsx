@@ -257,6 +257,7 @@ import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarFlagFilter } from "./sidebar/SidebarFlagFilter";
 import { SidebarTeamSection } from "./sidebar/TeamThreads";
+import { placeHandOverDraft } from "./sidebar/handOverThread";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { TooltipProvider } from "./ui/tooltip";
 import {
@@ -2857,6 +2858,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
             }
             return;
           }
+          case "team:hand-over":
+            placeHandOverDraft(threadRef);
+            void navigateToThread(threadRef);
+            return;
           case "auto-settle:enabled":
           case "auto-settle:disabled": {
             const result = await setThreadAutoSettle(

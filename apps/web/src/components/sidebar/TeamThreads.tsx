@@ -1,4 +1,4 @@
-import { ARI_TEAM_THREAD_TAG, type AriTeamPerson, type AriTeamThread } from "@t3tools/contracts";
+import { ARI_TEAM_THREAD_TAG, type AriTeamThread } from "@t3tools/contracts";
 import { UsersIcon } from "lucide-react";
 import { Schema } from "effect";
 import { useEffect } from "react";
@@ -16,7 +16,12 @@ import { RelativeTime } from "../RelativeTime";
 import { CollapsibleSectionHeader } from "../ui/collapsible-section-header";
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from "../ui/menu";
 import { toastManager } from "../ui/toast";
-import { askTeammatePrompt, teamSectionPeople, teamThreadActions } from "./teamThreads.logic";
+import {
+  askTeammatePrompt,
+  takeOverPrompt,
+  teamSectionPeople,
+  teamThreadActions,
+} from "./teamThreads.logic";
 
 const TEAM_SECTION_EXPANDED_KEY = "t3code:sidebar:team-expanded";
 const TEAM_SECTION_COUNT_KEY = "t3code:sidebar:team-count";
@@ -77,7 +82,7 @@ function TeamSection({
     onCopy: ({ title }) =>
       toastManager.add({ type: "success", title: "Title copied", description: title }),
   });
-  const ask = async (person: AriTeamPerson, thread: AriTeamThread) => {
+  const ask = async (prompt: string) => {
     const projectRef = resolveThreadActionProjectRef({
       ...newThreadContext,
       activeThread: newThreadContext.activeThread ?? undefined,
@@ -85,9 +90,7 @@ function TeamSection({
     const opened =
       projectRef === null
         ? null
-        : await newThreadContext
-            .handleNewThread(projectRef, { prompt: askTeammatePrompt(person, thread) })
-            .catch(() => null);
+        : await newThreadContext.handleNewThread(projectRef, { prompt }).catch(() => null);
     if (opened === null) {
       toastManager.add({
         type: "error",
@@ -116,7 +119,8 @@ function TeamSection({
                 <TeamThreadRow
                   key={thread.threadId}
                   thread={thread}
-                  onAsk={() => void ask(person, thread)}
+                  onAsk={() => void ask(askTeammatePrompt(person, thread))}
+                  onTakeOver={() => void ask(takeOverPrompt(person, thread))}
                   onCopyTitle={() => copyToClipboard(thread.title, { title: thread.title })}
                 />
               ))}
@@ -130,10 +134,12 @@ function TeamSection({
 function TeamThreadRow({
   thread,
   onAsk,
+  onTakeOver,
   onCopyTitle,
 }: {
   thread: AriTeamThread;
   onAsk: () => void;
+  onTakeOver: () => void;
   onCopyTitle: () => void;
 }) {
   const working = thread.state === "working";
@@ -166,6 +172,10 @@ function TeamThreadRow({
           action === "ask" ? (
             <MenuItem key={action} onClick={onAsk}>
               Ask their agent…
+            </MenuItem>
+          ) : action === "take-over" ? (
+            <MenuItem key={action} onClick={onTakeOver}>
+              Ask to take over…
             </MenuItem>
           ) : action === "open-pull-request" ? (
             <MenuItem

@@ -26,6 +26,7 @@ export type ThreadActionMenuId =
   | `flag:${ThreadFlag | "none"}`
   | "team:show"
   | "team:hide"
+  | "team:hand-over"
   | "rename"
   | "regenerate-title"
   | "mark-unread"
@@ -208,6 +209,9 @@ export function buildThreadActionMenuItems(
       : state.supports.teamThreads
         ? [{ id: "team:show" as const, label: "Show to team", icon: "users" }]
         : []),
+    ...(state.supports.teamThreads
+      ? [{ id: "team:hand-over" as const, label: "Hand over…", icon: "users" }]
+      : []),
     { id: "rename", label: "Rename thread", icon: "pencil", separatorBefore: true },
     ...(state.supports.titleRegeneration
       ? [

@@ -18,6 +18,8 @@ import {
 import { useRouter } from "@tanstack/react-router";
 
 import { pickSnoozePreset, resolveSnoozePresets } from "../components/Sidebar.snooze";
+import { placeHandOverDraft } from "../components/sidebar/handOverThread";
+import { buildThreadRouteParams } from "../threadRoutes";
 import {
   buildThreadActionMenuItems,
   threadActionRequiresOperate,
@@ -266,6 +268,13 @@ export function useThreadActionMenu(input: {
           await reportFailure("Failed to change what the team sees", () =>
             setThreadTeamShared(threadRef, action === "team:show"),
           );
+          return;
+        case "team:hand-over":
+          placeHandOverDraft(threadRef);
+          void router.navigate({
+            to: "/$environmentId/$threadId",
+            params: buildThreadRouteParams(threadRef),
+          });
           return;
         case "auto-settle:enabled":
         case "auto-settle:disabled":
