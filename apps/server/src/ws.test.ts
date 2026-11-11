@@ -2019,6 +2019,7 @@ it.effect("ACP session RPCs list a thread missing its history and repair it on i
           { secretReferences: true },
         ).pipe(
           Layer.provide(services),
+          Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
           Layer.merge(
             RpcAuthorization.layer([AuthOrchestrationReadScope, AuthOrchestrationOperateScope]),
           ),
