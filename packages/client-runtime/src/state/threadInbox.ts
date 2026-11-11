@@ -55,6 +55,25 @@ export function isThreadActionable(thread: ActionableThreadInput): boolean {
   );
 }
 
+/**
+ * A thread its own client is launching reads as preparing until its first run lands.
+ * The server commits the thread before its run, so the list would otherwise place it twice.
+ */
+export function asLaunchingThread<T extends EnvironmentThreadShell>(thread: T): T {
+  if (thread.latestRun !== null || thread.runtime !== null) return thread;
+  return {
+    ...thread,
+    runtime: {
+      status: "preparing",
+      activeRunId: null,
+      providerInstanceId: thread.providerInstanceId,
+      providerName: null,
+      lastError: null,
+      updatedAt: thread.updatedAt,
+    },
+  };
+}
+
 type InboxThreadInput = Pick<
   EnvironmentThreadShell,
   "id" | "environmentId" | "createdAt" | "unsettledAt" | "latestRun"
