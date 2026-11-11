@@ -1,5 +1,6 @@
 import * as AriState from "./ari/AriState.ts";
 import * as AriClient from "./ari/AriClient.ts";
+import * as AriInvites from "./ari/AriInvites.ts";
 import * as AriTeam from "./ari/AriTeam.ts";
 import * as AriTeamPublisher from "./ari/AriTeamPublisher.ts";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
@@ -648,6 +649,7 @@ const layerServerRestart = Layer.effect(
 const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   AgentAwarenessRelay.layer,
   AriTeamPublisher.layer.pipe(Layer.provide(AriClient.layer)),
+  AriInvites.layer.pipe(Layer.provide(AriClient.layer)),
   HeldHooksWaker.layer,
   layerThreadSettlementWorker,
   layerIdleCompactionWorker,

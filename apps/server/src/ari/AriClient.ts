@@ -14,12 +14,19 @@ export class AriReadError extends Schema.TaggedError<AriReadError>()("AriReadErr
   cause: Schema.Defect(),
 }) {}
 
+export interface AriRunOptions {
+  readonly stdin?: string;
+  readonly env?: NodeJS.ProcessEnv;
+  /** For arguments that carry a credential: a failure keeps the exit code, not what `ari` printed. */
+  readonly redact?: boolean;
+}
+
 export class AriClient extends Context.Service<
   AriClient,
   {
     readonly run: (
       args: ReadonlyArray<string>,
-      options?: { readonly stdin?: string; readonly env?: NodeJS.ProcessEnv },
+      options?: AriRunOptions,
     ) => Effect.Effect<string, AriReadError>;
   }
 >()("t3/ari/AriClient") {}
@@ -34,7 +41,7 @@ const make = Effect.gen(function* () {
     error.cause instanceof PlatformError.PlatformError && error.cause.reason._tag === "NotFound";
   const run = Effect.fn("AriClient.run")(function* (
     args: ReadonlyArray<string>,
-    options?: { readonly stdin?: string; readonly env?: NodeJS.ProcessEnv },
+    options?: AriRunOptions,
   ) {
     const invoke = (command: string) =>
       runner.run({
@@ -83,7 +90,10 @@ const make = Effect.gen(function* () {
             : result.code === 4 || result.timedOut
               ? "unreachable"
               : "unsupported";
-      return yield* new AriReadError({ state, cause: result });
+      return yield* new AriReadError({
+        state,
+        cause: options?.redact ? { code: result.code, timedOut: result.timedOut } : result,
+      });
     }
     return result.stdout;
   }, lock.withPermit);

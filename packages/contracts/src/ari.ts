@@ -1,5 +1,7 @@
 import * as Schema from "effect/Schema";
 
+import { GuestShareId, ThreadId, TrimmedNonEmptyString } from "./baseSchemas.ts";
+
 export const AriGroupState = Schema.Literals([
   "ok",
   "unavailable",
@@ -64,11 +66,80 @@ export const AriTeamPerson = Schema.Struct({
   threads: Schema.Array(AriTeamThread),
 });
 export type AriTeamPerson = typeof AriTeamPerson.Type;
+/** A guest link a teammate sent this person, as `ari relay team` lists it; every field is theirs. */
+export const AriTeamInvite = Schema.Struct({
+  id: Schema.String,
+  from: Schema.Struct({ name: Schema.String, handle: Schema.String }),
+  title: Schema.String,
+  url: Schema.String,
+  expiresAt: Schema.String,
+  createdAt: Schema.String,
+});
+export type AriTeamInvite = typeof AriTeamInvite.Type;
 export const AriTeam = Schema.Struct({
   state: AriGroupState,
   people: Schema.Array(AriTeamPerson),
+  /** Absent from servers older than invites. */
+  invites: Schema.optionalKey(Schema.Array(AriTeamInvite)),
 });
 export type AriTeam = typeof AriTeam.Type;
+
+/** Someone on the team who can be sent a guest link; the viewer is left out. */
+export const AriPerson = Schema.Struct({ handle: Schema.String, name: Schema.String });
+export type AriPerson = typeof AriPerson.Type;
+export const AriPeople = Schema.Struct({
+  state: AriGroupState,
+  people: Schema.Array(AriPerson),
+});
+export type AriPeople = typeof AriPeople.Type;
+
+// `ari` reads a leading dash as a flag, so an argument it takes positionally never starts with one.
+const AriPositional = TrimmedNonEmptyString.check(
+  Schema.makeFilter((value) => !value.startsWith("-"), { description: "not a flag" }),
+);
+
+/** The server sends the thread's current guest link itself; the share id only proves which one. */
+export const AriInviteInput = Schema.Struct({
+  threadId: ThreadId,
+  shareId: GuestShareId,
+  to: AriPositional,
+});
+export type AriInviteInput = typeof AriInviteInput.Type;
+export const AriUninviteInput = Schema.Struct({ id: AriPositional });
+export type AriUninviteInput = typeof AriUninviteInput.Type;
+export const AriUninviteResult = Schema.Struct({ removed: Schema.Boolean });
+export type AriUninviteResult = typeof AriUninviteResult.Type;
+
+const ARI_INVITE_MESSAGES = {
+  link_ended: "This guest link has ended or was already used. Create a new one.",
+  team_off: "Team threads is off on this machine. Turn it on in Settings > Ari.",
+  not_teammate: "That person is not on your team in Ari.",
+  unavailable: "Ari is not installed on this computer.",
+  signedOut: "Sign in to Ari first.",
+  forbidden: "Your Ari account cannot send invites.",
+  unreachable: "Ari could not be reached. Try again.",
+  unsupported: "Update Ari to send invites.",
+  failed: "Ari did not confirm the invite.",
+} as const;
+
+/** The message comes from `reason` alone, so no link or `ari` output reaches a client or a log. */
+export class AriInviteError extends Schema.TaggedError<AriInviteError>()("AriInviteError", {
+  reason: Schema.Literals([
+    "link_ended",
+    "team_off",
+    "not_teammate",
+    "unavailable",
+    "signedOut",
+    "forbidden",
+    "unreachable",
+    "unsupported",
+    "failed",
+  ]),
+}) {
+  override get message(): string {
+    return ARI_INVITE_MESSAGES[this.reason];
+  }
+}
 
 /** Text markers are forgeable and confer no permissions. */
 export function ariMessageMarker(text: string): { from: string } | null {

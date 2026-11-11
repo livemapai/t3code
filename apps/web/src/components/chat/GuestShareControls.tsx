@@ -7,6 +7,7 @@ import {
   AuthOrchestrationOperateScope,
   type ChatAttachment,
   type GuestMessageId,
+  type GuestShareId,
   type ScopedThreadRef,
   type ThreadGuestShare,
 } from "@t3tools/contracts";
@@ -16,7 +17,8 @@ import { useState } from "react";
 import { useCopyToClipboard } from "~/hooks/useCopyToClipboard";
 import { useNowMinute } from "~/hooks/useNowMinute";
 import { appAtomRegistry } from "~/rpc/atomRegistry";
-import { useQuietThreadProjection } from "~/state/entities";
+import { ariTeamEnvironment, useAriPeople } from "~/state/ari";
+import { useEnvironmentAriTeamThreadsEnabled, useQuietThreadProjection } from "~/state/entities";
 import { serverEnvironment } from "~/state/server";
 import { useEnvironmentScope } from "~/state/session";
 import { threadEnvironment } from "~/state/threads";
@@ -34,11 +36,13 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { useAssetUrls } from "~/assets/assetUrls";
 import { type ChatFileAttachment, isImageAttachment } from "../../types";
 import { buildExpandedImagePreview, type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { GuestMessageAttachments } from "./GuestMessageAttachments";
 import { GuestMessageName, guestBubbleClassName } from "./guestMessageStyle";
+import { quotable } from "../sidebar/teamThreads.logic";
 import { guestShareDialogThreadAtom } from "./guestShareDialogState";
 
 function useThreadGuestShare(threadRef: ScopedThreadRef | null): ThreadGuestShare | null {
@@ -60,7 +64,7 @@ export function GuestShareDialogHost() {
 type CreateState =
   | { readonly status: "idle" }
   | { readonly status: "creating" }
-  | { readonly status: "created"; readonly url: string }
+  | { readonly status: "created"; readonly url: string; readonly shareId: GuestShareId }
   | { readonly status: "failed"; readonly message: string };
 
 function GuestShareDialog({
@@ -87,7 +91,7 @@ function GuestShareDialog({
       input: { threadId: threadRef.threadId },
     });
     if (result._tag === "Success") {
-      setState({ status: "created", url: result.value.url });
+      setState({ status: "created", url: result.value.url, shareId: result.value.share.id });
       return;
     }
     if (isAtomCommandInterrupted(result)) {
@@ -118,18 +122,21 @@ function GuestShareDialog({
         </DialogHeader>
         <DialogPanel>
           {state.status === "created" ? (
-            <div className="flex items-center gap-2">
-              <Input
-                readOnly
-                aria-label="Guest link"
-                value={state.url}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-              <Button size="sm" variant="outline" onClick={() => copyToClipboard(state.url)}>
-                {isCopied ? <CheckIcon /> : <CopyIcon />}
-                {isCopied ? "Copied" : "Copy"}
-              </Button>
-            </div>
+            <>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  aria-label="Guest link"
+                  value={state.url}
+                  onFocus={(event) => event.currentTarget.select()}
+                />
+                <Button size="sm" variant="outline" onClick={() => copyToClipboard(state.url)}>
+                  {isCopied ? <CheckIcon /> : <CopyIcon />}
+                  {isCopied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              <SendToTeammate threadRef={threadRef} shareId={state.shareId} />
+            </>
           ) : (
             <p className="text-muted-foreground text-sm">
               {activeShare !== null
@@ -170,6 +177,112 @@ function GuestShareDialog({
         </DialogFooter>
       </DialogPopup>
     </Dialog>
+  );
+}
+
+/**
+ * Shown only when this connection may send invites and Team threads is on for the thread's
+ * machine; otherwise no team is read.
+ */
+function SendToTeammate(props: {
+  readonly threadRef: ScopedThreadRef;
+  readonly shareId: GuestShareId;
+}) {
+  const canInvite = useAtomValue(
+    ariTeamEnvironment.invite.permissionAtom(props.threadRef.environmentId),
+  );
+  const teamThreads = useEnvironmentAriTeamThreadsEnabled(props.threadRef.environmentId);
+  return canInvite && teamThreads ? <TeammatePicker {...props} /> : null;
+}
+
+type SendState =
+  | { readonly status: "idle" }
+  | { readonly status: "sending" }
+  | { readonly status: "sent"; readonly name: string }
+  | { readonly status: "failed"; readonly message: string };
+
+/** The server sends the thread's current link through `ari`; it never passes through an agent. */
+function TeammatePicker({
+  threadRef,
+  shareId,
+}: {
+  readonly threadRef: ScopedThreadRef;
+  readonly shareId: GuestShareId;
+}) {
+  const { data } = useAriPeople(threadRef.environmentId);
+  const invite = useAtomCommand(ariTeamEnvironment.invite, { reportFailure: false });
+  const [handle, setHandle] = useState<string | null>(null);
+  const [state, setState] = useState<SendState>({ status: "idle" });
+  // An `ari` without the team, or one older than invites, shows no picker.
+  if (data?.state !== "ok" || data.people.length === 0) return null;
+  // Names come from the team's accounts; shown as one plain line.
+  const people = data.people.map((candidate) => ({
+    ...candidate,
+    name: quotable(candidate.name, 80),
+  }));
+  const person = people.find((candidate) => candidate.handle === handle) ?? null;
+  const send = async () => {
+    if (person === null) return;
+    setState({ status: "sending" });
+    const result = await invite({
+      environmentId: threadRef.environmentId,
+      input: { threadId: threadRef.threadId, shareId, to: person.handle },
+    });
+    if (result._tag === "Success") {
+      setState({ status: "sent", name: person.name });
+      return;
+    }
+    if (isAtomCommandInterrupted(result)) {
+      setState({ status: "idle" });
+      return;
+    }
+    const error = squashAtomCommandFailure(result);
+    setState({
+      status: "failed",
+      message: error instanceof Error ? error.message : "Could not send the invite.",
+    });
+  };
+  return (
+    <div className="mt-3 flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        <Select
+          value={handle}
+          onValueChange={(next) => {
+            if (typeof next !== "string") return;
+            setHandle(next);
+            setState({ status: "idle" });
+          }}
+        >
+          <SelectTrigger size="sm" className="min-w-0 flex-1" aria-label="Teammate">
+            <SelectValue>{person?.name ?? "Send to a teammate"}</SelectValue>
+          </SelectTrigger>
+          <SelectPopup>
+            {people.map((candidate) => (
+              <SelectItem key={candidate.handle} value={candidate.handle}>
+                {candidate.name}
+              </SelectItem>
+            ))}
+          </SelectPopup>
+        </Select>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={person === null || state.status === "sending"}
+          onClick={() => void send()}
+        >
+          {state.status === "sending" ? "Sending..." : "Send"}
+        </Button>
+      </div>
+      {state.status === "sent" ? (
+        <p role="status" className="text-muted-foreground text-xs">
+          Sent to {state.name}. It shows in their Team section.
+        </p>
+      ) : state.status === "failed" ? (
+        <p role="alert" className="text-destructive text-xs">
+          {state.message}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

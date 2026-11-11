@@ -15,7 +15,8 @@ expired work again when you turn it back on.
 1. Right-click the thread in the sidebar and choose **Share with guest**. It is also in the thread
    menu and the command palette.
 2. Copy the link and send it to one person. It works in one browser and expires after 24 hours.
-   Opening it again in that browser takes them back to the thread.
+   Opening it again in that browser takes them back to the thread. With Ari, you can send it to a
+   teammate from the same dialog instead; see [Ari](./ari.md#inviting-a-teammate-to-a-thread).
 3. When they send a message, it appears at the end of the thread and the sidebar shows **Request**.
    Choose **Send** to run it as a normal turn, or **Dismiss**. Files they attached show with the
    message, and **Send** includes them.

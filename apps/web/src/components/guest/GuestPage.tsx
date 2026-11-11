@@ -65,6 +65,7 @@ import {
   guestFilesProblem,
   initialGuestStreamState,
   inviteShareId,
+  readGuestHash,
   type GuestStreamState,
   parseGuestStreamEvent,
   unplacedGuestMessages,
@@ -75,6 +76,8 @@ interface GuestEntry {
   /** Unspent invite from the URL hash, if this load came from a link. */
   readonly credential: string | null;
   readonly shareId: string | null;
+  /** The name a link opened through Ari fills in; the person still submits it. */
+  readonly name: string;
 }
 
 let capturedEntry: GuestEntry | null = null;
@@ -109,11 +112,7 @@ function writeAwaitingRowIds(ids: ReadonlySet<GuestMessageId>) {
  */
 function takeGuestEntry(): GuestEntry {
   if (capturedEntry === null) {
-    // A malformed fragment is an invalid link, not a crash.
-    let credential = "";
-    try {
-      credential = decodeURIComponent(window.location.hash.slice(1)).trim();
-    } catch {}
+    const { credential, name } = readGuestHash(window.location.hash);
     const shareId =
       credential !== ""
         ? inviteShareId(credential)
@@ -126,7 +125,7 @@ function takeGuestEntry(): GuestEntry {
         ? window.location.pathname
         : `${window.location.pathname}?${GUEST_SHARE_PARAM}=${encodeURIComponent(shareId)}`,
     );
-    capturedEntry = { credential: credential === "" ? null : credential, shareId };
+    capturedEntry = { credential: credential === "" ? null : credential, shareId, name };
   }
   return capturedEntry;
 }
@@ -198,7 +197,7 @@ const LANE = "chat-content-lane px-4";
 type GuestAccess = "checking" | "session" | "name" | "none";
 
 export function GuestPage() {
-  const [{ credential, shareId }] = useState(takeGuestEntry);
+  const [{ credential, shareId, name }] = useState(takeGuestEntry);
   // A browser that already joined this share goes straight back in, even from the spent link.
   // Sessions are per share, so one for another link never stands in for this one.
   const [access, setAccess] = useState<GuestAccess>(shareId === null ? "none" : "checking");
@@ -239,9 +238,10 @@ export function GuestPage() {
       ) : access === "name" && credential !== null ? (
         <NameForm
           credential={credential}
+          initialName={name}
           onJoined={() => {
             // The invite is spent; a remount must open the session, not the name form again.
-            capturedEntry = { credential: null, shareId };
+            capturedEntry = { credential: null, shareId, name: "" };
             setAccess("session");
           }}
         />
@@ -350,12 +350,14 @@ function Notice({ title, detail }: { readonly title: string; readonly detail?: s
 
 function NameForm({
   credential,
+  initialName,
   onJoined,
 }: {
   readonly credential: string;
+  readonly initialName: string;
   readonly onJoined: () => void;
 }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submit = async (event: FormEvent) => {

@@ -1,4 +1,6 @@
-import type { AriTeam, AriTeamPerson, AriTeamThread } from "@t3tools/contracts";
+import type { AriTeam, AriTeamInvite, AriTeamPerson, AriTeamThread } from "@t3tools/contracts";
+
+import { guestJoinHash, inviteShareId } from "../guest/guestStream.logic";
 
 /** Teammates with listed threads, by name, each thread newest first; the viewer's own are left out. */
 export function teamSectionPeople(team: AriTeam | null): ReadonlyArray<AriTeamPerson> {
@@ -14,13 +16,61 @@ export function teamSectionPeople(team: AriTeam | null): ReadonlyArray<AriTeamPe
     .toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-export type TeamThreadAction = "ask" | "take-over" | "open-pull-request" | "copy-title";
+/** Guest links teammates sent the viewer, newest first as `ari` lists them, with quoted text. */
+export function teamSectionInvites(team: AriTeam | null): ReadonlyArray<AriTeamInvite> {
+  if (team?.state !== "ok") return [];
+  return (team.invites ?? []).map((invite) => ({
+    ...invite,
+    title: quotable(invite.title),
+    from: { ...invite.from, name: quotable(invite.from.name, 80) },
+  }));
+}
+
+/** The viewer's own name, to fill in on a guest page they join. */
+export function teamSelfName(team: AriTeam | null): string | null {
+  return team?.people.find((person) => person.self)?.name.trim() || null;
+}
+
+/**
+ * Where Join opens an invite, with the viewer's name for the guest page's name field. An invite
+ * comes from another machine, so only a plain https guest link with a well-formed credential
+ * gets one, rebuilt from its parts so nothing else rides along.
+ */
+export function inviteJoinUrl(url: string, name: string | null): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const credential = parsed.hash.slice(1);
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.pathname !== "/guest" ||
+    parsed.search !== "" ||
+    !/^[\w-]+\.[\w-]+$/.test(credential) ||
+    inviteShareId(credential) === null
+  ) {
+    return null;
+  }
+  return `https://${parsed.host}/guest#${guestJoinHash(credential, name)}`;
+}
+
+export type TeamThreadAction =
+  | "ask"
+  | "take-over"
+  | "ask-to-join"
+  | "open-pull-request"
+  | "copy-title";
 
 /** Links come from teammates' machines, so only web links open. */
 export function teamThreadActions(thread: AriTeamThread): ReadonlyArray<TeamThreadAction> {
   return [
     "ask",
     "take-over",
+    "ask-to-join",
     ...(thread.pullRequestUrl?.startsWith("https://") ? (["open-pull-request"] as const) : []),
     "copy-title",
   ];
@@ -61,6 +111,11 @@ export function askTeammatePrompt(person: AriTeamPerson, thread: AriTeamThread):
 /** Asks the teammate to hand the thread over; they decide, and its handoff waits for approval. */
 export function takeOverPrompt(person: AriTeamPerson, thread: AriTeamThread): string {
   return `Ask ${teammate(person)} through ari relay to hand over their thread "${quotable(thread.title)}" to me: `;
+}
+
+/** Asks the teammate for a guest link to watch the thread; they decide whether to send one. */
+export function askToJoinPrompt(person: AriTeamPerson, thread: AriTeamThread): string {
+  return `Ask ${teammate(person)} through ari relay to invite me with a guest link to their thread "${quotable(thread.title)}": `;
 }
 
 const HAND_OVER_PROMPT = "Hand this thread over through ari relay to ";

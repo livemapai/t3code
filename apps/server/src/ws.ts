@@ -1,4 +1,5 @@
 import * as AriState from "./ari/AriState.ts";
+import * as AriInvites from "./ari/AriInvites.ts";
 import * as AriTeam from "./ari/AriTeam.ts";
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 import * as Context from "effect/Context";
@@ -1407,6 +1408,7 @@ export const layerWsRpc = (
     Effect.gen(function* () {
       const ariState = yield* AriState.AriState;
       const ariTeam = yield* AriTeam.AriTeam;
+      const ariInvites = yield* AriInvites.AriInvites;
       const currentSessionId = currentSession.sessionId;
       const sql = yield* SqlClient.SqlClient;
       const threadManagement = yield* ThreadManagementService.ThreadManagementService;
@@ -3308,6 +3310,12 @@ export const layerWsRpc = (
           ),
         [WS_METHODS.ariSubscribe]: () => ariState.subscribe,
         [WS_METHODS.ariTeam]: () => ariTeam.read,
+        [WS_METHODS.ariPeople]: () => ariTeam.people,
+        [WS_METHODS.ariInvite]: (input) =>
+          Effect.annotateCurrentSpan({ "orchestration_v2.thread_id": input.threadId }).pipe(
+            Effect.andThen(ariInvites.invite(input)),
+          ),
+        [WS_METHODS.ariUninvite]: (input) => ariInvites.uninvite(input),
         [WS_METHODS.subscribeServerConfig]: (input) =>
           Stream.unwrap(
             Effect.gen(function* () {

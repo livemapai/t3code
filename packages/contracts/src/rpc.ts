@@ -1,4 +1,12 @@
-import { AriState, AriTeam } from "./ari.ts";
+import {
+  AriInviteError,
+  AriInviteInput,
+  AriPeople,
+  AriState,
+  AriTeam,
+  AriUninviteInput,
+  AriUninviteResult,
+} from "./ari.ts";
 import {
   OrchestrationV2SearchThreadError,
   OrchestrationV2SearchThreadInput,
@@ -623,6 +631,9 @@ export const WS_METHODS = {
   subscribeDeviceState: "subscribeDeviceState",
   ariSubscribe: "ari.subscribe",
   ariTeam: "ari.team",
+  ariPeople: "ari.people",
+  ariInvite: "ari.invite",
+  ariUninvite: "ari.uninvite",
   subscribeServerConfig: "subscribeServerConfig",
   subscribeServerLifecycle: "subscribeServerLifecycle",
   subscribeAuthAccess: "subscribeAuthAccess",
@@ -1968,6 +1979,23 @@ const WsAriTeamRpc = Rpc.make(WS_METHODS.ariTeam, {
   error: EnvironmentAuthorizationError,
 });
 
+const WsAriPeopleRpc = Rpc.make(WS_METHODS.ariPeople, {
+  payload: Schema.Struct({}),
+  success: AriPeople,
+  error: EnvironmentAuthorizationError,
+});
+
+const WsAriInviteRpc = Rpc.make(WS_METHODS.ariInvite, {
+  payload: AriInviteInput,
+  error: Schema.Union([AriInviteError, EnvironmentAuthorizationError]),
+});
+
+const WsAriUninviteRpc = Rpc.make(WS_METHODS.ariUninvite, {
+  payload: AriUninviteInput,
+  success: AriUninviteResult,
+  error: Schema.Union([AriInviteError, EnvironmentAuthorizationError]),
+});
+
 export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerConfig, {
   payload: Schema.Struct({
     /** Opt-in protects older clients that reject unknown theme event types. */
@@ -2274,6 +2302,9 @@ export const WsRpcGroup = RpcGroup.make(
   WsSubscribeDeviceStateRpc,
   WsAriSubscribeRpc,
   WsAriTeamRpc,
+  WsAriPeopleRpc,
+  WsAriInviteRpc,
+  WsAriUninviteRpc,
   WsSubscribeServerConfigRpc,
   WsSubscribeServerLifecycleRpc,
   WsSubscribeAuthAccessRpc,

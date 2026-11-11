@@ -1,4 +1,5 @@
 import * as AriState from "./ari/AriState.ts";
+import * as AriInvites from "./ari/AriInvites.ts";
 import * as AriTeam from "./ari/AriTeam.ts";
 import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
@@ -1011,7 +1012,8 @@ it.effect.each([
           ).pipe(
             Layer.provide(configRpcServices),
             Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
-            Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
+            Layer.provide(Layer.mock(AriTeam.AriTeam)({})),
+            Layer.provide(Layer.mock(AriInvites.AriInvites)({})),
           ),
         ),
       );
@@ -1260,7 +1262,8 @@ it.effect("on-demand clients get provider config without workspace snapshots", (
         ).pipe(
           Layer.provide(configRpcServices),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
-          Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
+          Layer.provide(Layer.mock(AriTeam.AriTeam)({})),
+          Layer.provide(Layer.mock(AriInvites.AriInvites)({})),
         ),
       ),
     );
@@ -1511,7 +1514,8 @@ it.effect("a missing thread worktree gets its project's skills in the cwd snapsh
         ).pipe(
           Layer.provide(services),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
-          Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
+          Layer.provide(Layer.mock(AriTeam.AriTeam)({})),
+          Layer.provide(Layer.mock(AriInvites.AriInvites)({})),
         ),
       ),
     );
@@ -1602,7 +1606,8 @@ it.effect("a publish whose push fails still refreshes the new remote", () =>
         ).pipe(
           Layer.provide(services),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
-          Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
+          Layer.provide(Layer.mock(AriTeam.AriTeam)({})),
+          Layer.provide(Layer.mock(AriInvites.AriInvites)({})),
           Layer.merge(RpcAuthorization.layer([AuthSourceControlWriteScope])),
         ),
       ),

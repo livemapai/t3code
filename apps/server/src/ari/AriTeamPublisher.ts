@@ -100,6 +100,8 @@ const shorten = (text: string, max: number) => {
   }
   return `${kept}…`;
 };
+/** A thread title as the relay API takes it, here and in an invite. */
+export const ariThreadTitle = (title: string) => shorten(title, TITLE_MAX);
 const fitsOrNull = (text: string | null, max: number) =>
   text === null || text.trim() === "" || text.length > max ? null : text;
 
@@ -127,7 +129,7 @@ export function ariTeamThreadEntry(
   if (!THREAD_ID.test(thread.id)) return null;
   return {
     threadId: thread.id,
-    title: shorten(thread.title, TITLE_MAX),
+    title: ariThreadTitle(thread.title),
     project: fitsOrNull(project, PROJECT_MAX),
     branch: fitsOrNull(thread.branch, BRANCH_MAX),
     pullRequestUrl: plainPullRequestUrl(
