@@ -20,6 +20,7 @@ import * as TestClock from "effect/testing/TestClock";
 import * as AriClient from "./AriClient.ts";
 import {
   ARI_TEAM_PUBLISH_LIMIT,
+  ariTeamThreadEntry,
   ariTeamThreadState,
   makeAriTeamPublisher,
 } from "./AriTeamPublisher.ts";
@@ -80,11 +81,16 @@ const makeHarness = Effect.fnUntraced(function* (
     readonly initial?: ReadonlyArray<OrchestrationV2ThreadShell>;
     /** What `ari` prints; by default it holds exactly what was sent. */
     readonly answer?: (call: number, sent: number) => string;
+    /** Team threads on this machine at start. */
+    readonly enabled?: boolean;
   } = {},
 ) {
   const threads = new Map(options.initial?.map((thread) => [thread.id, thread] as const));
   const events = yield* Queue.unbounded<OrchestrationV2DomainEvent>();
   const pulls = yield* Queue.unbounded<void>();
+  const switches = yield* Queue.unbounded<boolean>();
+  const switchPulls = yield* Queue.unbounded<void>();
+  yield* Queue.offer(switches, options.enabled ?? true);
   const reads = yield* Queue.unbounded<void>();
   let gate: Deferred.Deferred<void> | null = null;
   const published: Array<Published> = [];
@@ -95,6 +101,9 @@ const makeHarness = Effect.fnUntraced(function* (
     {
       events: Stream.fromEffectRepeat(
         Queue.offer(pulls, undefined).pipe(Effect.andThen(Queue.take(events))),
+      ),
+      enabled: Stream.fromEffectRepeat(
+        Queue.offer(switchPulls, undefined).pipe(Effect.andThen(Queue.take(switches))),
       ),
       readThreads: (threadIds) =>
         Queue.offer(reads, undefined).pipe(
@@ -135,6 +144,9 @@ const makeHarness = Effect.fnUntraced(function* (
   );
   yield* publisher.start();
   yield* Queue.take(pulls);
+  // The second pull means the first value was handled.
+  yield* Queue.take(switchPulls);
+  yield* Queue.take(switchPulls);
   yield* publisher.drain;
 
   const put = (thread: OrchestrationV2ThreadShell) =>
@@ -188,6 +200,11 @@ const makeHarness = Effect.fnUntraced(function* (
       gate = null;
     }).pipe(Effect.andThen(Deferred.succeed(held, undefined)));
   });
+  /** Flips Team threads, as Settings does, once the change has been handled. */
+  const setEnabled = Effect.fnUntraced(function* (value: boolean) {
+    yield* Queue.offer(switches, value);
+    yield* Queue.take(switchPulls);
+  });
   const renameProject = (title: string) =>
     Effect.sync(() => {
       projectTitle = title;
@@ -201,6 +218,7 @@ const makeHarness = Effect.fnUntraced(function* (
     reads,
     holdReads,
     renameProject,
+    setEnabled,
     attempts: () => calls,
     homes,
   };
@@ -260,6 +278,61 @@ describe("AriTeamPublisher", () => {
       ]);
       assert.notInclude(JSON.stringify(published), "private message");
       assert.notInclude(JSON.stringify(published), "Not shared");
+    }).pipe(Effect.scoped),
+  );
+
+  const pr = (url: string) => ({
+    linkedPullRequest: { projectId: PROJECT_ID, repository: "livemap/frontend", number: 7, url },
+  });
+  it.each([
+    [
+      "a long title, shortened",
+      { title: `${"a".repeat(199)}😀tail` },
+      { title: `${"a".repeat(199)}…` },
+    ],
+    ["a long branch, dropped", { branch: "b".repeat(251) }, { branch: null }],
+    [
+      "a pull request link with a sign-in",
+      pr("https://me:pw@github.com/x/y/pull/7"),
+      { pullRequestUrl: null },
+    ],
+    ["a pull request link that is not http", pr("javascript:alert(1)"), { pullRequestUrl: null }],
+    [
+      "a pull request link with a query",
+      pr("https://github.com/x/y/pull/7?token=abc#frag"),
+      { pullRequestUrl: "https://github.com/x/y/pull/7" },
+    ],
+    [
+      "an over-long pull request link",
+      pr(`https://github.com/${"p".repeat(500)}`),
+      { pullRequestUrl: null },
+    ],
+  ] as const)("fits %s to the relay API", (_, change, expected) => {
+    const entry = ariTeamThreadEntry(shell({ ...change, tags: ["team"] }), "frontend");
+    assert.deepInclude(entry, expected);
+    assert.isAtMost(entry?.title.length ?? 0, 200);
+  });
+
+  it("leaves out a thread whose id the API refuses, and a project name it would", () => {
+    assert.isNull(ariTeamThreadEntry(shell({ id: ThreadId.make("has space") }), null));
+    assert.isNull(ariTeamThreadEntry(shell(), "p".repeat(201))?.project);
+  });
+
+  it.effect("publishes the other threads when one has an over-long title", () =>
+    Effect.gen(function* () {
+      const { published } = yield* makeHarness({
+        initial: [
+          shell({ tags: ["team"], title: "t".repeat(5000) }),
+          shell({ id: ThreadId.make("bad id"), tags: ["team"] }),
+          shell({ id: ThreadId.make("second"), tags: ["team"] }),
+        ],
+      });
+      const threads = published.at(-1)?.threads ?? [];
+      assert.sameMembers(
+        threads.map((thread) => thread.threadId),
+        [THREAD_ID, "second"],
+      );
+      assert.isTrue(threads.every((thread) => String(thread.title).length <= 200));
     }).pipe(Effect.scoped),
   );
 
@@ -375,6 +448,68 @@ describe("AriTeamPublisher", () => {
         THREAD_ID,
         "second",
       ]);
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("takes the list down when Team threads is turned off and lists it again on", () =>
+    Effect.gen(function* () {
+      const { publisher, published, deliver, setEnabled, reads } = yield* makeHarness({
+        initial: [listed],
+      });
+      assert.equal(published.at(-1)?.threads.length, 1);
+      yield* setEnabled(false);
+      yield* publisher.drain;
+      assert.deepEqual(published.at(-1)?.threads, []);
+      // While off, nothing is read or published, even for a newly marked thread.
+      yield* Queue.clear(reads);
+      const before = published.length;
+      yield* deliver("thread.tags-updated", shell({ id: ThreadId.make("second"), tags: ["team"] }));
+      yield* TestClock.adjust("30 minutes");
+      yield* publisher.drain;
+      assert.equal(published.length, before);
+      assert.equal(yield* Queue.size(reads), 0);
+      yield* setEnabled(true);
+      yield* publisher.drain;
+      assert.sameMembers(published.at(-1)?.threads.map((thread) => thread.threadId) ?? [], [
+        THREAD_ID,
+        "second",
+      ]);
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("starts with nothing listed while Team threads is off", () =>
+    Effect.gen(function* () {
+      const { published } = yield* makeHarness({ initial: [listed], enabled: false });
+      assert.deepEqual(published, [{ args: ["relay", "team", "publish", "-"], threads: [] }]);
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("ends with an empty list when Team threads is turned off during a publish", () =>
+    Effect.gen(function* () {
+      const { publisher, published, deliver, reads, holdReads, setEnabled } = yield* makeHarness();
+      const release = yield* holdReads();
+      yield* deliver("thread.tags-updated", listed);
+      yield* Queue.take(reads);
+      yield* setEnabled(false);
+      yield* release;
+      yield* publisher.drain;
+      assert.deepEqual(published.at(-1)?.threads, []);
+    }).pipe(Effect.scoped),
+  );
+
+  it.effect("retries taking the list down when turning it off fails", () =>
+    Effect.gen(function* () {
+      const { publisher, published, setEnabled, attempts } = yield* makeHarness({
+        initial: [listed],
+        fail: (call) => (call === 2 ? "unreachable" : null),
+      });
+      yield* setEnabled(false);
+      yield* publisher.drain;
+      assert.equal(attempts(), 2);
+      yield* TestClock.adjust("15 seconds");
+      yield* publisher.drain;
+      assert.equal(attempts(), 3);
+      assert.deepEqual(published.at(-1)?.threads, []);
     }).pipe(Effect.scoped),
   );
 

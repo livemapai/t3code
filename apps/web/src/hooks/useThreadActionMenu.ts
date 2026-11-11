@@ -32,6 +32,7 @@ import { threadEnvironment } from "../state/threads";
 import { useOrchestrationCommand } from "../state/use-orchestration-command";
 import { readEnvironmentScope } from "../state/session";
 import {
+  readEnvironmentAriTeamThreadsEnabled,
   readEnvironmentServerConfigLoaded,
   readEnvironmentSupportsAutoSettleOptOut,
   readThreadShell,
@@ -102,7 +103,6 @@ export function useThreadActionMenu(input: {
   const confirmThreadArchive = useClientSettings((s) => s.confirmThreadArchive);
   const timestampFormat = useClientSettings((s) => s.timestampFormat);
   const threadFlagsEnabled = useClientSettings((s) => s.ariThreadFlagsEnabled);
-  const teamThreadsEnabled = useClientSettings((s) => s.ariTeamThreadsEnabled);
   const { copyToClipboard: copyPathToClipboard } = useCopyToClipboard<{ path: string }>({
     onCopy: ({ path }) => {
       toastManager.add({ type: "success", title: "Path copied", description: path });
@@ -141,7 +141,7 @@ export function useThreadActionMenu(input: {
         snooze: configLoaded,
         pinning: configLoaded,
         flags: configLoaded && threadFlagsEnabled,
-        teamThreads: configLoaded && teamThreadsEnabled,
+        teamThreads: readEnvironmentAriTeamThreadsEnabled(threadRef.environmentId),
         titleRegeneration: configLoaded,
       };
       const isRegeneratingTitle = thread.titleRegeneration != null;

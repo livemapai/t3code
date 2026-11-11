@@ -26,14 +26,41 @@ export function teamThreadActions(thread: AriTeamThread): ReadonlyArray<TeamThre
   ];
 }
 
+/**
+ * Text from a teammate's machine, made safe to put inside a sentence the person sends: one line,
+ * no control or invisible formatting characters, and no `"` or backtick to close the quotes
+ * around it, as `ari`'s own `quotable` does; capped so it cannot drown the sentence.
+ */
+export function quotable(text: string, max = 200): string {
+  const line = text
+    .replace(/\p{Cf}/gu, "")
+    .replace(/[\p{Cc}\p{Zl}\p{Zp}\s]+/gu, " ")
+    .replace(/["`]/g, "'")
+    .trim();
+  if (line.length <= max) return line;
+  let kept = "";
+  for (const char of line) {
+    if (kept.length + char.length > max - 1) break;
+    kept += char;
+  }
+  return `${kept.trimEnd()}…`;
+}
+
+/** A handle is an email or the part before its @, so anything else is dropped from one. */
+export const quotableHandle = (handle: string) =>
+  handle.replace(/[^A-Za-z0-9._%+@-]/g, "").slice(0, 100);
+
+const teammate = (person: Pick<AriTeamPerson, "name" | "handle">) =>
+  `${quotable(person.name, 80)} (${quotableHandle(person.handle)})`;
+
 /** The person finishes the question; nothing is sent until they do. */
 export function askTeammatePrompt(person: AriTeamPerson, thread: AriTeamThread): string {
-  return `Ask ${person.name} (${person.handle}) through ari relay about their thread "${thread.title}": `;
+  return `Ask ${teammate(person)} through ari relay about their thread "${quotable(thread.title)}": `;
 }
 
 /** Asks the teammate to hand the thread over; they decide, and its handoff waits for approval. */
 export function takeOverPrompt(person: AriTeamPerson, thread: AriTeamThread): string {
-  return `Ask ${person.name} (${person.handle}) through ari relay to hand over their thread "${thread.title}" to me: `;
+  return `Ask ${teammate(person)} through ari relay to hand over their thread "${quotable(thread.title)}" to me: `;
 }
 
 const HAND_OVER_PROMPT = "Hand this thread over through ari relay to ";

@@ -23,6 +23,7 @@ import type * as Orchestrator from "../orchestration-v2/Orchestrator.ts";
 import * as ServerConfig from "../config.ts";
 import * as ThreadManagement from "../orchestration-v2/ThreadManagementService.ts";
 import * as ProjectService from "../project/ProjectService.ts";
+import * as ServerSettings from "../serverSettings.ts";
 import { forkParked } from "../serverActivation.ts";
 import * as AriClient from "./AriClient.ts";
 
@@ -33,6 +34,8 @@ const RETRY_SECONDS = [15, 30, 60];
 
 export interface AriTeamPublisherSource<E> {
   readonly events: Stream.Stream<OrchestrationV2DomainEvent, E>;
+  /** Whether Team threads is on for this machine: the current value, then each change. */
+  readonly enabled: Stream.Stream<boolean>;
   /** Active threads; every one of them when `threadIds` is absent. */
   readonly readThreads: (
     threadIds?: ReadonlyArray<ThreadId>,
@@ -80,6 +83,61 @@ const isTeamListed = (thread: OrchestrationV2ThreadShell) =>
   thread.deletedAt === null &&
   isListedThreadLineage(thread.lineage);
 
+// The relay API's limits: past one, it refuses this machine's whole list.
+const TITLE_MAX = 200;
+const PROJECT_MAX = 200;
+const BRANCH_MAX = 250;
+const PULL_REQUEST_URL_MAX = 500;
+const THREAD_ID = /^[A-Za-z0-9._:-]{1,200}$/;
+
+const shorten = (text: string, max: number) => {
+  if (text.length <= max) return text;
+  // By code point, so no surrogate pair is cut in half.
+  let kept = "";
+  for (const char of text) {
+    if (kept.length + char.length > max - 1) break;
+    kept += char;
+  }
+  return `${kept}…`;
+};
+const fitsOrNull = (text: string | null, max: number) =>
+  text === null || text.trim() === "" || text.length > max ? null : text;
+
+/** A plain http(s) link without a sign-in, query or fragment, which is all a pull request needs. */
+function plainPullRequestUrl(input: string | null): string | null {
+  if (input === null || /\p{Cc}/u.test(input)) return null;
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return null;
+  }
+  if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) {
+    return null;
+  }
+  const plain = `${url.origin}${url.pathname}`;
+  return plain.length > PULL_REQUEST_URL_MAX ? null : plain;
+}
+
+/** What is published about a thread, fitted to the API's limits; null for an id it would refuse. */
+export function ariTeamThreadEntry(
+  thread: OrchestrationV2ThreadShell,
+  project: string | null,
+): AriTeamThread | null {
+  if (!THREAD_ID.test(thread.id)) return null;
+  return {
+    threadId: thread.id,
+    title: shorten(thread.title, TITLE_MAX),
+    project: fitsOrNull(project, PROJECT_MAX),
+    branch: fitsOrNull(thread.branch, BRANCH_MAX),
+    pullRequestUrl: plainPullRequestUrl(
+      thread.linkedPullRequest?.url ?? thread.branchPullRequest?.url ?? null,
+    ),
+    state: ariTeamThreadState(thread),
+    updatedAt: DateTime.formatIso(thread.updatedAt),
+  };
+}
+
 /** Approvals, questions and errors read as idle: the team sees only whether the agent works. */
 export function ariTeamThreadState(
   thread: Pick<OrchestrationV2ThreadShell, "status" | "pendingRuntimeRequest">,
@@ -95,6 +153,8 @@ export const makeAriTeamPublisher = Effect.fn("AriTeamPublisher.make")(function*
   home?: string,
 ) {
   const client = yield* AriClient.AriClient;
+  // Null until the setting is read; nothing publishes before that.
+  let enabled: boolean | null = null;
   // Only the worker writes membership; events add candidates it merges in on its next pass.
   let teamThreadIds = new Set<ThreadId>();
   const candidates = new Set<ThreadId>();
@@ -119,31 +179,34 @@ export const makeAriTeamPublisher = Effect.fn("AriTeamPublisher.make")(function*
     });
 
   const publish = Effect.fn("AriTeamPublisher.publish")(function* (force: boolean) {
-    const ids = [...teamThreadIds, ...candidates];
-    candidates.clear();
-    const threads = yield* source.readThreads(scanAll ? undefined : ids);
-    scanAll = false;
-    const listed = threads
-      .filter(isTeamListed)
-      .toSorted(
-        (a, b) => DateTime.toEpochMillis(b.updatedAt) - DateTime.toEpochMillis(a.updatedAt),
-      );
-    teamThreadIds = new Set(listed.map((thread) => thread.id));
-    const shown = listed.slice(0, ARI_TEAM_PUBLISH_LIMIT);
-    const titles = yield* source.readProjectTitles([
-      ...new Set(shown.map((thread) => thread.projectId)),
-    ]);
-    const body = yield* encodePublishBody({
-      threads: shown.map((thread): AriTeamThread => ({
-        threadId: thread.id,
-        title: thread.title,
-        project: titles.get(thread.projectId) ?? null,
-        branch: thread.branch,
-        pullRequestUrl: thread.linkedPullRequest?.url ?? thread.branchPullRequest?.url ?? null,
-        state: ariTeamThreadState(thread),
-        updatedAt: DateTime.formatIso(thread.updatedAt),
-      })),
-    });
+    let shown: ReadonlyArray<AriTeamThread> = [];
+    if (enabled) {
+      const ids = [...teamThreadIds, ...candidates];
+      candidates.clear();
+      const threads = yield* source.readThreads(scanAll ? undefined : ids);
+      scanAll = false;
+      const listed = threads
+        .filter(isTeamListed)
+        .toSorted(
+          (a, b) => DateTime.toEpochMillis(b.updatedAt) - DateTime.toEpochMillis(a.updatedAt),
+        );
+      teamThreadIds = new Set(listed.map((thread) => thread.id));
+      const titles = yield* source.readProjectTitles([
+        ...new Set(listed.slice(0, ARI_TEAM_PUBLISH_LIMIT).map((thread) => thread.projectId)),
+      ]);
+      shown = listed
+        .flatMap((thread) => {
+          const entry = ariTeamThreadEntry(thread, titles.get(thread.projectId) ?? null);
+          return entry === null ? [] : [entry];
+        })
+        .slice(0, ARI_TEAM_PUBLISH_LIMIT);
+    } else {
+      // Off lists nothing; turning it back on reads every thread again.
+      candidates.clear();
+      teamThreadIds = new Set();
+      scanAll = true;
+    }
+    const body = yield* encodePublishBody({ threads: shown });
     listedCount = shown.length;
     if (!force && acknowledged && body === published) return;
     yield* client
@@ -190,6 +253,7 @@ export const makeAriTeamPublisher = Effect.fn("AriTeamPublisher.make")(function*
   // Events that arrive while a publish waits collapse into it: it reads the state as it is then.
   const request = (force: boolean) =>
     Effect.suspend(() => {
+      if (enabled === null) return Effect.void;
       if (force) forceNext = true;
       if (queued) return Effect.void;
       queued = true;
@@ -197,6 +261,7 @@ export const makeAriTeamPublisher = Effect.fn("AriTeamPublisher.make")(function*
     }).pipe(Effect.uninterruptible);
 
   const onEvent = (event: OrchestrationV2DomainEvent) => {
+    if (!enabled) return Effect.void;
     if (teamThreadIds.has(event.threadId) || candidates.has(event.threadId)) {
       return LISTED_FIELD_EVENTS.has(event.type) ? request(false) : Effect.void;
     }
@@ -230,9 +295,16 @@ export const makeAriTeamPublisher = Effect.fn("AriTeamPublisher.make")(function*
     never,
     Scope.Scope
   > {
-    // Publishing once at start replaces whatever this machine listed before a restart.
+    yield* forkParked(Stream.runForEach(source.events, onEvent));
+    // The first value publishes once, which replaces whatever this machine listed before a
+    // restart; each change after it publishes at once, so turning it off takes the list down.
     yield* forkParked(
-      request(false).pipe(Effect.andThen(Stream.runForEach(source.events, onEvent))),
+      Stream.runForEach(Stream.changes(source.enabled), (value) =>
+        Effect.suspend(() => {
+          enabled = value;
+          return request(true);
+        }),
+      ),
     );
     yield* forkParked(Effect.forever(schedule));
   });
@@ -247,10 +319,26 @@ export const layer = Layer.effectDiscard(
     if (config.devUrl !== undefined) return;
     const threads = yield* ThreadManagement.ThreadManagementService;
     const projects = yield* ProjectService.ProjectService;
+    const settings = yield* ServerSettings.ServerSettingsService;
     const source: AriTeamPublisherSource<
       Orchestrator.OrchestratorV2Error | ProjectService.ProjectOperationError
     > = {
       events: threads.streamDomainEvents,
+      // Subscribed before the read, so a change in between is not lost. An unreadable setting
+      // reads as off, the private direction.
+      enabled: Stream.unwrap(
+        Effect.gen(function* () {
+          const changes = yield* settings.subscribeChanges;
+          const current = yield* settings.getSettings.pipe(
+            Effect.map((value) => value.ariTeamThreadsEnabled),
+            Effect.orElseSucceed(() => false),
+          );
+          return Stream.concat(
+            Stream.make(current),
+            changes.pipe(Stream.map((value) => value.ariTeamThreadsEnabled)),
+          );
+        }),
+      ),
       readThreads: (threadIds) =>
         threadIds?.length === 0
           ? Effect.succeed([])

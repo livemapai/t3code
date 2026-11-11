@@ -47,6 +47,7 @@ vi.mock("../state/session", () => ({
     scope === AuthOrchestrationOperateScope && state.granted.has(environmentId),
 }));
 vi.mock("../state/entities", () => ({
+  readEnvironmentAriTeamThreadsEnabled: () => true,
   readEnvironmentServerConfigLoaded: () => true,
   readEnvironmentSupportsAutoSettleOptOut: () => true,
   readThreadShell: () => ({
@@ -119,7 +120,6 @@ vi.mock("./useSettings", () => ({
       confirmThreadArchive: true,
       timestampFormat: "12-hour",
       ariThreadFlagsEnabled: true,
-      ariTeamThreadsEnabled: true,
     }),
 }));
 vi.mock("./useThreadActions", () => ({

@@ -357,6 +357,29 @@ export function readEnvironmentServerConfigLoaded(environmentId: EnvironmentId):
   return appAtomRegistry.get(environmentServerConfigsAtom).has(environmentId);
 }
 
+const FALSE_ATOM = Atom.make(false);
+
+/**
+ * Whether Team threads is on for the machine an environment runs on. It is that server's setting,
+ * because that server publishes its threads; an environment whose config has not loaded reads off.
+ */
+const ariTeamThreadsEnabledAtom = Atom.family((environmentId: EnvironmentId) =>
+  Atom.make(
+    (get) =>
+      get(environmentServerConfigsAtom).get(environmentId)?.settings.ariTeamThreadsEnabled === true,
+  ).pipe(Atom.withLabel(`ari-team-threads:enabled:${environmentId}`)),
+);
+
+export function useEnvironmentAriTeamThreadsEnabled(environmentId: EnvironmentId | null): boolean {
+  return useAtomValue(
+    environmentId === null ? FALSE_ATOM : ariTeamThreadsEnabledAtom(environmentId),
+  );
+}
+
+export function readEnvironmentAriTeamThreadsEnabled(environmentId: EnvironmentId): boolean {
+  return appAtomRegistry.get(ariTeamThreadsEnabledAtom(environmentId));
+}
+
 export function readEnvironmentSupportsAutoSettleOptOut(environmentId: EnvironmentId): boolean {
   return (
     appAtomRegistry.get(environmentServerConfigsAtom).get(environmentId)?.environment.capabilities

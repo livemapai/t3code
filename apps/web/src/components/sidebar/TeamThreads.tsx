@@ -6,11 +6,11 @@ import { useEffect } from "react";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useHandleNewThread } from "../../hooks/useHandleNewThread";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
-import { useClientSettings } from "../../hooks/useSettings";
 import { resolveThreadActionProjectRef } from "../../lib/chatThreadActions";
 import { cn } from "../../lib/utils";
 import { readLocalApi } from "../../localApi";
 import { useAriTeam } from "../../state/ari";
+import { useEnvironmentAriTeamThreadsEnabled } from "../../state/entities";
 import { usePrimaryEnvironmentId } from "../../state/environments";
 import { RelativeTime } from "../RelativeTime";
 import { CollapsibleSectionHeader } from "../ui/collapsible-section-header";
@@ -41,8 +41,9 @@ export function TeamThreadIndicator({ tags }: { tags: ReadonlyArray<string> | un
 }
 
 export function SidebarTeamSection() {
-  const enabled = useClientSettings((settings) => settings.ariTeamThreadsEnabled);
+  // The section reads the primary environment's team, so its machine's switch decides.
   const environmentId = usePrimaryEnvironmentId();
+  const enabled = useEnvironmentAriTeamThreadsEnabled(environmentId);
   if (!enabled || environmentId === null) return null;
   return <TeamSection environmentId={environmentId} />;
 }

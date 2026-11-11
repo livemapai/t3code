@@ -2729,7 +2729,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 snooze: configLoaded,
                 pinning: configLoaded,
                 flags: configLoaded && getClientSettings().ariThreadFlagsEnabled,
-                teamThreads: configLoaded && getClientSettings().ariTeamThreadsEnabled,
+                teamThreads:
+                  serverConfigs.get(thread.environmentId)?.settings.ariTeamThreadsEnabled === true,
                 titleRegeneration: configLoaded,
               },
               snoozePresets,

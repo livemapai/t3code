@@ -166,8 +166,10 @@ function TeamThreadsRow() {
   const updateSettings = useUpdateScopedSettings();
   return (
     <SettingsRow
+      serverScoped
       {...searchableSetting("ari-team-threads")}
-      description="Show the threads teammates list in a Team section, and right-click a thread of yours to show it to the team. Off hides both; a thread you already show stays listed until you hide it."
+      settingKeys={["ariTeamThreadsEnabled"]}
+      description="Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked."
       control={
         <Switch
           checked={settings.ariTeamThreadsEnabled}
