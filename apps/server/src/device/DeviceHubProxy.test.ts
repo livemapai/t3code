@@ -3,6 +3,7 @@ import {
   AuthOrchestrationReadScope,
   AuthOrchestrationOperateScope,
   AuthSessionId,
+  DeviceOperationError,
   LOCAL_DEVICE_HOST_ID,
   type AuthEnvironmentScope,
 } from "@t3tools/contracts";
@@ -24,8 +25,14 @@ const fixture = (
   fail = false,
   authError?: EnvironmentAuth.ServerAuthCredentialError | EnvironmentAuth.ServerAuthInternalError,
   upstream?: DeviceHost.DeviceHostReady["upstream"],
+  hostScreenshot: DeviceHost.DeviceHostReady["devices"]["screenshot"] = () =>
+    Effect.succeed(HOST_PNG),
 ) => {
   let finalized = 0;
+  const hostScreenshots: Array<DeviceHost.HostDevice> = [];
+  const serviceScreenshots: Array<
+    Parameters<DeviceService.DeviceService["Service"]["screenshot"]>[0]
+  > = [];
   const requests: string[] = [];
   const headers: Array<Readonly<Record<string, string>>> = [];
   const client = HttpClient.make((request, _url, signal) =>
@@ -63,17 +70,37 @@ const fixture = (
             Effect.succeed({
               hostId: LOCAL_DEVICE_HOST_ID,
               hub: { origin: "http://hub.test" },
+              devices: {
+                screenshot: (device: DeviceHost.HostDevice) => {
+                  hostScreenshots.push(device);
+                  return hostScreenshot(device);
+                },
+              },
               ...(upstream ? { upstream } : {}),
             }),
-        } as DeviceService.DeviceService["Service"]),
+          screenshot: (input: (typeof serviceScreenshots)[number]) => {
+            serviceScreenshots.push(input);
+            return Effect.succeed({ png: SERVICE_PNG });
+          },
+        } as unknown as DeviceService.DeviceService["Service"]),
       ),
       Layer.provideMerge(Layer.succeed(HttpClient.HttpClient, client)),
     ),
     { disableLogger: true },
   );
   disposers.push(dispose);
-  return { handler, requests, headers, finalized: () => finalized };
+  return {
+    handler,
+    requests,
+    headers,
+    hostScreenshots,
+    serviceScreenshots,
+    finalized: () => finalized,
+  };
 };
+
+const HOST_PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1]);
+const SERVICE_PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 2]);
 
 describe("device hub proxy", () => {
   it("releases the upstream response after forwarding its body and strips tickets", async () => {
@@ -226,6 +253,122 @@ describe("device hub proxy", () => {
     );
     expect(unrouted.status).toBe(404);
     expect(requests).toHaveLength(1);
+  });
+
+  it("captures serve-sim screenshots through the device service on hub hosts", async () => {
+    const { handler, requests, hostScreenshots, serviceScreenshots } = fixture([
+      AuthOrchestrationReadScope,
+    ]);
+    const response = await handler(
+      new Request(
+        "http://t3.test/api/device-hub/vendor/serve-sim/api/screenshot?device=udid-1&hostId=local&wsTicket=secret",
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("cache-control")).toBe("no-store, no-transform");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(SERVICE_PNG);
+    expect(serviceScreenshots).toEqual([{ hostId: LOCAL_DEVICE_HOST_ID, deviceId: "udid-1" }]);
+    expect(hostScreenshots).toEqual([]);
+    expect(requests).toEqual([]);
+  });
+
+  it("forwards serve-sim screenshots on routed hosts with the host's credentials only", async () => {
+    const { handler, requests, headers, serviceScreenshots } = fixture(
+      [AuthOrchestrationReadScope],
+      false,
+      undefined,
+      (hubPath, search) =>
+        Effect.succeed({
+          url: `https://session.test${hubPath.slice("/vendor/serve-sim".length)}?${search}`,
+          headers: { authorization: "Bearer session-token" },
+          protocols: [],
+        }),
+    );
+    const response = await handler(
+      new Request(
+        "http://t3.test/api/device-hub/vendor/serve-sim/api/screenshot?device=udid-1&hostId=eas&wsTicket=secret",
+        { headers: { authorization: "Bearer environment-token", cookie: "t3=session" } },
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store, no-transform");
+    expect(response.headers.get("set-cookie")).toBeNull();
+    await response.text();
+    expect(serviceScreenshots).toEqual([]);
+    expect(requests).toEqual(["https://session.test/api/screenshot?device=udid-1"]);
+    expect(headers[0]?.authorization).toBe("Bearer session-token");
+    expect(headers[0]).not.toHaveProperty("cookie");
+  });
+
+  it("captures Limrun screenshots from the host, ahead of its upstream routing", async () => {
+    const limrunUpstream: DeviceHost.DeviceHostReady["upstream"] = (hubPath) =>
+      Effect.succeed(
+        hubPath === "/vendor/limrun/ws"
+          ? { url: "wss://instance.test/signal", headers: {}, protocols: [] }
+          : null,
+      );
+    const { handler, requests, hostScreenshots, serviceScreenshots } = fixture(
+      [AuthOrchestrationReadScope],
+      false,
+      undefined,
+      limrunUpstream,
+    );
+    const response = await handler(
+      new Request(
+        "http://t3.test/api/device-hub/vendor/limrun/screenshot?device=instance-1&platform=ios&hostId=limrun&wsTicket=secret",
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(HOST_PNG);
+    expect(hostScreenshots).toMatchObject([{ id: "instance-1", platform: "ios" }]);
+
+    // The Limrun host routes no serve-sim paths, so its serve-sim screenshot stays unreachable.
+    const serveSim = await handler(
+      new Request(
+        "http://t3.test/api/device-hub/vendor/serve-sim/api/screenshot?device=instance-1&hostId=limrun",
+      ),
+    );
+    expect(serveSim.status).toBe(404);
+    expect(serviceScreenshots).toEqual([]);
+    expect(requests).toEqual([]);
+  });
+
+  it("answers a failed Limrun capture with 502 without exposing its cause", async () => {
+    const { handler, hostScreenshots } = fixture(
+      [AuthOrchestrationReadScope],
+      false,
+      undefined,
+      undefined,
+      () =>
+        Effect.fail(
+          new DeviceOperationError({
+            operation: "screenshot",
+            reason: "request_failed",
+            cause: "private instance diagnostic",
+          }),
+        ),
+    );
+    const response = await handler(
+      new Request("http://t3.test/api/device-hub/vendor/limrun/screenshot?device=instance-1"),
+    );
+    expect(response.status).toBe(502);
+    expect(await response.text()).toBe("Screenshot failed");
+    expect(hostScreenshots).toMatchObject([{ id: "instance-1", platform: "android" }]);
+  });
+
+  it.each([
+    "/vendor/serve-sim/api/screenshot?device=udid-1",
+    "/vendor/limrun/screenshot?device=i-1",
+  ])("requires read scope before capturing %s", async (path) => {
+    const { handler, requests, hostScreenshots, serviceScreenshots } = fixture([]);
+    const response = await handler(new Request(`http://t3.test/api/device-hub${path}`));
+    expect(response.status).toBe(403);
+    expect(hostScreenshots).toEqual([]);
+    expect(serviceScreenshots).toEqual([]);
+    expect(requests).toEqual([]);
   });
 
   it("never forwards the vendor shell endpoint", async () => {
