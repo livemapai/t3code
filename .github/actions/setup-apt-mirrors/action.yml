@@ -12,6 +12,28 @@ runs:
           https://mirror.math.princeton.edu/pub/ubuntu 3 \
           | sudo tee /etc/apt/blacksmith-ubuntu-mirrors.txt > /dev/null
 
+        # GitHub-hosted images keep a list of their own, which the rewrite below does not reach.
+        # Give it the same servers, the ones that answer first: a server whose name does not
+        # resolve costs every file a DNS timeout.
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+          up=""
+          down=""
+          for mirror in $(cut -f1 /etc/apt/blacksmith-ubuntu-mirrors.txt); do
+            if curl -fsS --max-time 10 -o /dev/null "$mirror/dists/$codename/InRelease"; then
+              up="$up $mirror"
+            else
+              down="$down $mirror"
+            fi
+          done
+          priority=0
+          for mirror in $up $down; do
+            priority=$((priority + 1))
+            printf '%s\tpriority:%s\n' "$mirror" "$priority"
+          done | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          cat /etc/apt/apt-mirrors.txt
+        fi
+
         # APT's mirror transport retries each file against the next server.
         sudo find /etc/apt -maxdepth 2 -type f \( -name '*.list' -o -name '*.sources' \) \
           -exec sed -i -E \
