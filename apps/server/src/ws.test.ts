@@ -1,4 +1,5 @@
 import * as AriState from "./ari/AriState.ts";
+import * as AriTeam from "./ari/AriTeam.ts";
 import * as SecretResolver from "@t3tools/secret-provider-core/server/SecretResolver";
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -1010,6 +1011,7 @@ it.effect.each([
           ).pipe(
             Layer.provide(configRpcServices),
             Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+            Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
           ),
         ),
       );
@@ -1258,6 +1260,7 @@ it.effect("on-demand clients get provider config without workspace snapshots", (
         ).pipe(
           Layer.provide(configRpcServices),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+          Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
         ),
       ),
     );
@@ -1508,6 +1511,7 @@ it.effect("a missing thread worktree gets its project's skills in the cwd snapsh
         ).pipe(
           Layer.provide(services),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+          Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
         ),
       ),
     );
@@ -1598,6 +1602,7 @@ it.effect("a publish whose push fails still refreshes the new remote", () =>
         ).pipe(
           Layer.provide(services),
           Layer.provide(Layer.succeed(AriState.AriState, { subscribe: Stream.empty })),
+          Layer.provide(Layer.succeed(AriTeam.AriTeam, { read: Effect.die("unused") })),
           Layer.merge(RpcAuthorization.layer([AuthSourceControlWriteScope])),
         ),
       ),

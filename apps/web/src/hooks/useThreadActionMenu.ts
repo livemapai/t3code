@@ -10,6 +10,7 @@ import {
 import { THREAD_FLAGS, threadFlagOf } from "@t3tools/client-runtime/state/thread-flags";
 import { canSnooze, effectiveSnoozed } from "@t3tools/client-runtime/state/thread-settled";
 import {
+  ARI_TEAM_THREAD_TAG,
   AuthOrchestrationOperateScope,
   type ScopedThreadRef,
   type ThreadId,
@@ -85,6 +86,7 @@ export function useThreadActionMenu(input: {
     confirmAndUnpinThread,
     setThreadAutoSettle,
     setThreadFlag,
+    setThreadTeamShared,
     archiveThread,
     deleteThread,
     markThreadUnread,
@@ -98,6 +100,7 @@ export function useThreadActionMenu(input: {
   const confirmThreadArchive = useClientSettings((s) => s.confirmThreadArchive);
   const timestampFormat = useClientSettings((s) => s.timestampFormat);
   const threadFlagsEnabled = useClientSettings((s) => s.ariThreadFlagsEnabled);
+  const teamThreadsEnabled = useClientSettings((s) => s.ariTeamThreadsEnabled);
   const { copyToClipboard: copyPathToClipboard } = useCopyToClipboard<{ path: string }>({
     onCopy: ({ path }) => {
       toastManager.add({ type: "success", title: "Path copied", description: path });
@@ -136,6 +139,7 @@ export function useThreadActionMenu(input: {
         snooze: configLoaded,
         pinning: configLoaded,
         flags: configLoaded && threadFlagsEnabled,
+        teamThreads: configLoaded && teamThreadsEnabled,
         titleRegeneration: configLoaded,
       };
       const isRegeneratingTitle = thread.titleRegeneration != null;
@@ -147,6 +151,7 @@ export function useThreadActionMenu(input: {
         projectFilter: null,
         isPinned: thread.pinnedAt != null,
         flag: threadFlagOf(thread.source.tags),
+        teamShared: thread.source.tags?.includes(ARI_TEAM_THREAD_TAG) === true,
         isSettled: supports.settlement && thread.settledOverride === "settled",
         autoSettleEnabled: thread.autoSettleDisabledAt == null,
         isSnoozed: supports.snooze && effectiveSnoozed(thread, { now: now.toISOString() }),
@@ -256,6 +261,12 @@ export function useThreadActionMenu(input: {
           );
           return;
         }
+        case "team:show":
+        case "team:hide":
+          await reportFailure("Failed to change what the team sees", () =>
+            setThreadTeamShared(threadRef, action === "team:show"),
+          );
+          return;
         case "auto-settle:enabled":
         case "auto-settle:disabled":
           await reportFailure("Failed to update auto-settle", () =>

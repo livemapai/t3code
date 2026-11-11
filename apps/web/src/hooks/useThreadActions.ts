@@ -302,6 +302,9 @@ export function useThreadActions() {
   const setThreadFlagMutation = useOrchestrationCommand(threadEnvironment.setFlag, {
     reportFailure: false,
   });
+  const setThreadTeamSharedMutation = useOrchestrationCommand(threadEnvironment.setTeamShared, {
+    reportFailure: false,
+  });
   const reorderPinnedThreadMutation = useOrchestrationCommand(threadEnvironment.reorderPin, {
     reportFailure: false,
   });
@@ -741,6 +744,12 @@ export function useThreadActions() {
       input: { threadId: target.threadId, flag, previous },
     });
 
+  const setThreadTeamShared = (target: ScopedThreadRef, shared: boolean) =>
+    setThreadTeamSharedMutation({
+      environmentId: target.environmentId,
+      input: { threadId: target.threadId, shared },
+    });
+
   const pinThread = async (target: ScopedThreadRef, opts: { orderKey?: string } = {}) => {
     if (!readEnvironmentServerConfigLoaded(target.environmentId)) {
       return AsyncResult.failure(
@@ -1020,6 +1029,7 @@ export function useThreadActions() {
     markThreadUnread,
     setThreadAutoSettle,
     setThreadFlag,
+    setThreadTeamShared,
     turnThreadIntoProject: (target: ScopedThreadRef) =>
       createProjectFromThread({
         environmentId: target.environmentId,

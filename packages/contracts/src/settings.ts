@@ -526,6 +526,7 @@ export const ClientSettingsSchema = Schema.Struct({
   ariMergeShout: AriMergeShout.pipe(Schema.withDecodingDefault(Effect.succeed("ship-it"))),
   ariThreadFlagsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   ariRelayShelfEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  ariTeamThreadsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   ariLibraryLinksInAppEnabled: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),
   ),
@@ -2049,6 +2050,7 @@ export const ClientSettingsPatch = Schema.Struct({
   ariMergeShout: Schema.optionalKey(AriMergeShout),
   ariThreadFlagsEnabled: Schema.optionalKey(Schema.Boolean),
   ariRelayShelfEnabled: Schema.optionalKey(Schema.Boolean),
+  ariTeamThreadsEnabled: Schema.optionalKey(Schema.Boolean),
   ariLibraryLinksInAppEnabled: Schema.optionalKey(Schema.Boolean),
   toolCallVisibility: Schema.optionalKey(ToolCallVisibility),
   threadDetailsUsageEnabled: Schema.optionalKey(Schema.Boolean),

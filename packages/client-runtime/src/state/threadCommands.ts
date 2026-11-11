@@ -47,6 +47,7 @@ import {
   reorderActiveThread,
   setThreadAutoSettle,
   setThreadFlag,
+  setThreadTeamShared,
   settleThread,
   snoozeThread,
   startThreadTurn,
@@ -208,6 +209,12 @@ export function createThreadEnvironmentAtoms<R, E>(
     setFlag: createEnvironmentCommand(runtime, {
       label: "environment-data:commands:thread:set-flag",
       execute: setThreadFlag,
+      scheduler,
+      concurrency,
+    }),
+    setTeamShared: createEnvironmentCommand(runtime, {
+      label: "environment-data:commands:thread:set-team-shared",
+      execute: setThreadTeamShared,
       scheduler,
       concurrency,
     }),

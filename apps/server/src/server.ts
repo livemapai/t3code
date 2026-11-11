@@ -1,5 +1,7 @@
 import * as AriState from "./ari/AriState.ts";
 import * as AriClient from "./ari/AriClient.ts";
+import * as AriTeam from "./ari/AriTeam.ts";
+import * as AriTeamPublisher from "./ari/AriTeamPublisher.ts";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
 import type { RelayManagedEndpointRuntimeConfig } from "@t3tools/contracts/relay";
 import * as Random from "effect/Random";
@@ -645,6 +647,7 @@ const layerServerRestart = Layer.effect(
 
 const layerRuntimeCoreDependenciesBase = Layer.mergeAll(
   AgentAwarenessRelay.layer,
+  AriTeamPublisher.layer.pipe(Layer.provide(AriClient.layer)),
   HeldHooksWaker.layer,
   layerThreadSettlementWorker,
   layerIdleCompactionWorker,
@@ -1211,7 +1214,9 @@ const layerMakeServer = Layer.unwrap(
       Layer.provide(CloudLink.layer.pipe(Layer.provideMerge(ConnectReachability.layer))),
       Layer.provideMerge(layerRuntimeServices),
       Layer.provide(
-        AriState.layer.pipe(Layer.provide(AriClient.layer), Layer.provide(layerServerEnvironment)),
+        Layer.merge(AriState.layer.pipe(Layer.provide(layerServerEnvironment)), AriTeam.layer).pipe(
+          Layer.provide(AriClient.layer),
+        ),
       ),
       Layer.provideMerge(
         McpSessionRegistry.layer.pipe(

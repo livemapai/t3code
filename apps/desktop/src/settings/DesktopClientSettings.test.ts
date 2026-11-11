@@ -67,6 +67,7 @@ const clientSettings: ClientSettings = {
   ariMergeShout: "ship-it",
   ariThreadFlagsEnabled: true,
   ariRelayShelfEnabled: true,
+  ariTeamThreadsEnabled: true,
   ariLibraryLinksInAppEnabled: true,
   threadDetailsUsageEnabled: false,
   threadDetailsItems: {},

@@ -22,7 +22,11 @@ import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2Pe
 import { runRanAfter } from "@t3tools/shared/orchestrationV2ThreadError";
 import * as DateTime from "effect/DateTime";
 import * as Effect from "effect/Effect";
-import { isOrchestrationV2WorkActive, latestProviderTurnForAttempt } from "@t3tools/contracts";
+import {
+  isOrchestrationV2WorkActive,
+  latestProviderTurnForAttempt,
+  withoutAriTeamTag,
+} from "@t3tools/contracts";
 
 function trimmed(value: string | null | undefined): string | undefined {
   const result = value?.trim();
@@ -63,6 +67,7 @@ export function makeSubagentChildThread(input: {
 }): OrchestrationV2AppThread {
   return {
     ...input.parentThread,
+    tags: withoutAriTeamTag(input.parentThread.tags),
     createdBy: input.createdBy,
     creationSource: input.creationSource,
     id: input.childThreadId,

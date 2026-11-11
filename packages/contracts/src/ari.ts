@@ -39,6 +39,37 @@ export function ariAttentionTarget(state: AriState, primary: boolean): "site" | 
 /** The tag on a thread `ari relay` started, so clients can tell it from the person's own. */
 export const ARI_RELAY_THREAD_TAG = "relay";
 
+/** The tag a person puts on their own thread to list it for the team; threads without it stay private. */
+export const ARI_TEAM_THREAD_TAG = "team";
+
+/** A thread made from another one's data starts private: the tag is consent for that thread alone. */
+export const withoutAriTeamTag = (tags: ReadonlyArray<string> | undefined) =>
+  tags?.filter((tag) => tag !== ARI_TEAM_THREAD_TAG);
+
+/** What `ari relay team` lists about a thread, and all this server ever publishes about one. */
+export const AriTeamThread = Schema.Struct({
+  threadId: Schema.String,
+  title: Schema.String,
+  project: Schema.NullOr(Schema.String),
+  branch: Schema.NullOr(Schema.String),
+  pullRequestUrl: Schema.NullOr(Schema.String),
+  state: Schema.Literals(["working", "idle"]),
+  updatedAt: Schema.String,
+});
+export type AriTeamThread = typeof AriTeamThread.Type;
+export const AriTeamPerson = Schema.Struct({
+  name: Schema.String,
+  handle: Schema.String,
+  self: Schema.Boolean,
+  threads: Schema.Array(AriTeamThread),
+});
+export type AriTeamPerson = typeof AriTeamPerson.Type;
+export const AriTeam = Schema.Struct({
+  state: AriGroupState,
+  people: Schema.Array(AriTeamPerson),
+});
+export type AriTeam = typeof AriTeam.Type;
+
 /** Text markers are forgeable and confer no permissions. */
 export function ariMessageMarker(text: string): { from: string } | null {
   const marker =

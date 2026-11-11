@@ -1,6 +1,6 @@
 import { AriAttention } from "./AriAttention";
 import { attachSidebarTree } from "../lib/sidebarTree";
-import { type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
+import { ARI_TEAM_THREAD_TAG, type EnvironmentId, type ScopedProjectRef } from "@t3tools/contracts";
 import type { EnvironmentServerConfig } from "@t3tools/client-runtime/connection";
 import {
   dropThreadContext,
@@ -256,6 +256,7 @@ import {
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarFlagFilter } from "./sidebar/SidebarFlagFilter";
+import { SidebarTeamSection } from "./sidebar/TeamThreads";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
 import { TooltipProvider } from "./ui/tooltip";
 import {
@@ -974,6 +975,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     confirmAndUnpinThread,
     setThreadAutoSettle,
     setThreadFlag,
+    setThreadTeamShared,
     turnThreadIntoProject,
     reorderPinnedThread,
     reorderActiveThread,
@@ -2709,6 +2711,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                   : null,
               isPinned,
               flag: threadFlagOf(thread.source.tags),
+              teamShared: thread.source.tags?.includes(ARI_TEAM_THREAD_TAG) === true,
               isSettled,
               autoSettleEnabled: thread.autoSettleDisabledAt == null,
               isSnoozed,
@@ -2725,6 +2728,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 snooze: configLoaded,
                 pinning: configLoaded,
                 flags: configLoaded && getClientSettings().ariThreadFlagsEnabled,
+                teamThreads: configLoaded && getClientSettings().ariTeamThreadsEnabled,
                 titleRegeneration: configLoaded,
               },
               snoozePresets,
@@ -2832,6 +2836,21 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                 stackedThreadToast({
                   type: "error",
                   title: "Failed to flag thread",
+                  description: error instanceof Error ? error.message : "An error occurred.",
+                }),
+              );
+            }
+            return;
+          }
+          case "team:show":
+          case "team:hide": {
+            const result = await setThreadTeamShared(threadRef, clicked.value === "team:show");
+            if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+              const error = squashAtomCommandFailure(result);
+              toastManager.add(
+                stackedThreadToast({
+                  type: "error",
+                  title: "Failed to change what the team sees",
                   description: error instanceof Error ? error.message : "An error occurred.",
                 }),
               );
@@ -3762,6 +3781,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
               )}
             </div>
           ) : null}
+          {isSearchingThreads ? null : <SidebarTeamSection />}
         </SidebarGroup>
       </SidebarContent>
       <AriAttention />

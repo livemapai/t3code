@@ -17,7 +17,10 @@ export class AriReadError extends Schema.TaggedError<AriReadError>()("AriReadErr
 export class AriClient extends Context.Service<
   AriClient,
   {
-    readonly run: (args: ReadonlyArray<string>) => Effect.Effect<string, AriReadError>;
+    readonly run: (
+      args: ReadonlyArray<string>,
+      options?: { readonly stdin?: string; readonly env?: NodeJS.ProcessEnv },
+    ) => Effect.Effect<string, AriReadError>;
   }
 >()("t3/ari/AriClient") {}
 
@@ -29,11 +32,16 @@ const make = Effect.gen(function* () {
   const lock = yield* Semaphore.make(1);
   const missing = (error: ProcessRunner.ProcessSpawnError) =>
     error.cause instanceof PlatformError.PlatformError && error.cause.reason._tag === "NotFound";
-  const run = Effect.fn("AriClient.run")(function* (args: ReadonlyArray<string>) {
+  const run = Effect.fn("AriClient.run")(function* (
+    args: ReadonlyArray<string>,
+    options?: { readonly stdin?: string; readonly env?: NodeJS.ProcessEnv },
+  ) {
     const invoke = (command: string) =>
       runner.run({
         command,
         args: [...args, "--json"],
+        stdin: options?.stdin,
+        env: options?.env,
         timeout: "10 seconds",
         maxOutputBytes: 1024 * 1024,
       });

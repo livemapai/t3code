@@ -527,6 +527,12 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["ari livemap relay teammate agent sidebar section shelf separate"],
   },
   {
+    id: "ari-team-threads",
+    title: "Team threads",
+    to: "/settings/ari",
+    searchTerms: ["ari livemap team teammates share show hide list who works on what sidebar"],
+  },
+  {
     id: "ari-library-links",
     title: "Open Ari Library links in the app",
     to: "/settings/ari",

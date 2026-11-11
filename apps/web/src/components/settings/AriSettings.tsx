@@ -161,6 +161,24 @@ function RelayShelfRow() {
   );
 }
 
+function TeamThreadsRow() {
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-team-threads")}
+      description="Show the threads teammates list in a Team section, and right-click a thread of yours to show it to the team. Off hides both; a thread you already show stays listed until you hide it."
+      control={
+        <Switch
+          checked={settings.ariTeamThreadsEnabled}
+          onCheckedChange={(checked) => updateSettings({ ariTeamThreadsEnabled: Boolean(checked) })}
+          aria-label="Team threads"
+        />
+      }
+    />
+  );
+}
+
 function LibraryLinksRow() {
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
@@ -190,6 +208,7 @@ export function AriSettings() {
         <MergeShoutRow />
         <ThreadFlagsRow />
         <RelayShelfRow />
+        <TeamThreadsRow />
         <LibraryLinksRow />
       </SettingsSection>
       <div className="space-y-4">

@@ -1,4 +1,5 @@
 import * as AriState from "./ari/AriState.ts";
+import * as AriTeam from "./ari/AriTeam.ts";
 import { OrchestrationDispatchCommandError } from "@t3tools/contracts";
 import * as Context from "effect/Context";
 import * as SecureRandom from "effect/crypto/SecureRandom";
@@ -1405,6 +1406,7 @@ export const layerWsRpc = (
   Layer.effectContext(
     Effect.gen(function* () {
       const ariState = yield* AriState.AriState;
+      const ariTeam = yield* AriTeam.AriTeam;
       const currentSessionId = currentSession.sessionId;
       const sql = yield* SqlClient.SqlClient;
       const threadManagement = yield* ThreadManagementService.ThreadManagementService;
@@ -3305,6 +3307,7 @@ export const layerWsRpc = (
             }),
           ),
         [WS_METHODS.ariSubscribe]: () => ariState.subscribe,
+        [WS_METHODS.ariTeam]: () => ariTeam.read,
         [WS_METHODS.subscribeServerConfig]: (input) =>
           Stream.unwrap(
             Effect.gen(function* () {
