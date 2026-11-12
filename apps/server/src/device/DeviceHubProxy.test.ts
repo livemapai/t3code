@@ -35,6 +35,7 @@ const fixture = (
   > = [];
   const requests: string[] = [];
   const headers: Array<Readonly<Record<string, string>>> = [];
+  const unexpectedOperation = Effect.die("Unexpected device operation");
   const client = HttpClient.make((request, _url, signal) =>
     Effect.gen(function* () {
       requests.push(request.url);
@@ -52,7 +53,7 @@ const fixture = (
   const { handler, dispose } = HttpRouter.toWebHandler(
     DeviceHubProxy.layer.pipe(
       Layer.provideMerge(
-        Layer.succeed(EnvironmentAuth.EnvironmentAuth, {
+        Layer.mock(EnvironmentAuth.EnvironmentAuth)({
           authenticateWebSocketUpgrade: () =>
             authError
               ? Effect.fail(authError)
@@ -62,27 +63,46 @@ const fixture = (
                   method: "bearer-access-token",
                   scopes,
                 }),
-        } as unknown as EnvironmentAuth.EnvironmentAuth["Service"]),
+        }),
       ),
       Layer.provideMerge(
-        Layer.succeed(DeviceService.DeviceService, {
-          currentReadiness: () =>
+        Layer.mock(DeviceService.DeviceService)({
+          currentReadiness: (hostId) =>
             Effect.succeed({
-              hostId: LOCAL_DEVICE_HOST_ID,
+              hostId: hostId ?? LOCAL_DEVICE_HOST_ID,
+              nodePath: "node",
               hub: { origin: "http://hub.test" },
               devices: {
-                screenshot: (device: DeviceHost.HostDevice) => {
+                list: unexpectedOperation,
+                boot: () => unexpectedOperation,
+                attach: () => unexpectedOperation,
+                shutdown: () => unexpectedOperation,
+                screenshot: (device) => {
                   hostScreenshots.push(device);
                   return hostScreenshot(device);
                 },
               },
+              run: () => unexpectedOperation,
+              helpers: { serveSimAxSettings: null, serveSimCli: null },
               ...(upstream ? { upstream } : {}),
             }),
-          screenshot: (input: (typeof serviceScreenshots)[number]) => {
-            serviceScreenshots.push(input);
-            return Effect.succeed({ png: SERVICE_PNG });
-          },
-        } as unknown as DeviceService.DeviceService["Service"]),
+          screenshot: (input) =>
+            Effect.sync(() => {
+              serviceScreenshots.push(input);
+              return {
+                device: {
+                  hostId: input.hostId ?? LOCAL_DEVICE_HOST_ID,
+                  id: input.deviceId,
+                  platform: "ios",
+                  name: "Phone",
+                  version: "27.0",
+                  booted: true,
+                  physical: false,
+                },
+                png: SERVICE_PNG,
+              };
+            }),
+        }),
       ),
       Layer.provideMerge(Layer.succeed(HttpClient.HttpClient, client)),
     ),
@@ -273,7 +293,7 @@ describe("device hub proxy", () => {
     expect(requests).toEqual([]);
   });
 
-  it("forwards serve-sim screenshots on routed hosts with the host's credentials only", async () => {
+  it("captures routed-host screenshots through the selected service without forwarding credentials", async () => {
     const { handler, requests, headers, serviceScreenshots } = fixture(
       [AuthOrchestrationReadScope],
       false,
@@ -294,11 +314,10 @@ describe("device hub proxy", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store, no-transform");
     expect(response.headers.get("set-cookie")).toBeNull();
-    await response.text();
-    expect(serviceScreenshots).toEqual([]);
-    expect(requests).toEqual(["https://session.test/api/screenshot?device=udid-1"]);
-    expect(headers[0]?.authorization).toBe("Bearer session-token");
-    expect(headers[0]).not.toHaveProperty("cookie");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(SERVICE_PNG);
+    expect(serviceScreenshots).toEqual([{ hostId: "eas", deviceId: "udid-1" }]);
+    expect(requests).toEqual([]);
+    expect(headers).toEqual([]);
   });
 
   it("captures Limrun screenshots from the host, ahead of its upstream routing", async () => {
@@ -325,14 +344,16 @@ describe("device hub proxy", () => {
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(HOST_PNG);
     expect(hostScreenshots).toMatchObject([{ id: "instance-1", platform: "ios" }]);
 
-    // The Limrun host routes no serve-sim paths, so its serve-sim screenshot stays unreachable.
+    // Generic screenshot endpoints use the selected service even when no HTTP route exists.
     const serveSim = await handler(
       new Request(
         "http://t3.test/api/device-hub/vendor/serve-sim/api/screenshot?device=instance-1&hostId=limrun",
       ),
     );
-    expect(serveSim.status).toBe(404);
-    expect(serviceScreenshots).toEqual([]);
+    expect(serveSim.status).toBe(200);
+    expect(new Uint8Array(await serveSim.arrayBuffer())).toEqual(SERVICE_PNG);
+    expect(serviceScreenshots).toEqual([{ hostId: "limrun", deviceId: "instance-1" }]);
+    expect(hostScreenshots).toHaveLength(1);
     expect(requests).toEqual([]);
   });
 
@@ -382,6 +403,32 @@ describe("device hub proxy", () => {
     ).toBe(404);
     expect(requests).toEqual([]);
   });
+
+  it.each(["serve-sim", "serve-emu"])(
+    "captures %s screenshots through hosts with their own stream routing",
+    async (vendor) => {
+      const { handler, requests, serviceScreenshots, hostScreenshots } = fixture(
+        [AuthOrchestrationReadScope],
+        false,
+        undefined,
+        () => Effect.succeed(null),
+      );
+      const response = await handler(
+        new Request(
+          `http://t3.test/api/device-hub/vendor/${vendor}/api/screenshot?device=udid-1&hostId=pool`,
+          {
+            method: "POST",
+          },
+        ),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/png");
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(SERVICE_PNG);
+      expect(requests).toEqual([]);
+      expect(hostScreenshots).toEqual([]);
+      expect(serviceScreenshots).toEqual([{ hostId: "pool", deviceId: "udid-1" }]);
+    },
+  );
 });
 
 it.each([

@@ -18,8 +18,17 @@ vi.mock(import("@t3tools/client-runtime/state/thread-workflows"), async (importO
 vi.mock(import("../../state/entities"), async (importOriginal) => ({
   ...(await importOriginal()),
   useThreadProjection: (() => state.projection) as never,
-  useQuietThreadShell: ((target: unknown) =>
-    target === null ? null : { title: "Release lead" }) as never,
+  // The linked environment is connected, but its thread is not in the loaded shell.
+  useQuietThreadShell: ((target: { readonly environmentId: string } | null) =>
+    target === null || target.environmentId === "environment:linked"
+      ? null
+      : { title: "Release lead" }) as never,
+}));
+
+vi.mock(import("../../state/environments"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useEnvironment: ((environmentId: string | null) =>
+    environmentId === "environment:linked" ? { environmentId } : null) as never,
 }));
 
 vi.mock(import("../../state/query"), async (importOriginal) => ({
@@ -142,6 +151,19 @@ it("shows who sent a queued message and folds automation and agent prompts", asy
         },
       ],
       [
+        "run:linked",
+        "Linked review finished.",
+        {
+          createdBy: "agent",
+          creationSource: "mcp",
+          linkedSender: {
+            environmentId: "environment:linked",
+            threadId: "thread:linked-lead",
+            title: "Title when sent",
+          },
+        },
+      ],
+      [
         "run:server",
         "Continue where you left off.",
         {
@@ -158,6 +180,8 @@ it("shows who sent a queued message and folds automation and agent prompts", asy
   };
   const onOpenThread = vi.fn();
   await using _screen = await renderQueue({ onOpenThread });
+  // Four rows collapse the queue.
+  await page.getByRole("button", { name: "Show all 4 queued" }).click();
 
   const automation = page.getByRole("button", { name: /PR dispatcher/ });
   await expect.element(automation).toHaveAttribute("aria-expanded", "false");
@@ -167,8 +191,12 @@ it("shows who sent a queued message and folds automation and agent prompts", asy
   await expect.element(page.getByRole("link", { name: "Open automation" })).toBeInTheDocument();
 
   await expect.element(page.getByRole("button", { name: /Release lead/ })).toBeVisible();
-  await page.getByRole("button", { name: "Open thread" }).click({ force: true });
-  expect(onOpenThread).toHaveBeenCalledExactlyOnceWith("thread:lead");
+  await page.getByRole("button", { name: "Open thread" }).nth(0).click({ force: true });
+  expect(onOpenThread).toHaveBeenCalledExactlyOnceWith("thread:lead", "environment:test");
+  // A sender in a connected linked environment keeps the title it sent and opens there.
+  await expect.element(page.getByRole("button", { name: /Title when sent/ })).toBeVisible();
+  await page.getByRole("button", { name: "Open thread" }).nth(1).click({ force: true });
+  expect(onOpenThread).toHaveBeenLastCalledWith("thread:linked-lead", "environment:linked");
 
   await expect.element(page.getByText("Sent by T3 Code")).toBeVisible();
   await expect.element(page.getByText("Continue where you left off.")).toBeVisible();
@@ -202,4 +230,48 @@ it("stays inside the timeline scroller instead of growing the chat column", asyn
   await expect.element(page.getByText("Later", { exact: true })).toBeInTheDocument();
   const column = screen.getByTestId("column").element();
   expect(column.scrollHeight).toBe(column.clientHeight);
+});
+
+it.each([
+  ["Ada. Not from you.", "Ada"],
+  ["another thread of yours (Ada).", "Your other thread"],
+])("keeps Relay attribution and readable body for %s", async (from, label) => {
+  setup();
+  const text = `RELAY QUESTION from ${from}\nAgent routing instructions.\n--- question q-1 ---\nCan you review this?\nSecond line.\n--- end of question q-1 ---\nConversation: https://example.test/relay/q-1`;
+  state.projection = { projection: { messages: [] } };
+  state.workflow = {
+    activeRun: { id: "run:active" },
+    canPromoteToSteer: true,
+    queuedRuns: [
+      {
+        run: { id: "run:relay", userMessageId: "message:relay" },
+        text,
+        attachments: [],
+        message: {
+          id: "message:relay",
+          role: "user",
+          text,
+          createdBy: "agent",
+          creationSource: "mcp",
+          linkedSender: {
+            environmentId: "environment:linked",
+            threadId: "thread:linked-lead",
+            title: "Machine routing title",
+          },
+          createdAt: DateTime.makeUnsafe("2026-10-27T12:00:00.000Z"),
+        },
+      },
+    ],
+  };
+  const onOpenThread = vi.fn();
+  await using _screen = await renderQueue({ onOpenThread });
+  const header = page.getByRole("button", { name: new RegExp(label) });
+  await expect.element(header).toMatchTextContent(/Can you review this\?/);
+  await header.click();
+  await expect
+    .element(page.getByText("Can you review this? Second line.", { exact: true }))
+    .toBeVisible();
+  await expect.element(page.getByText(/Agent routing instructions/)).not.toBeInTheDocument();
+  await page.getByRole("button", { name: "Open thread" }).click({ force: true });
+  expect(onOpenThread).toHaveBeenCalledExactlyOnceWith("thread:linked-lead", "environment:linked");
 });

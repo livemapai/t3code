@@ -112,6 +112,8 @@ vi.mock("../state/threads", () => ({
       "pin",
       "unpin",
       "reorderPin",
+      "setFlag",
+      "setTeamShared",
       "snooze",
       "unsnooze",
       "stopSession",
@@ -214,6 +216,15 @@ const secondary = EnvironmentId.make("secondary");
 const target = { environmentId: secondary, threadId: ThreadId.make("thread") };
 type ThreadActions = ReturnType<typeof useThreadActions>;
 const operations = [
+  {
+    name: "setFlag",
+    run: (actions: ThreadActions, ref: ScopedThreadRef) =>
+      actions.setThreadFlag(ref, "urgent", null),
+  },
+  {
+    name: "setTeamShared",
+    run: (actions: ThreadActions, ref: ScopedThreadRef) => actions.setThreadTeamShared(ref, true),
+  },
   {
     name: "archive",
     run: (actions: ThreadActions, ref: ScopedThreadRef) => actions.archiveThread(ref),

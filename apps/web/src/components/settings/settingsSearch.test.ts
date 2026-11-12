@@ -60,10 +60,18 @@ const ITEMS: ReadonlyArray<SettingsSearchItem> = [
 describe("searchSettings", () => {
   it("matches titles, sections, and remembered setting details", () => {
     expect(searchSettings("word", ITEMS).map((item) => item.id)).toEqual(["word-wrap"]);
+    expect(searchSettings("relay held sign in")).toEqual([
+      expect.objectContaining({ id: "ari-host", to: "/settings/ari" }),
+    ]);
+    expect(searchSettings("team teammates share")).toEqual([
+      expect.objectContaining({ id: "ari-team-threads", to: "/settings/ari" }),
+    ]);
     expect(searchSettings("network", ITEMS).map((item) => item.id)).toEqual(["network-access"]);
     expect(searchSettings("sharing", ITEMS).map((item) => item.id)).toEqual(["network-access"]);
     expect(searchSettings("claude", ITEMS).map((item) => item.id)).toEqual(["providers"]);
     expect(searchSettings("long lines", ITEMS).map((item) => item.id)).toEqual(["word-wrap"]);
+    const spanish = (message: string) => (message === "Word wrap" ? "Ajuste de línea" : message);
+    expect(searchSettings("ajuste", ITEMS, spanish).map((item) => item.id)).toEqual(["word-wrap"]);
     for (const query of ["fallback", "fallback agent", "fallback model"]) {
       expect(searchSettings(query)[0]).toMatchObject({
         id: "fallback-model",
