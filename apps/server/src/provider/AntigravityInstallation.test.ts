@@ -415,6 +415,37 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("Antigravity inst
   );
 
   it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+    "reports an early validation process abort as failure and retains the previous runtime",
+    () =>
+      Effect.gen(function* () {
+        const realSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const spawner = ChildProcessSpawner.make((command) =>
+          ChildProcess.isStandardCommand(command) &&
+          String(command.command).endsWith(executableName)
+            ? realSpawner.spawn(
+                ChildProcess.make("sh", ["-c", "kill -ABRT $$"], {
+                  stdin: "pipe",
+                  stdout: "pipe",
+                  stderr: "pipe",
+                }),
+              )
+            : realSpawner.spawn(command),
+        );
+        const { installation, stagingReleased } = yield* makeHarness({
+          previous: true,
+          useDefaultValidation: true,
+          spawner,
+        });
+        yield* installation.start;
+        const state = yield* terminalState(installation);
+        expect(state.phase).toBe("failed");
+        expect(state.message).toContain("could not start");
+        yield* Deferred.await(stagingReleased);
+        yield* expectPreviousRelease(installation);
+      }),
+  );
+
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
     "refuses a 16 KiB-page linux-arm64 kernel before downloading the runtime",
     () =>
       Effect.gen(function* () {
@@ -473,6 +504,48 @@ it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("Antigravity inst
           "active.json",
           "versions",
         ]);
+      }),
+  );
+
+  it.effect.skipIf(HostProcess.Platform.defaultValue() === "win32")(
+    "keeps explicit cancellation of a live validation process cancelled",
+    () =>
+      Effect.gen(function* () {
+        const realSpawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+        const spawned = yield* Deferred.make<ChildProcessSpawner.ChildProcessHandle>();
+        const spawner = ChildProcessSpawner.make(
+          Effect.fnUntraced(function* (command) {
+            if (
+              !ChildProcess.isStandardCommand(command) ||
+              !String(command.command).endsWith(executableName)
+            ) {
+              return yield* realSpawner.spawn(command);
+            }
+            const child = yield* realSpawner.spawn(
+              ChildProcess.make("sh", ["-c", "cat >/dev/null"], {
+                stdin: "pipe",
+                stdout: "pipe",
+                stderr: "pipe",
+              }),
+            );
+            yield* Deferred.succeed(spawned, child);
+            return child;
+          }),
+        );
+        const { installation, stagingReleased } = yield* makeHarness({
+          previous: true,
+          useDefaultValidation: true,
+          spawner,
+        });
+        const started = yield* installation.start;
+        const child = yield* Deferred.await(spawned);
+        expect((yield* installation.state).phase).toBe("verifying");
+        expect(
+          (yield* installation.cancel(started.operationId ?? "missing-operation-id")).phase,
+        ).toBe("cancelled");
+        expect(yield* child.isRunning).toBe(false);
+        yield* Deferred.await(stagingReleased);
+        yield* expectPreviousRelease(installation);
       }),
   );
 

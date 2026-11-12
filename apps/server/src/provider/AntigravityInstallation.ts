@@ -385,6 +385,17 @@ export const makeAntigravityInstallation = Effect.fn("AntigravityInstallation.ma
         ),
     );
 
+  const validationError = (cause: unknown, stderr = "") => {
+    if (isInstallationError(cause)) return cause;
+    const diagnostics = isAcpProcessExitedError(cause) ? (cause.stderr ?? stderr) : stderr;
+    const detail = /\b(?:AF_INET6|enforce_kernel_ipv6_support)\b/.test(diagnostics)
+      ? "Antigravity requires IPv6 socket support. Enable IPv6 in this environment. On WSL, remove ipv6.disable=1 from .wslconfig and run wsl --shutdown."
+      : /page-size\.cc|Compile-time page size does not match/.test(diagnostics)
+        ? LARGE_PAGE_KERNEL_MESSAGE
+        : "The downloaded Antigravity runtime could not start in this environment.";
+    return installationError("verify", detail, cause);
+  };
+
   const validate =
     options.validate ??
     Effect.fn("AntigravityInstallation.validate")(
@@ -413,6 +424,33 @@ export const makeAntigravityInstallation = Effect.fn("AntigravityInstallation.ma
           // A shallow scoped profile cleans up unpacked files within Windows' path limit.
           tempDirectory: profileDirectory,
         });
+        let terminationError: EffectAcpErrors.AcpError | undefined;
+        let stderrTail = "";
+        const stderrDecoder = new TextDecoder();
+        const validationSpawner = ChildProcessSpawner.make(
+          Effect.fnUntraced(function* (command) {
+            const child = yield* spawner.spawn(command);
+            if (platform === "win32") {
+              // Stop PyInstaller's tree before ACP closes pipes; taskkill cannot reach it after launcher exit.
+              yield* Scope.addFinalizer(
+                validationScope,
+                child.kill({ forceKillAfter: "1 second" }).pipe(Effect.orDie),
+              );
+            }
+            return {
+              ...child,
+              stderr: child.stderr.pipe(
+                Stream.tap((chunk) =>
+                  Effect.sync(() => {
+                    stderrTail = (stderrTail + stderrDecoder.decode(chunk, { stream: true })).slice(
+                      -8192,
+                    );
+                  }),
+                ),
+              ),
+            };
+          }),
+        );
         const runtime = yield* makeAntigravityAcpRuntime({
           runtimeVersion: expectedVersion,
           spawn: buildAntigravityAcpSpawnInput({
@@ -422,22 +460,21 @@ export const makeAntigravityInstallation = Effect.fn("AntigravityInstallation.ma
             baseEnv: environment,
           }),
           cwd: profileDirectory,
-          childProcessSpawner:
-            platform === "win32"
-              ? ChildProcessSpawner.make(
-                  Effect.fnUntraced(function* (command) {
-                    const child = yield* spawner.spawn(command);
-                    // Stop PyInstaller's tree before ACP closes pipes; after launcher exit, taskkill cannot reach children holding DLLs open.
-                    yield* Scope.addFinalizer(
-                      validationScope,
-                      child.kill({ forceKillAfter: "1 second" }).pipe(Effect.orDie),
-                    );
-                    return child;
-                  }),
-                )
-              : spawner,
+          childProcessSpawner: validationSpawner,
+          onTermination: (error) =>
+            Effect.sync(() => {
+              terminationError = error;
+            }),
         });
-        const initialized = yield* runtime.initialize();
+        const initialized = yield* runtime.initialize().pipe(
+          // ACP scope teardown can interrupt initialize after recording a process/transport failure.
+          Effect.catchCauseIf(Cause.hasInterruptsOnly, (cause) =>
+            terminationError === undefined
+              ? Effect.failCause(cause)
+              : Effect.fail(terminationError),
+          ),
+          Effect.mapError((cause) => validationError(cause, stderrTail)),
+        );
         if (
           initialized.agentInfo?.name !== "antigravity-acp" ||
           initialized.agentInfo.version !== expectedVersion ||
@@ -458,16 +495,7 @@ export const makeAntigravityInstallation = Effect.fn("AntigravityInstallation.ma
       Effect.provideService(Path.Path, path),
       Effect.provideService(ChildProcessSpawner.ChildProcessSpawner, spawner),
       Effect.provideService(SecureRandom.SecureRandom, random),
-      Effect.mapError((cause) => {
-        if (isInstallationError(cause)) return cause;
-        const stderr = isAcpProcessExitedError(cause) ? (cause.stderr ?? "") : "";
-        const detail = /\b(?:AF_INET6|enforce_kernel_ipv6_support)\b/.test(stderr)
-          ? "Antigravity requires IPv6 socket support. Enable IPv6 in this environment. On WSL, remove ipv6.disable=1 from .wslconfig and run wsl --shutdown."
-          : /page-size\.cc|Compile-time page size does not match/.test(stderr)
-            ? LARGE_PAGE_KERNEL_MESSAGE
-            : "The downloaded Antigravity runtime could not start in this environment.";
-        return installationError("verify", detail, cause);
-      }),
+      Effect.mapError((cause) => validationError(cause)),
     );
 
   const install = Effect.fn("AntigravityInstallation.install")(
