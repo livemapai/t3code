@@ -37,15 +37,16 @@ export function visibleDecisionCards(input: {
   );
 }
 
-/** How many open cards the project filter hides; the toggle names it. */
-export function hiddenOpenDecisionCardCount(input: {
+/** How many cards of `status` the project filter hides; the toggle names it. */
+export function hiddenDecisionCardCount(input: {
   cards: ReadonlyArray<DecisionCard>;
+  status: DecisionCardStatus;
   activeProjectId: ProjectId | null;
 }): number {
   if (input.activeProjectId === null) return 0;
   let count = 0;
   for (const card of input.cards) {
-    if (card.status === "open" && card.projectId !== input.activeProjectId) count += 1;
+    if (card.status === input.status && card.projectId !== input.activeProjectId) count += 1;
   }
   return count;
 }

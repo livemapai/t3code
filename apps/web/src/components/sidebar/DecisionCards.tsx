@@ -34,7 +34,7 @@ import {
   canSubmitDecisionAnswer,
   DECISION_CARD_STATUS_FILTERS,
   decisionCardErrorMessage,
-  hiddenOpenDecisionCardCount,
+  hiddenDecisionCardCount,
   openDecisionCardCount,
   visibleDecisionCards,
 } from "./decisionCards.logic";
@@ -69,7 +69,7 @@ function DecisionsSection({ environmentId }: { environmentId: EnvironmentId }) {
   const cards = data?.cards ?? [];
   if (cards.length === 0) return null;
   const openCount = openDecisionCardCount(cards);
-  const hiddenOpenCount = hiddenOpenDecisionCardCount({ cards, activeProjectId });
+  const hiddenCount = hiddenDecisionCardCount({ cards, status, activeProjectId });
   const visible = visibleDecisionCards({ cards, status, activeProjectId, showAllProjects });
   const filtered = activeProjectId !== null && !showAllProjects;
   return (
@@ -105,7 +105,7 @@ function DecisionsSection({ environmentId }: { environmentId: EnvironmentId }) {
                 {filter.label}
               </Button>
             ))}
-            {activeProjectId !== null && (showAllProjects || hiddenOpenCount > 0) ? (
+            {activeProjectId !== null && (showAllProjects || hiddenCount > 0) ? (
               <Button
                 size="xs"
                 variant="ghost-muted"
@@ -114,7 +114,7 @@ function DecisionsSection({ environmentId }: { environmentId: EnvironmentId }) {
               >
                 {showAllProjects
                   ? "This project only"
-                  : `Show all projects (${hiddenOpenCount} more open)`}
+                  : `Show all projects (${hiddenCount} more ${status})`}
               </Button>
             ) : null}
           </div>

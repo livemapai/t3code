@@ -14,6 +14,7 @@ import {
   CheckpointRef,
   CommandId,
   ContextTransferId,
+  DecisionCardId,
   type DecisionCardListInput,
   EventId,
   MessageId,
@@ -89,6 +90,7 @@ import * as ManagedPolicy from "../policy/ManagedPolicy.ts";
 import * as Scheduler from "../scheduling/Scheduler.ts";
 import * as SecretRequests from "../secrets/SecretRequests.ts";
 import * as DecisionCards from "../decisionCards/DecisionCards.ts";
+import { upsertDecisionCard } from "./DecisionCardProjection.ts";
 import * as PreviewManager from "../preview/Manager.ts";
 import * as TerminalManager from "../terminal/Manager.ts";
 import * as ResourceCleanupService from "./ResourceCleanupService.ts";
@@ -10014,40 +10016,41 @@ const layerDecisionCardsTest = DecisionCards.layer.pipe(
   Layer.provide(NodeCrypto.layer),
 );
 
-it.layer(layerDecisionCardsTest)("decision cards", (it) => {
-  const createThread = (name: string, projectId: ProjectId) =>
-    Effect.gen(function* () {
-      const orchestrator = yield* Orchestrator.OrchestratorV2;
-      const threadId = ThreadId.make(`decision-card-${name}`);
-      yield* orchestrator.dispatch({
-        type: "thread.create",
-        createdBy: "user",
-        creationSource: "web",
-        commandId: CommandId.make(`decision-card-${name}-create`),
-        threadId,
-        projectId,
-        title: `Decision ${name}`,
-        modelSelection,
-        runtimeMode: "full-access",
-        interactionMode: "default",
-        branch: null,
-        worktreePath: process.cwd(),
-      });
-      return threadId;
+const createThread = (name: string, projectId: ProjectId, worktreePath = process.cwd()) =>
+  Effect.gen(function* () {
+    const orchestrator = yield* Orchestrator.OrchestratorV2;
+    const threadId = ThreadId.make(`decision-card-${name}`);
+    yield* orchestrator.dispatch({
+      type: "thread.create",
+      createdBy: "user",
+      creationSource: "web",
+      commandId: CommandId.make(`decision-card-${name}-create`),
+      threadId,
+      projectId,
+      title: `Decision ${name}`,
+      modelSelection,
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      branch: null,
+      worktreePath,
     });
-  const postCard = (threadId: ThreadId) =>
-    Effect.flatMap(DecisionCards.DecisionCards, (cards) =>
-      cards.post({
-        threadId,
-        title: "Which cache?",
-        context: "Redis costs more; **memory** loses entries on restart.",
-        options: [
-          { id: "redis", label: "Redis" },
-          { id: "memory", label: "In memory", description: "Lost on restart." },
-        ],
-        recommendedOptionId: "memory",
-      }),
-    );
+    return threadId;
+  });
+const postCard = (threadId: ThreadId) =>
+  Effect.flatMap(DecisionCards.DecisionCards, (cards) =>
+    cards.post({
+      threadId,
+      title: "Which cache?",
+      context: "Redis costs more; **memory** loses entries on restart.",
+      options: [
+        { id: "redis", label: "Redis" },
+        { id: "memory", label: "In memory", description: "Lost on restart." },
+      ],
+      recommendedOptionId: "memory",
+    }),
+  );
+
+it.layer(layerDecisionCardsTest)("decision cards", (it) => {
   const wakes = (threadId: ThreadId) =>
     Effect.gen(function* () {
       const orchestrator = yield* Orchestrator.OrchestratorV2;
@@ -10194,6 +10197,74 @@ it.layer(layerDecisionCardsTest)("decision cards", (it) => {
           .reason,
         "thread_closed",
       );
+    }),
+  );
+});
+
+// The layers share one in-memory database because `SqlitePersistence.layerMemory` is built once.
+const layerDecisionCardsProjectsTest = DecisionCards.layer.pipe(
+  Layer.provideMerge(Layer.mergeAll(layerProjectDeletionTest, ProjectionStore.layer)),
+  Layer.provideMerge(SqlitePersistence.layerMemory),
+  Layer.provide(NodeCrypto.layer),
+);
+
+it.layer(layerDecisionCardsProjectsTest)("decision cards with real projects", (it) => {
+  it.effect("a list returns every open card, however much closed history is newer", () =>
+    Effect.gen(function* () {
+      const cards = yield* DecisionCards.DecisionCards;
+      const sql = yield* SqlClient.SqlClient;
+      const projectId = ProjectId.make("decision-card-project-cap");
+      const threadId = yield* createThread("cap", projectId);
+      const old = yield* postCard(threadId);
+      for (let index = 0; index < 205; index += 1) {
+        yield* upsertDecisionCard(sql, {
+          ...old,
+          id: DecisionCardId.make(`decision-card:cap-${index}`),
+          status: "dismissed",
+          createdAt: new Date(Date.parse(old.createdAt) + 1_000 + index).toISOString(),
+        });
+      }
+      const listed = (input: DecisionCardListInput) =>
+        Effect.map(cards.list(input), (result) => result.cards);
+      assert.deepEqual(
+        (yield* listed({ projectId, status: "open" })).map((card) => card.id),
+        [old.id],
+      );
+      const all = yield* listed({ projectId });
+      assert.include(
+        all.map((card) => card.id),
+        old.id,
+      );
+      assert.isAtMost(all.filter((card) => card.status === "dismissed").length, 200);
+    }),
+  );
+
+  it.effect("a promoted thread's cards follow it into the new project", () =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const cards = yield* DecisionCards.DecisionCards;
+      const scratch = ProjectId.make("decision-card-project-scratch");
+      const folder = "/tmp/runtime-layer-decision-card-adopted";
+      const projects = yield* ProjectService.ProjectService;
+      const { id: adopted } = yield* projects.create({
+        commandId: CommandId.make("decision-card-promote-project"),
+        projectId: ProjectId.make("decision-card-project-adopted"),
+        title: "Adopted",
+        workspaceRoot: folder,
+      });
+      const threadId = yield* createThread("promote", scratch, folder);
+      const card = yield* postCard(threadId);
+      yield* orchestrator.dispatch({
+        type: "thread.project.adopt-folder",
+        commandId: CommandId.make("decision-card-promote-adopt"),
+        threadId,
+        projectId: adopted,
+      });
+      const ids = (input: DecisionCardListInput) =>
+        Effect.map(cards.list(input), (result) => result.cards.map((entry) => entry.id));
+      assert.deepEqual(yield* ids({ projectId: adopted }), [card.id]);
+      assert.deepEqual(yield* ids({ projectId: scratch }), []);
+      assert.equal((yield* cards.list({ projectId: adopted })).cards[0]?.projectId, adopted);
     }),
   );
 });

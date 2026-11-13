@@ -4,7 +4,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   canSubmitDecisionAnswer,
   decisionCardErrorMessage,
-  hiddenOpenDecisionCardCount,
+  hiddenDecisionCardCount,
   openDecisionCardCount,
   visibleDecisionCards,
 } from "./decisionCards.logic";
@@ -23,8 +23,16 @@ const p1 = "p1" as DecisionCard["projectId"];
 describe("decision card filtering", () => {
   it("counts open cards of every project, whatever the filter", () => {
     expect(openDecisionCardCount(cards)).toBe(2);
-    expect(hiddenOpenDecisionCardCount({ cards, activeProjectId: p1 })).toBe(1);
-    expect(hiddenOpenDecisionCardCount({ cards, activeProjectId: null })).toBe(0);
+  });
+
+  it("counts what the project filter hides for the selected status", () => {
+    const hidden = (status: DecisionCard["status"], activeProjectId: typeof p1 | null) =>
+      hiddenDecisionCardCount({ cards, status, activeProjectId });
+    expect(hidden("open", p1)).toBe(1);
+    // Project 2 has no open cards here, yet its dismissed one is still hidden.
+    expect(hidden("dismissed", p1)).toBe(1);
+    expect(hidden("answered", p1)).toBe(0);
+    expect(hidden("open", null)).toBe(0);
   });
 
   it("filters to the active project unless all projects are shown", () => {

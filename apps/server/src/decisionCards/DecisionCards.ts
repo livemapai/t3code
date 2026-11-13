@@ -67,6 +67,15 @@ const LIST_CHANGE_EVENTS = [
   "thread.deleted",
 ] as const;
 
+/** Drops a snapshot that matches the one before it. */
+export const distinctSnapshots = <E, R>(
+  snapshots: Stream.Stream<DecisionCardListResult, E, R>,
+): Stream.Stream<DecisionCardListResult, E, R> =>
+  Stream.changesWith(
+    snapshots,
+    (previous, next) => JSON.stringify(previous.cards) === JSON.stringify(next.cards),
+  );
+
 const failed = (cause: unknown, cardId?: DecisionCardId) =>
   new DecisionCardError({
     reason: "failed",
@@ -196,7 +205,8 @@ const make = Effect.gen(function* () {
           Stream.mapError((cause) => failed(cause)),
           Stream.mapEffect(() => list(input)),
         );
-        return Stream.concat(Stream.make({ cards: first.cards }), changes);
+        // Most changes (any thread archiving) leave this list as it was.
+        return Stream.concat(Stream.make({ cards: first.cards }), changes).pipe(distinctSnapshots);
       }),
     );
 
