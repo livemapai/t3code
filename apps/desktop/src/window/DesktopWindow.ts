@@ -735,6 +735,7 @@ export const make = Effect.gen(function* () {
     });
 
     window.on("page-title-updated", (event) => {
+      if (!window.webContents.isLoadingMainFrame()) return;
       event.preventDefault();
       window.setTitle(environment.displayName);
     });
@@ -817,7 +818,7 @@ export const make = Effect.gen(function* () {
       }
       clearDevelopmentLoadRetry();
       developmentLoadRetryIndex = 0;
-      window.setTitle(environment.displayName);
+      window.setTitle(window.webContents.getTitle() || environment.displayName);
       if (environment.platform === "darwin") syncMacosWindowButtons(window);
     });
     window.webContents.on(

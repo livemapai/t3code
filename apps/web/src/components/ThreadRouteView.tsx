@@ -1,5 +1,9 @@
 import { useAtomValue } from "@effect/atom-react";
-import { parseScopedThreadKey, scopedThreadKey } from "@t3tools/client-runtime/environment";
+import {
+  parseScopedThreadKey,
+  scopedThreadKey,
+  scopeProjectRef,
+} from "@t3tools/client-runtime/environment";
 import { parseThreadKey, threadKey } from "@t3tools/client-runtime/state/entities";
 import { visibilityParentKey } from "@t3tools/client-runtime/state/threads";
 import type { ScopedThreadRef } from "@t3tools/contracts";
@@ -11,10 +15,12 @@ import ChatView from "./ChatView";
 import { BackgroundThreadContext } from "./chat/backgroundThread";
 import { SidebarInset } from "./ui/sidebar";
 import { useComposerDraftStore } from "../composerDraftStore";
+import { setDocumentPageTitle } from "../documentTitle";
 import { useSidebarPendingFileDropStore } from "../sidebarPendingFileDropStore";
 import {
   useEnvironmentThreadRefs,
   useAnyEnvironmentHiding,
+  useProject,
   useQuietThreadShell,
 } from "../state/entities";
 import { appAtomRegistry } from "../rpc/atomRegistry";
@@ -68,6 +74,11 @@ export function ThreadRouteView({
   );
   const serverThreadRef = target.kind === "server" ? target.threadRef : null;
   const serverThreadShell = useQuietThreadShell(serverThreadRef);
+  const serverThreadProject = useProject(
+    serverThreadRef && serverThreadShell
+      ? scopeProjectRef(serverThreadRef.environmentId, serverThreadShell.projectId)
+      : null,
+  );
   const shellStatus = useEnvironmentShellStatus(serverThreadRef?.environmentId ?? null);
   const environmentThreadRefs = useEnvironmentThreadRefs(serverThreadRef?.environmentId ?? null);
   const bootstrapComplete = isThreadRouteSnapshotAuthoritative(shellStatus);
@@ -223,6 +234,18 @@ export function ThreadRouteView({
       />
     );
   }
+
+  const documentTitle =
+    view === null || background || serverThreadShell === null
+      ? null
+      : serverThreadProject && !serverThreadProject.isScratch
+        ? `${serverThreadProject.title} / ${serverThreadShell.title}`
+        : serverThreadShell.title;
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- names the browser tab and desktop window after the open thread
+  useEffect(() => {
+    setDocumentPageTitle(documentTitle);
+    return () => setDocumentPageTitle(null);
+  }, [documentTitle]);
 
   return (
     <SidebarInset
