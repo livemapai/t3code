@@ -256,6 +256,7 @@ import {
 import { SidebarContent, SidebarGroup, useSidebar } from "./ui/sidebar";
 import { SidebarChromeFooter, SidebarChromeHeader } from "./sidebar/SidebarChrome";
 import { SidebarFlagFilter } from "./sidebar/SidebarFlagFilter";
+import { SidebarDecisionsSection } from "./sidebar/DecisionCards";
 import { SidebarTeamSection } from "./sidebar/TeamThreads";
 import { placeHandOverDraft } from "./sidebar/handOverThread";
 import { SidebarHeaderIconButton, SidebarThreadHeader } from "./sidebar/SidebarThreadHeader";
@@ -3318,6 +3319,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
         }
       >
         <SidebarGroup className="flex-1" role="presentation">
+          {isSearchingThreads ? null : <SidebarDecisionsSection />}
           {isSearchingThreads ? (
             threadSearchResults.length > 0 ? (
               <TooltipProvider

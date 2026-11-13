@@ -137,6 +137,7 @@ function shouldPublishAgentAwarenessEvent(
     case "context-handoff.updated":
     case "context-transfer.created":
     case "context-transfer.updated":
+    case "decision-card.updated":
       return false;
   }
 }

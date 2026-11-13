@@ -14,6 +14,8 @@ import {
   CheckpointRef,
   CommandId,
   ContextTransferId,
+  DecisionCardId,
+  type DecisionCardListInput,
   EventId,
   MessageId,
   NodeId,
@@ -87,6 +89,8 @@ import * as ScheduledTaskService from "../scheduledTasks/ScheduledTaskService.ts
 import * as ManagedPolicy from "../policy/ManagedPolicy.ts";
 import * as Scheduler from "../scheduling/Scheduler.ts";
 import * as SecretRequests from "../secrets/SecretRequests.ts";
+import * as DecisionCards from "../decisionCards/DecisionCards.ts";
+import { upsertDecisionCard } from "./DecisionCardProjection.ts";
 import * as PreviewManager from "../preview/Manager.ts";
 import * as TerminalManager from "../terminal/Manager.ts";
 import * as ResourceCleanupService from "./ResourceCleanupService.ts";
@@ -10006,3 +10010,261 @@ it.layer(layerQueueResumeDisabledInstanceTest)(
     );
   },
 );
+
+const layerDecisionCardsTest = DecisionCards.layer.pipe(
+  Layer.provideMerge(layerTest),
+  Layer.provide(NodeCrypto.layer),
+);
+
+const createThread = (name: string, projectId: ProjectId, worktreePath = process.cwd()) =>
+  Effect.gen(function* () {
+    const orchestrator = yield* Orchestrator.OrchestratorV2;
+    const threadId = ThreadId.make(`decision-card-${name}`);
+    yield* orchestrator.dispatch({
+      type: "thread.create",
+      createdBy: "user",
+      creationSource: "web",
+      commandId: CommandId.make(`decision-card-${name}-create`),
+      threadId,
+      projectId,
+      title: `Decision ${name}`,
+      modelSelection,
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      branch: null,
+      worktreePath,
+    });
+    return threadId;
+  });
+const postCard = (threadId: ThreadId) =>
+  Effect.flatMap(DecisionCards.DecisionCards, (cards) =>
+    cards.post({
+      threadId,
+      title: "Which cache?",
+      context: "Redis costs more; **memory** loses entries on restart.",
+      options: [
+        { id: "redis", label: "Redis" },
+        { id: "memory", label: "In memory", description: "Lost on restart." },
+      ],
+      recommendedOptionId: "memory",
+    }),
+  );
+
+it.layer(layerDecisionCardsTest)("decision cards", (it) => {
+  const wakes = (threadId: ThreadId) =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const projection = yield* orchestrator.getThreadProjection(threadId);
+      return projection.messages
+        .filter((message) => message.notification?.summary === "Decision answered: Which cache?")
+        .map((message) => ({
+          text: message.text,
+          runStatus: projection.runs.find((run) => run.userMessageId === message.id)?.status,
+        }));
+    });
+
+  it.effect("an answer wakes its thread; reopening takes the answer back without a wake", () =>
+    Effect.gen(function* () {
+      const cards = yield* DecisionCards.DecisionCards;
+      const projectId = ProjectId.make("decision-card-project-answer");
+      const threadId = yield* createThread("answer", projectId);
+      const card = yield* postCard(threadId);
+      assert.deepEqual((yield* cards.list({ projectId, status: "open" })).cards, [card]);
+
+      const answered = yield* cards.answer({
+        cardId: card.id,
+        chosenOptionId: "redis",
+        note: "  We already run it.  ",
+      });
+      assert.equal(answered.card.status, "answered");
+      assert.equal(answered.card.chosenOptionId, "redis");
+      assert.equal(answered.card.note, "We already run it.");
+      assert.isDefined(answered.card.answeredAt);
+      const [wake] = yield* wakes(threadId);
+      assert.include(wake?.text, "Choice: Redis (option redis).");
+      assert.include(wake?.text, "Note: We already run it.");
+      // Idle, so the answer starts a turn at once.
+      assert.notEqual(wake?.runStatus, "queued");
+      assert.isDefined(wake?.runStatus);
+
+      const again = yield* cards
+        .answer({ cardId: card.id, chosenOptionId: "memory" })
+        .pipe(Effect.flip);
+      assert.equal(again.reason, "not_open");
+
+      const reopened = yield* cards.reopen({ cardId: card.id });
+      assert.deepEqual(reopened.card, { ...card, status: "open" });
+      assert.lengthOf(yield* wakes(threadId), 1);
+
+      yield* cards.answer({ cardId: card.id, note: "Use memory after all." });
+      const after = yield* wakes(threadId);
+      assert.lengthOf(after, 2);
+      assert.isTrue(after.some((wake) => wake.text.includes("Answer: Use memory after all.")));
+    }),
+  );
+
+  it.effect("an answer queues behind the turn that is running", () =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const cards = yield* DecisionCards.DecisionCards;
+      const threadId = yield* createThread("busy", ProjectId.make("decision-card-project"));
+      yield* orchestrator.dispatch({
+        type: "message.dispatch",
+        createdBy: "user",
+        creationSource: "web",
+        commandId: CommandId.make("decision-card-busy-first"),
+        threadId,
+        messageId: MessageId.make("decision-card-busy-first"),
+        text: "Start work.",
+        attachments: [],
+        dispatchMode: { type: "start_immediately" },
+      });
+      const card = yield* postCard(threadId);
+      yield* cards.answer({ cardId: card.id, chosenOptionId: "memory" });
+      assert.deepEqual(
+        (yield* wakes(threadId)).map((wake) => wake.runStatus),
+        ["queued"],
+      );
+    }),
+  );
+
+  it.effect("a subscription lists the cards again after each change, from where it read", () =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const cards = yield* DecisionCards.DecisionCards;
+      const projectId = ProjectId.make("decision-card-project-subscribe");
+      const threadId = yield* createThread("subscribe", projectId);
+      const updates = yield* Stream.toQueue(cards.subscribe({ projectId }), {
+        capacity: "unbounded",
+      });
+      assert.deepEqual((yield* Queue.take(updates)).cards, []);
+      const card = yield* postCard(threadId);
+      assert.deepEqual((yield* Queue.take(updates)).cards, [card]);
+      yield* orchestrator.dispatch({
+        type: "thread.archive",
+        commandId: CommandId.make("decision-card-subscribe-archive"),
+        threadId,
+      });
+      assert.deepEqual((yield* Queue.take(updates)).cards, []);
+    }),
+  );
+
+  it.effect("dismissing and reopening move a card without waking, and lists filter", () =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const cards = yield* DecisionCards.DecisionCards;
+      const projectA = ProjectId.make("decision-card-project-a");
+      const projectB = ProjectId.make("decision-card-project-b");
+      const threadA = yield* createThread("filter-a", projectA);
+      const threadB = yield* createThread("filter-b", projectB);
+      const cardA = yield* postCard(threadA);
+      const cardB = yield* postCard(threadB);
+      assert.deepEqual(
+        (yield* cards.list({ projectId: projectA })).cards.map((card) => card.id),
+        [cardA.id],
+      );
+      const ids = (input: DecisionCardListInput) =>
+        Effect.map(cards.list(input), ({ cards }) => cards.map((card) => card.id));
+      assert.includeMembers(yield* ids({}), [cardA.id, cardB.id]);
+
+      const dismissed = yield* cards.dismiss({ cardId: cardA.id });
+      assert.equal(dismissed.card.status, "dismissed");
+      assert.equal(
+        (yield* cards.dismiss({ cardId: cardA.id }).pipe(Effect.flip)).reason,
+        "not_open",
+      );
+      const open = yield* ids({ status: "open" });
+      assert.include(open, cardB.id);
+      assert.notInclude(open, cardA.id);
+      assert.deepEqual(yield* ids({ projectId: projectA, status: "dismissed" }), [cardA.id]);
+      assert.equal((yield* cards.reopen({ cardId: cardA.id })).card.status, "open");
+      assert.equal(
+        (yield* cards.reopen({ cardId: cardA.id }).pipe(Effect.flip)).reason,
+        "already_open",
+      );
+      assert.lengthOf(yield* wakes(threadA), 0);
+
+      yield* orchestrator.dispatch({
+        type: "thread.archive",
+        commandId: CommandId.make("decision-card-filter-b-archive"),
+        threadId: threadB,
+      });
+      const listed = yield* ids({});
+      assert.include(listed, cardA.id);
+      assert.notInclude(listed, cardB.id);
+      assert.equal(
+        (yield* cards.answer({ cardId: cardB.id, chosenOptionId: "redis" }).pipe(Effect.flip))
+          .reason,
+        "thread_closed",
+      );
+    }),
+  );
+});
+
+// The layers share one in-memory database because `SqlitePersistence.layerMemory` is built once.
+const layerDecisionCardsProjectsTest = DecisionCards.layer.pipe(
+  Layer.provideMerge(Layer.mergeAll(layerProjectDeletionTest, ProjectionStore.layer)),
+  Layer.provideMerge(SqlitePersistence.layerMemory),
+  Layer.provide(NodeCrypto.layer),
+);
+
+it.layer(layerDecisionCardsProjectsTest)("decision cards with real projects", (it) => {
+  it.effect("a list returns every open card, however much closed history is newer", () =>
+    Effect.gen(function* () {
+      const cards = yield* DecisionCards.DecisionCards;
+      const sql = yield* SqlClient.SqlClient;
+      const projectId = ProjectId.make("decision-card-project-cap");
+      const threadId = yield* createThread("cap", projectId);
+      const old = yield* postCard(threadId);
+      for (let index = 0; index < 205; index += 1) {
+        yield* upsertDecisionCard(sql, {
+          ...old,
+          id: DecisionCardId.make(`decision-card:cap-${index}`),
+          status: "dismissed",
+          createdAt: `9999-01-01T00:00:00.${String(index).padStart(3, "0")}Z`,
+        });
+      }
+      const listed = (input: DecisionCardListInput) =>
+        Effect.map(cards.list(input), (result) => result.cards);
+      assert.deepEqual(
+        (yield* listed({ projectId, status: "open" })).map((card) => card.id),
+        [old.id],
+      );
+      const all = yield* listed({ projectId });
+      assert.include(
+        all.map((card) => card.id),
+        old.id,
+      );
+      assert.isAtMost(all.filter((card) => card.status === "dismissed").length, 200);
+    }),
+  );
+
+  it.effect("a promoted thread's cards follow it into the new project", () =>
+    Effect.gen(function* () {
+      const orchestrator = yield* Orchestrator.OrchestratorV2;
+      const cards = yield* DecisionCards.DecisionCards;
+      const scratch = ProjectId.make("decision-card-project-scratch");
+      const folder = "/tmp/runtime-layer-decision-card-adopted";
+      const projects = yield* ProjectService.ProjectService;
+      const { id: adopted } = yield* projects.create({
+        commandId: CommandId.make("decision-card-promote-project"),
+        projectId: ProjectId.make("decision-card-project-adopted"),
+        title: "Adopted",
+        workspaceRoot: folder,
+      });
+      const threadId = yield* createThread("promote", scratch, folder);
+      const card = yield* postCard(threadId);
+      yield* orchestrator.dispatch({
+        type: "thread.project.adopt-folder",
+        commandId: CommandId.make("decision-card-promote-adopt"),
+        threadId,
+        projectId: adopted,
+      });
+      const ids = (input: DecisionCardListInput) =>
+        Effect.map(cards.list(input), (result) => result.cards.map((entry) => entry.id));
+      assert.deepEqual(yield* ids({ projectId: adopted }), [card.id]);
+      assert.deepEqual(yield* ids({ projectId: scratch }), []);
+      assert.equal((yield* cards.list({ projectId: adopted })).cards[0]?.projectId, adopted);
+    }),
+  );
+});

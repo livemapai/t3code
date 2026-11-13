@@ -141,6 +141,11 @@ import {
   decideGuestShareCommand,
   type GuestShareCommand,
 } from "./GuestShareDecider.ts";
+import {
+  decideDecisionCardCommand,
+  decisionCardWake,
+  type DecisionCardCommand,
+} from "./DecisionCardDecider.ts";
 import * as EffectOutbox from "./EffectOutbox.ts";
 import { withCommandMetrics } from "../observability/Metrics.ts";
 import type { OrchestrationEffectRequestV2, PendingOrchestrationEffectV2 } from "./EffectOutbox.ts";
@@ -662,6 +667,10 @@ function commandThreadId(command: OrchestrationV2ServerCommand): ThreadId {
       return command.parentThreadId;
     case "secret_request.record":
     case "link_request.record":
+    case "decision-card.post":
+    case "decision-card.answer":
+    case "decision-card.dismiss":
+    case "decision-card.reopen":
       return command.threadId;
     case "thread.fork":
     case "thread.merge_back":
@@ -9709,6 +9718,66 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
   );
 
   /**
+   * An answer and the message that wakes the card's thread commit together, so a retried
+   * answer neither loses the wake nor sends it twice. The message queues behind a running turn.
+   */
+  const dispatchDecisionCard = Effect.fn("orchestrationV2.dispatch.decisionCard")(function* (
+    command: DecisionCardCommand,
+    events: Ref.Ref<Array<OrchestrationV2DomainEvent>>,
+    effects: Ref.Ref<Array<PendingOrchestrationEffectV2>>,
+  ) {
+    const [thread, existing] = yield* Effect.all([
+      projectionStore.getThread(command.threadId),
+      projectionStore.getDecisionCard(command.cardId),
+    ]).pipe(
+      Effect.mapError(
+        (cause) => new OrchestratorProjectionError({ threadId: command.threadId, cause }),
+      ),
+    );
+    const now = yield* DateTime.now;
+    const decided = decideDecisionCardCommand({
+      command,
+      thread,
+      existing,
+      now: DateTime.formatIso(now),
+    });
+    if (Result.isFailure(decided)) {
+      return yield* new OrchestratorDispatchError({
+        commandId: command.commandId,
+        commandType: command.type,
+        cause: decided.failure.message,
+      });
+    }
+    const { card, wake } = decided.success;
+    if (card === undefined) return;
+    yield* emit(
+      events,
+      command,
+    )({
+      type: "decision-card.updated",
+      threadId: command.threadId,
+      providerInstanceId: thread.providerInstanceId,
+      occurredAt: now,
+      payload: card,
+    });
+    if (!wake) return;
+    yield* dispatchMessage(
+      {
+        type: "message.dispatch",
+        commandId: command.commandId,
+        threadId: command.threadId,
+        ...decisionCardWake(card, command.commandId),
+        attachments: [],
+        dispatchMode: { type: "queue_after_active" },
+        createdBy: "agent",
+        creationSource: "server",
+      },
+      events,
+      effects,
+    );
+  });
+
+  /**
    * Closes the link cards still waiting for the user. Their agent stopped
    * waiting long ago, so nobody is woken: stopping or archiving the thread
    * means the user is done with it.
@@ -14112,6 +14181,12 @@ const makeOrchestrator = Effect.fn("orchestrationV2.Orchestrator.layer")(functio
         break;
       case "link_request.record":
         yield* dispatchLinkRequestRecord(command, events, effects);
+        break;
+      case "decision-card.post":
+      case "decision-card.answer":
+      case "decision-card.dismiss":
+      case "decision-card.reopen":
+        yield* dispatchDecisionCard(command, events, effects);
         break;
       default:
         return yield* dispatchUnsupported(command);

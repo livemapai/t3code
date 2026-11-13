@@ -2,6 +2,11 @@ import type { ProjectThreadAwarenessV2Input } from "@t3tools/shared/agentAwarene
 import { pendingGuestMessageCount } from "@t3tools/contracts";
 import { applyThreadPullRequestLinkUpdate } from "../sourceControl/threadPullRequests.ts";
 import { projectTurnItemForWire } from "./WireProjection.ts";
+import {
+  readDecisionCard,
+  readDecisionCards,
+  upsertDecisionCard,
+} from "./DecisionCardProjection.ts";
 import * as Stream from "effect/Stream";
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
 import { makeThreadFind } from "./ThreadFind.ts";
@@ -43,6 +48,9 @@ import type {
   OrchestrationV2ThreadProjection,
   OrchestrationV2TurnItem,
   GuestShareId,
+  DecisionCard,
+  DecisionCardId,
+  DecisionCardListInput,
   ProviderThreadId,
   ProviderTurnId,
   RunAttemptId,
@@ -160,11 +168,23 @@ export class ProjectionStoreReadError extends Schema.TaggedError<ProjectionStore
   }
 }
 
+export class ProjectionStoreDecisionCardReadError extends Schema.TaggedError<ProjectionStoreDecisionCardReadError>()(
+  "ProjectionStoreDecisionCardReadError",
+  {
+    cause: Schema.optional(Schema.Defect()),
+  },
+) {
+  override get message(): string {
+    return "Failed to read decision cards.";
+  }
+}
+
 export const ProjectionStoreV2Error = Schema.Union([
   ProjectionStoreSetupError,
   ProjectionStoreApplyEventError,
   ProjectionStoreThreadNotFoundError,
   ProjectionStoreReadError,
+  ProjectionStoreDecisionCardReadError,
 ]);
 export type ProjectionStoreV2Error = typeof ProjectionStoreV2Error.Type;
 
@@ -635,6 +655,17 @@ export interface ProjectionStoreV2Shape {
   readonly isNodeStored: (
     node: OrchestrationV2ExecutionNode,
   ) => Effect.Effect<boolean, ProjectionStoreV2Error>;
+  readonly getDecisionCard: (
+    cardId: DecisionCardId,
+  ) => Effect.Effect<DecisionCard | undefined, ProjectionStoreV2Error>;
+  /** Also returns the event sequence the cards were read at, to follow changes from. */
+  readonly listDecisionCards: (input: DecisionCardListInput) => Effect.Effect<
+    {
+      readonly cards: ReadonlyArray<DecisionCard>;
+      readonly snapshotSequence: number;
+    },
+    ProjectionStoreV2Error
+  >;
   readonly getRuntimeRequest: (
     threadId: ThreadId,
     requestId: RuntimeRequestId,
@@ -1002,7 +1033,9 @@ export function applyToProjection(
       return {
         ...base,
         contextTransfers: upsertById(base.contextTransfers, event.payload),
-      };
+      }; // Decision cards are listed apart from threads.
+    case "decision-card.updated":
+      return projection;
   }
 }
 
@@ -2867,9 +2900,13 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
             `;
               break;
             }
+            case "decision-card.updated":
+              yield* upsertDecisionCard(sql, event.payload);
+              break;
           }
 
           if (
+            event.type !== "decision-card.updated" &&
             event.type !== "thread.created" &&
             event.type !== "thread.archived" &&
             event.type !== "thread.unarchived" &&
@@ -5164,6 +5201,15 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       },
       (effect, node) => effect.pipe(Effect.mapError(controlReadError(node.threadId))),
     );
+
+    const getDecisionCard: ProjectionStoreV2Shape["getDecisionCard"] = (cardId) =>
+      readDecisionCard(sql, cardId).pipe(
+        Effect.mapError((cause) => new ProjectionStoreDecisionCardReadError({ cause })),
+      );
+    const listDecisionCards: ProjectionStoreV2Shape["listDecisionCards"] = (input) =>
+      readDecisionCards(sql, input).pipe(
+        Effect.mapError((cause) => new ProjectionStoreDecisionCardReadError({ cause })),
+      );
 
     const getRuntimeRequest: ProjectionStoreV2Shape["getRuntimeRequest"] = (threadId, requestId) =>
       sql
@@ -7677,6 +7723,8 @@ export const layer: Layer.Layer<ProjectionStoreV2, never, SqlClient.SqlClient> =
       getThreadRecords: (threadId, fields, filter) =>
         getThreadRecords(threadId, fields, filter).pipe(NodeSqliteClient.readOnly),
       getRuntimeRequest: readOnReader(getRuntimeRequest),
+      getDecisionCard: readOnReader(getDecisionCard),
+      listDecisionCards: readOnReader(listDecisionCards),
       getPlan: readOnReader(getPlan),
       getProviderControlContext: readOnReader(getProviderControlContext),
       getLimitRecoveryCandidates: readOnReader(getLimitRecoveryCandidates),

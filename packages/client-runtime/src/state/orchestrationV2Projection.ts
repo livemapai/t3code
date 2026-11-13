@@ -416,6 +416,8 @@ export function applyOrchestrationV2ProjectionEvent(
       return { ...base, contextHandoffs: upsertEntity(base.contextHandoffs, event.payload) };
     case "context-transfer.created":
     case "context-transfer.updated":
-      return { ...base, contextTransfers: upsertEntity(base.contextTransfers, event.payload) };
+      return { ...base, contextTransfers: upsertEntity(base.contextTransfers, event.payload) }; // Decision cards are listed apart from threads.
+    case "decision-card.updated":
+      return projection;
   }
 }

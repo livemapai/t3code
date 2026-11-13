@@ -1,5 +1,6 @@
 import * as WorktreeBranchSync from "./WorktreeBranchSync.ts";
 import * as GuestShareService from "../guest/GuestShareService.ts";
+import * as DecisionCards from "../decisionCards/DecisionCards.ts";
 import * as UsageLimitRecoveryWorker from "./UsageLimitRecoveryWorker.ts";
 import * as Scheduler from "../scheduling/Scheduler.ts";
 import * as Layer from "effect/Layer";
@@ -383,6 +384,9 @@ export const layerProduction = Layer.mergeAll(
   layerSecretRequestsProvided,
   GuestShareService.layer.pipe(
     Layer.provide(Layer.merge(layerOrchestratorProvided, layerCommandOutputHubProvided)),
+  ),
+  DecisionCards.layer.pipe(
+    Layer.provide(Layer.merge(layerOrchestratorProvided, ProjectionStore.layer)),
   ),
   UsageLimitRecoveryWorker.layer.pipe(
     Layer.provide(

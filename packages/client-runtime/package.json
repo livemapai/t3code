@@ -235,6 +235,10 @@
       "types": "./src/state/ari.ts",
       "default": "./src/state/ari.ts"
     },
+    "./state/decision-cards": {
+      "types": "./src/state/decisionCards.ts",
+      "default": "./src/state/decisionCards.ts"
+    },
     "./state/device": {
       "types": "./src/state/device.ts",
       "default": "./src/state/device.ts"

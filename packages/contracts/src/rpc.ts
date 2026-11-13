@@ -394,6 +394,15 @@ import {
 } from "./scheduledTask.ts";
 import { SecretRequestAnswerInput, SecretRequestError } from "./secretRequest.ts";
 import {
+  DecisionCardAnswerInput,
+  DecisionCardDismissInput,
+  DecisionCardError,
+  DecisionCardListInput,
+  DecisionCardListResult,
+  DecisionCardMutationResult,
+  DecisionCardReopenInput,
+} from "./decisionCard.ts";
+import {
   ProjectCloneActionInput,
   ProjectCloneActionResult,
   ProjectCloneListEvent,
@@ -564,6 +573,11 @@ export const WS_METHODS = {
   scheduledTasksRunNow: "scheduledTasks.runNow",
   scheduledTasksRotateWebhookToken: "scheduledTasks.rotateWebhookToken",
   secretsAnswerRequest: "secrets.answerRequest",
+  decisionCardsList: "decisionCards.list",
+  decisionCardsSubscribe: "decisionCards.subscribe",
+  decisionCardsAnswer: "decisionCards.answer",
+  decisionCardsDismiss: "decisionCards.dismiss",
+  decisionCardsReopen: "decisionCards.reopen",
   guestShareCreate: "guestShare.create",
   scheduledTasksListWebhookDeliveries: "scheduledTasks.listWebhookDeliveries",
   scheduledTasksGetWebhookDelivery: "scheduledTasks.getWebhookDelivery",
@@ -2066,6 +2080,38 @@ const WsGuestShareCreateRpc = Rpc.make(WS_METHODS.guestShareCreate, {
   error: Schema.Union([GuestShareCreateError, EnvironmentAuthorizationError]),
 });
 
+const WsDecisionCardsListRpc = Rpc.make(WS_METHODS.decisionCardsList, {
+  payload: DecisionCardListInput,
+  success: DecisionCardListResult,
+  error: Schema.Union([DecisionCardError, EnvironmentAuthorizationError]),
+});
+
+/** The list now, then again after every card change. */
+const WsDecisionCardsSubscribeRpc = Rpc.make(WS_METHODS.decisionCardsSubscribe, {
+  payload: DecisionCardListInput,
+  success: DecisionCardListResult,
+  error: Schema.Union([DecisionCardError, EnvironmentAuthorizationError]),
+  stream: true,
+});
+
+const WsDecisionCardsAnswerRpc = Rpc.make(WS_METHODS.decisionCardsAnswer, {
+  payload: DecisionCardAnswerInput,
+  success: DecisionCardMutationResult,
+  error: Schema.Union([DecisionCardError, EnvironmentAuthorizationError]),
+});
+
+const WsDecisionCardsDismissRpc = Rpc.make(WS_METHODS.decisionCardsDismiss, {
+  payload: DecisionCardDismissInput,
+  success: DecisionCardMutationResult,
+  error: Schema.Union([DecisionCardError, EnvironmentAuthorizationError]),
+});
+
+const WsDecisionCardsReopenRpc = Rpc.make(WS_METHODS.decisionCardsReopen, {
+  payload: DecisionCardReopenInput,
+  success: DecisionCardMutationResult,
+  error: Schema.Union([DecisionCardError, EnvironmentAuthorizationError]),
+});
+
 const WsSecretsAnswerRequestRpc = Rpc.make(WS_METHODS.secretsAnswerRequest, {
   payload: SecretRequestAnswerInput,
   error: Schema.Union([SecretRequestError, EnvironmentAuthorizationError]),
@@ -2175,6 +2221,11 @@ export const WsRpcGroup = RpcGroup.make(
   WsScheduledTasksRunNowRpc,
   WsScheduledTasksRotateWebhookTokenRpc,
   WsSecretsAnswerRequestRpc,
+  WsDecisionCardsListRpc,
+  WsDecisionCardsSubscribeRpc,
+  WsDecisionCardsAnswerRpc,
+  WsDecisionCardsDismissRpc,
+  WsDecisionCardsReopenRpc,
   WsScheduledTasksListWebhookDeliveriesRpc,
   WsScheduledTasksGetWebhookDeliveryRpc,
   WsServerReportClientActivityRpc,
