@@ -286,7 +286,7 @@ function DecisionCardDetail({
       ) : card.note ? (
         <p className="text-xs whitespace-pre-wrap text-sidebar-foreground">{card.note}</p>
       ) : null}
-      <div className="sticky bottom-0 z-10 flex items-center gap-1 bg-sidebar py-1">
+      <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-1 bg-sidebar py-1">
         <Button
           size="xs"
           variant="link"
