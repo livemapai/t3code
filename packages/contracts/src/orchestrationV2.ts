@@ -14,6 +14,7 @@ import {
   CommandId,
   ContextHandoffId,
   ContextTransferId,
+  DecisionCardId,
   EventId,
   GuestMessageId,
   GuestShareId,
@@ -43,6 +44,14 @@ import {
 } from "./baseSchemas.ts";
 import { AuthMcpClientAccess } from "./auth.ts";
 import { ChatAttachment } from "./chatAttachment.ts";
+import {
+  DecisionCard,
+  DecisionCardContext,
+  DecisionCardNote,
+  DecisionCardOptionId,
+  DecisionCardOptions,
+  DecisionCardTitle,
+} from "./decisionCard.ts";
 import { ThreadGuestShare } from "./guestShare.ts";
 import { StoredThreadTags, ThreadTag } from "./threadTags.ts";
 import {
@@ -2049,6 +2058,11 @@ export const OrchestrationV2DomainEvent = Schema.Union([
     type: Schema.Literal("context-transfer.updated"),
     payload: OrchestrationV2ContextTransfer,
   }),
+  Schema.Struct({
+    ...OrchestrationV2EventBase.fields,
+    type: Schema.Literal("decision-card.updated"),
+    payload: DecisionCard,
+  }),
 ]);
 export type OrchestrationV2DomainEvent = typeof OrchestrationV2DomainEvent.Type;
 
@@ -2943,6 +2957,11 @@ export const OrchestrationV2DomainEventJson = Schema.Union([
     type: Schema.Literal("context-transfer.updated"),
     payload: OrchestrationV2ContextTransferJson,
   }),
+  Schema.Struct({
+    ...OrchestrationV2JsonEventBaseFields,
+    type: Schema.Literal("decision-card.updated"),
+    payload: DecisionCard,
+  }),
 ]);
 export type OrchestrationV2DomainEventJson = typeof OrchestrationV2DomainEventJson.Type;
 
@@ -3626,6 +3645,32 @@ const OrchestrationV2InternalCommand = Schema.Union([
         notification: OrchestrationV2Notification,
       }),
     ),
+  }),
+  /** Internal so only the agent's own MCP call posts a card in its thread. */
+  Schema.Struct({
+    type: Schema.Literal("decision-card.post"),
+    commandId: CommandId,
+    threadId: ThreadId,
+    cardId: DecisionCardId,
+    title: DecisionCardTitle,
+    context: DecisionCardContext,
+    options: DecisionCardOptions,
+    recommendedOptionId: Schema.optional(DecisionCardOptionId),
+  }),
+  /** Answering wakes the card's thread with the answer, in the same commit. */
+  Schema.Struct({
+    type: Schema.Literal("decision-card.answer"),
+    commandId: CommandId,
+    threadId: ThreadId,
+    cardId: DecisionCardId,
+    chosenOptionId: Schema.optional(DecisionCardOptionId),
+    note: Schema.optional(DecisionCardNote),
+  }),
+  Schema.Struct({
+    type: Schema.Literals(["decision-card.dismiss", "decision-card.reopen"]),
+    commandId: CommandId,
+    threadId: ThreadId,
+    cardId: DecisionCardId,
   }),
 ]);
 export type OrchestrationV2InternalCommand = typeof OrchestrationV2InternalCommand.Type;

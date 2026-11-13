@@ -19,11 +19,17 @@ import {
   RunId,
   NonNegativeInt,
   ProjectId,
+  DecisionCardContext,
+  DecisionCardId,
+  DecisionCardOptionId,
+  DecisionCardOptions,
+  DecisionCardTitle,
 } from "@t3tools/contracts";
 import * as SecureRandom from "effect/crypto/SecureRandom";
 import * as Schema from "effect/Schema";
 import { Tool, Toolkit } from "effect/ai";
 
+import * as DecisionCards from "../../../decisionCards/DecisionCards.ts";
 import * as ThreadSearch from "../../../orchestration-v2/ThreadSearch.ts";
 import * as ScheduledTaskService from "../../../scheduledTasks/ScheduledTaskService.ts";
 import * as ThreadManagementService from "../../../orchestration-v2/ThreadManagementService.ts";
@@ -237,7 +243,29 @@ const ScheduledTaskRunTool = Tool.make("run_scheduled_task_now", {
   .annotate(Tool.Destructive, true)
   .annotate(Tool.OpenWorld, true);
 
+const PostDecisionTool = Tool.make("post_decision", {
+  description:
+    "Ask the user to make a choice that is theirs, in a card they answer later. Returns at once; the answer arrives as a message in this thread. Until then, do only work that does not depend on it, or end your turn. Don't wait, poll, or also ask in chat.",
+  parameters: Schema.Struct({
+    title: DecisionCardTitle,
+    context: DecisionCardContext.annotate({
+      description: "Markdown: what is at stake, tradeoffs.",
+    }),
+    options: DecisionCardOptions,
+    recommendedOptionId: Schema.optional(DecisionCardOptionId).annotate({
+      description: "The option you would pick.",
+    }),
+  }),
+  success: Schema.Struct({ cardId: DecisionCardId, status: Schema.Literal("open") }),
+  failure: OrchestratorMcpFailure,
+  failureMode: "return" as const,
+  dependencies: [...commandTool.dependencies, DecisionCards.DecisionCards],
+})
+  .annotate(Tool.Title, "Post a decision for the user")
+  .annotate(Tool.Destructive, false);
+
 export const ThreadToolkit = Toolkit.make(
+  PostDecisionTool,
   ScheduledTaskRunTool,
   ThreadSearchTool,
   ThreadConfigureTool,

@@ -71,6 +71,10 @@ export const CLIENT_GUARDED_RPC_SCOPES = {
   [WS_METHODS.scheduledTasksRunNow]: AuthOrchestrationOperateScope,
   [WS_METHODS.scheduledTasksRotateWebhookToken]: AuthOrchestrationOperateScope,
   [ORCHESTRATION_V2_WS_METHODS.stopWorkflow]: AuthOrchestrationOperateScope,
+  // Answering a decision card starts a turn in the thread that posted it.
+  [WS_METHODS.decisionCardsAnswer]: AuthOrchestrationOperateScope,
+  [WS_METHODS.decisionCardsDismiss]: AuthOrchestrationOperateScope,
+  [WS_METHODS.decisionCardsReopen]: AuthOrchestrationOperateScope,
   // Force stop kills agent processes, as Stop on a terminal does.
   [ORCHESTRATION_V2_WS_METHODS.forceStopThread]: AuthOrchestrationOperateScope,
   // A guest link hands thread access to someone outside, like a pairing link.

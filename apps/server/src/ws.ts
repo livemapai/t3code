@@ -124,6 +124,7 @@ import * as ThreadMessageIntake from "./orchestration-v2/ThreadMessageIntake.ts"
 import * as DocumentText from "./provider/DocumentText.ts";
 import * as ScheduledTasks from "./scheduledTasks/ScheduledTaskService.ts";
 import * as SecretRequests from "./secrets/SecretRequests.ts";
+import * as DecisionCards from "./decisionCards/DecisionCards.ts";
 import * as GuestShareService from "./guest/GuestShareService.ts";
 import {
   bufferShellLiveStream,
@@ -1449,6 +1450,7 @@ export const layerWsRpc = (
       const providerSessionManager = yield* ProviderSessionManager.ProviderSessionManagerV2;
       const scheduledTasks = yield* ScheduledTasks.ScheduledTaskService;
       const secretRequests = yield* SecretRequests.SecretRequests;
+      const decisionCards = yield* DecisionCards.DecisionCards;
       const guestShares = yield* GuestShareService.GuestShareService;
       const pullRequests = yield* PullRequestService.PullRequestService;
       const reviewGuides = yield* PullRequestReviewGuideService.PullRequestReviewGuideService;
@@ -2242,6 +2244,20 @@ export const layerWsRpc = (
         [WS_METHODS.secretsAnswerRequest]: (input) =>
           Effect.annotateCurrentSpan({ "orchestration_v2.thread_id": input.threadId }).pipe(
             Effect.andThen(secretRequests.answer(input)),
+          ),
+        [WS_METHODS.decisionCardsList]: (input) => decisionCards.list(input),
+        [WS_METHODS.decisionCardsSubscribe]: (input) => decisionCards.subscribe(input),
+        [WS_METHODS.decisionCardsAnswer]: (input) =>
+          Effect.annotateCurrentSpan({ "decision_card.id": input.cardId }).pipe(
+            Effect.andThen(decisionCards.answer(input)),
+          ),
+        [WS_METHODS.decisionCardsDismiss]: (input) =>
+          Effect.annotateCurrentSpan({ "decision_card.id": input.cardId }).pipe(
+            Effect.andThen(decisionCards.dismiss(input)),
+          ),
+        [WS_METHODS.decisionCardsReopen]: (input) =>
+          Effect.annotateCurrentSpan({ "decision_card.id": input.cardId }).pipe(
+            Effect.andThen(decisionCards.reopen(input)),
           ),
         [WS_METHODS.scheduledTasksListWebhookDeliveries]: (input) =>
           Effect.annotateCurrentSpan({ "scheduled_task.id": input.id }).pipe(
