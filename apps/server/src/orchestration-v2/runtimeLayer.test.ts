@@ -10221,7 +10221,7 @@ it.layer(layerDecisionCardsProjectsTest)("decision cards with real projects", (i
           ...old,
           id: DecisionCardId.make(`decision-card:cap-${index}`),
           status: "dismissed",
-          createdAt: new Date(Date.parse(old.createdAt) + 1_000 + index).toISOString(),
+          createdAt: `9999-01-01T00:00:00.${String(index).padStart(3, "0")}Z`,
         });
       }
       const listed = (input: DecisionCardListInput) =>
