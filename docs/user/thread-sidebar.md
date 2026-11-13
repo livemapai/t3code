@@ -337,3 +337,25 @@ A snoozed thread keeps working and stays hidden until its wake time, even while
 its agent wakes itself for background work. It comes back early for an approval,
 a new question, a failed run, or a message or answer you send. You can snooze an existing
 question and answer when the thread wakes; the question stays unanswered.
+
+## Answer decisions
+
+When an agent needs a choice that is yours, it posts a decision card instead of
+stopping to ask in chat. Cards appear in the **Decisions** section at the top of
+the sidebar, which shows only once a card exists. The badge on its header counts
+open cards from every project and stays visible when the section is collapsed.
+
+Select a card to read its context and options. The agent's recommended option is
+marked. Pick an option, write a note, or both, then choose **Answer**. The agent's
+thread gets your answer as a message and continues; the agent does not wait on the
+card, so it may have moved on to other work. Choose **Dismiss** to decline without
+answering. **Open thread** jumps to the thread that asked.
+
+Use **Answered** and **Dismissed** to see closed cards, and **Reopen** to turn one
+back into an open card. Reopening doesn't wake the thread; answer it again to do that.
+
+- While you work in a project, the list shows only that project's cards. Choose
+  **Show all projects** to see the rest; the button says how many more are open.
+- Cards of archived or deleted threads are hidden, and the list holds the newest 200.
+- Cards belong to the machine your app runs on. Without permission to operate that
+  machine you can read cards but not answer them.
