@@ -249,9 +249,11 @@ const PostDecisionTool = Tool.make("post_decision", {
   parameters: Schema.Struct({
     title: DecisionCardTitle,
     context: DecisionCardContext.annotate({
-      description: "Markdown: what is at stake, tradeoffs.",
+      description: "Markdown background. Never list the options here.",
     }),
-    options: DecisionCardOptions,
+    options: DecisionCardOptions.annotate({
+      description: "The only place for choices; detail goes in each description.",
+    }),
     recommendedOptionId: Schema.optional(DecisionCardOptionId).annotate({
       description: "The option you would pick.",
     }),

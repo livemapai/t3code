@@ -73,7 +73,7 @@ function DecisionsSection({ environmentId }: { environmentId: EnvironmentId }) {
   const visible = visibleDecisionCards({ cards, status, activeProjectId, showAllProjects });
   const filtered = activeProjectId !== null && !showAllProjects;
   return (
-    <section aria-label="Decisions" className="mx-0.5 mt-2 flex flex-col gap-px">
+    <section aria-label="Decisions" className="mx-0.5 mt-2 flex max-h-[45vh] flex-col gap-px">
       <CollapsibleSectionHeader
         expanded={expanded}
         onClick={() => setExpanded((value) => !value)}
@@ -93,7 +93,7 @@ function DecisionsSection({ environmentId }: { environmentId: EnvironmentId }) {
       </CollapsibleSectionHeader>
       {expanded ? (
         <>
-          <div className="flex flex-wrap items-center gap-0.5 px-1 pb-1">
+          <div className="flex shrink-0 flex-wrap items-center gap-0.5 px-1 pb-1">
             {DECISION_CARD_STATUS_FILTERS.map((filter) => (
               <Button
                 key={filter.status}
@@ -119,19 +119,21 @@ function DecisionsSection({ environmentId }: { environmentId: EnvironmentId }) {
             ) : null}
           </div>
           {visible.length === 0 ? (
-            <p className="px-2.5 py-1.5 text-xs text-sidebar-muted-foreground">
+            <p className="shrink-0 px-2.5 py-1.5 text-xs text-sidebar-muted-foreground">
               {filtered ? `No ${status} decisions in this project.` : `No ${status} decisions.`}
             </p>
           ) : (
-            visible.map((card) => (
-              <DecisionCardRow
-                key={card.id}
-                environmentId={environmentId}
-                card={card}
-                expanded={openCardId === card.id}
-                onToggle={() => setOpenCardId((id) => (id === card.id ? null : card.id))}
-              />
-            ))
+            <div className="flex min-h-0 flex-col gap-px overflow-y-auto">
+              {visible.map((card) => (
+                <DecisionCardRow
+                  key={card.id}
+                  environmentId={environmentId}
+                  card={card}
+                  expanded={openCardId === card.id}
+                  onToggle={() => setOpenCardId((id) => (id === card.id ? null : card.id))}
+                />
+              ))}
+            </div>
           )}
         </>
       ) : null}
@@ -226,7 +228,7 @@ function DecisionCardDetail({
   return (
     <div className="flex flex-col gap-2 px-2.5 pt-0.5 pb-2 ps-8 text-sm">
       {card.context.trim().length > 0 ? (
-        <div className="max-h-56 overflow-y-auto text-xs text-sidebar-foreground">
+        <div className="max-h-40 overflow-y-auto text-xs text-sidebar-foreground">
           <ChatMarkdown
             text={card.context}
             cwd={undefined}
@@ -259,7 +261,9 @@ function DecisionCardDetail({
                     ) : null}
                   </span>
                   {option.description ? (
-                    <span className="text-sidebar-muted-foreground">{option.description}</span>
+                    <span className="line-clamp-2 text-sidebar-muted-foreground">
+                      {option.description}
+                    </span>
                   ) : null}
                 </span>
               </label>
@@ -282,7 +286,7 @@ function DecisionCardDetail({
       ) : card.note ? (
         <p className="text-xs whitespace-pre-wrap text-sidebar-foreground">{card.note}</p>
       ) : null}
-      <div className="flex items-center gap-1">
+      <div className="sticky bottom-0 z-10 flex items-center gap-1 bg-sidebar py-1">
         <Button
           size="xs"
           variant="link"
