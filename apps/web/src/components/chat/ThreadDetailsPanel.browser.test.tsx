@@ -41,6 +41,7 @@ vi.mock(import("~/state/entities"), async (importOriginal) => ({
           worktreePath: state.folder,
           branch: null,
           pullRequests: state.pullRequests,
+          source: { tags: [] },
         }) as never,
   useServerConfigs: (() =>
     new Map(
