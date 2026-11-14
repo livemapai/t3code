@@ -1227,6 +1227,9 @@ it.effect("access changes made while the snapshot loads reach the client after i
                 legacyCookieName: undefined,
                 streamChanges: subscribe(sessionChanges),
               }),
+              Layer.succeed(AriState.AriState, { subscribe: Stream.empty }),
+              Layer.mock(AriTeam.AriTeam)({}),
+              Layer.mock(AriInvites.AriInvites)({}),
             ),
           ),
         ),
@@ -1842,6 +1845,9 @@ it.effect("a git action that fails partway still refreshes the repository status
       Layer.mock(ScratchThreadPromotion.ScratchThreadPromotion)({}),
       Layer.mock(ServerEnvironment.ServerEnvironment)({}),
       Layer.mock(EnvironmentAuth.EnvironmentAuth)({}),
+      Layer.succeed(AriState.AriState, { subscribe: Stream.empty }),
+      Layer.mock(AriTeam.AriTeam)({}),
+      Layer.mock(AriInvites.AriInvites)({}),
     );
     const server = yield* RpcServer.makeNoSerialization(WsRpcGroup, {
       ...WS_RPC_SERVER_OPTIONS,

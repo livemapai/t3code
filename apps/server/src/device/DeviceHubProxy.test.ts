@@ -315,7 +315,7 @@ describe("device hub proxy", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(HOST_PNG);
     expect(hostScreenshots).toMatchObject([{ id: "instance-1", platform: "ios" }]);
-
+    expect(screenshots).toEqual([]);
     expect(requests).toEqual([]);
   });
 
