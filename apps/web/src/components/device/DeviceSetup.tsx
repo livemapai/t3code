@@ -143,7 +143,7 @@ export function platformSetupStatus(state: DeviceServiceState, platform: DeviceP
     ready: true,
     message:
       remoteHost?.kind === "eas"
-        ? `${remoteHost.label} starts ${platform === "ios" ? "iOS Simulators" : "Android emulators"} in the cloud with EAS Simulator.`
+        ? `${remoteHost.label} starts ${platform === "ios" ? "iOS Simulators" : "Android emulators"} in the cloud with Expo Simulators.`
         : remoteHost?.kind === "limrun"
           ? `${remoteHost.label} starts ${platform === "ios" ? "iOS Simulators" : "Android emulators"} in the cloud with Limrun.`
           : platform === "ios"
