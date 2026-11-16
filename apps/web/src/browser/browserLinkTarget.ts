@@ -7,6 +7,9 @@ import {
 import { ensureClientSettingsHydrated, getClientSettings } from "~/hooks/useSettings";
 import { readEnvironmentScope } from "~/state/session";
 import { isPreviewAvailableFor } from "./previewRuntime";
+import { isWebUrl } from "./webUrl";
+
+export { isWebUrl };
 
 export interface ResolveLinkTargetInput {
   readonly url: string;
@@ -41,15 +44,6 @@ function isAriLibraryUrl(url: string): boolean {
       (hostname === "myari.app" || hostname === "www.myari.app") &&
       /^\/([a-z]{2}\/)?assets(\/|$)/.test(pathname)
     );
-  } catch {
-    return false;
-  }
-}
-
-export function isWebUrl(url: string): boolean {
-  try {
-    const { protocol } = new URL(url);
-    return protocol === "http:" || protocol === "https:";
   } catch {
     return false;
   }

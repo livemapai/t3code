@@ -75,6 +75,10 @@ const serveSimApiSchema = Schema.Struct({
 const decodeServeSimApi = Schema.decodeUnknownOption(serveSimApiSchema);
 const decodeWebRtcSettings = Schema.decodeUnknownOption(webRtcSettingsSchema);
 type WebRtcSettings = typeof webRtcSettingsSchema.Type;
+const decodeLeaseEnd = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ reason: Schema.String })),
+);
+const leaseEnded = (reason: string) => `Device lease ended: ${reason}`;
 const decodeTransportLocked = Schema.decodeUnknownOption(
   Schema.Struct({
     error: Schema.Literal("stream_transport_locked"),
@@ -252,7 +256,7 @@ export function scanAccessUnit(buf: Uint8Array): { isKey: boolean; sps: Uint8Arr
 }
 
 export type AvccChunk = {
-  readonly type: "description" | "keyframe" | "delta" | "seed";
+  readonly type: "description" | "keyframe" | "delta" | "seed" | "end";
   readonly payload: Uint8Array;
 };
 
@@ -261,6 +265,8 @@ const AVCC_TAGS: Record<number, AvccChunk["type"] | undefined> = {
   2: "keyframe",
   3: "delta",
   4: "seed",
+  // Simlock's final frame on a lease that ended, carrying `{ reason }`.
+  7: "end",
 };
 
 export class AvccDemuxer {
@@ -720,6 +726,7 @@ export function createDeviceStreamClient(
       videoGeneration === feedGeneration &&
       controller === videoController;
     let retryDetail: string | undefined;
+    let leaseEnd: string | undefined;
     try {
       const response = await fetch(httpUrl(videoPath), {
         signal: videoController.signal,
@@ -811,6 +818,11 @@ export function createDeviceStreamClient(
             case "delta":
               decode(chunk.type === "keyframe", chunk.payload);
               break;
+            case "end": {
+              const end = decodeLeaseEnd(decoder.decode(chunk.payload));
+              leaseEnd = Option.isSome(end) ? end.value.reason : "ended";
+              break;
+            }
           }
         }
       }
@@ -821,6 +833,7 @@ export function createDeviceStreamClient(
         : (cause as Error).message;
     }
     if (isCurrent()) {
+      if (leaseEnd !== undefined) return fail(leaseEnded(leaseEnd));
       controller = null;
       videoController.abort();
       closeDecoder();
@@ -1168,6 +1181,7 @@ export function createDeviceStreamClient(
       duoControl.clear();
       rotationCursor = null;
       if (stopped) return;
+      if (event.code === 4001) return fail(leaseEnded(event.reason || "ended"));
       events.onInputConnected(
         false,
         event.reason || (event.code === 1006 ? "input socket refused" : `closed ${event.code}`),
