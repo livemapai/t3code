@@ -1,5 +1,7 @@
 import { assert, it } from "@effect/vitest";
 import {
+  ARI_TEAM_THREAD_TAG,
+  ARI_RELAY_THREAD_TAG,
   CommandId,
   EnvironmentId,
   type ModelSelection,
@@ -89,6 +91,7 @@ function makeParentThread(): OrchestrationV2AppThread {
 it("resets a subagent child's snooze, title job and remote delegation but keeps its workspace", () => {
   const parentThread: OrchestrationV2AppThread = {
     ...makeParentThread(),
+    tags: [ARI_TEAM_THREAD_TAG, ARI_RELAY_THREAD_TAG, "keep-tag"],
     titleRegeneration: { requestId: CommandId.make("command:parent-title"), startedAt: snoozedAt },
     delegatedFrom: {
       environmentId: EnvironmentId.make("linked-environment"),
@@ -115,6 +118,8 @@ it("resets a subagent child's snooze, title job and remote delegation but keeps 
   assert.isNull(childThread.snoozedAt);
   assert.isNull(childThread.titleRegeneration);
   assert.isUndefined(childThread.delegatedFrom);
+  assert.deepEqual(childThread.tags, [ARI_RELAY_THREAD_TAG, "keep-tag"]);
+  assert.deepEqual(parentThread.tags, [ARI_TEAM_THREAD_TAG, ARI_RELAY_THREAD_TAG, "keep-tag"]);
   assert.equal(childThread.projectId, parentThread.projectId);
   assert.equal(childThread.runtimeMode, parentThread.runtimeMode);
   assert.equal(childThread.interactionMode, parentThread.interactionMode);
@@ -390,6 +395,7 @@ it("waits for nested work and retains the report across monitor acknowledgements
       },
     ],
   });
+  assert.equal(afterMonitorEnded.state, "result_available");
   assert.equal(afterMonitorEnded.resultRun?.id, ended.id);
 });
 
@@ -453,6 +459,13 @@ it("reports a provider's stop reason for a completed run without an assistant re
     level: "warning",
     message: "sessionStart hook (user): Plugin guard blocked this session.",
   } satisfies OrchestrationV2TurnItem;
+  assert.equal(
+    subagentResultForRun(
+      { ...projection, turnItems: [{ ...notice, id: TurnItemId.make("unrelated-notice") }] },
+      run,
+    ).text,
+    "Child task completed without an assistant result.",
+  );
   assert.equal(
     subagentResultForRun({ ...projection, turnItems: [notice] }, run).text,
     `Child task completed without an assistant result.\n\n${notice.message}`,
