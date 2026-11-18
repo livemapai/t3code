@@ -3034,7 +3034,10 @@
     {
       "t": "span",
       "i": 2,
-      "c": [" ", "en el ordenador que abrió esta página"]
+      "c": [
+        " ",
+        "en el ordenador que abrió esta página"
+      ]
     }
   ],
   "b2d53b4d1d48fbef": [
@@ -3046,7 +3049,10 @@
     {
       "t": "span",
       "i": 2,
-      "c": [" ", "· quien lo ejecute obtiene este acceso"]
+      "c": [
+        " ",
+        "· quien lo ejecute obtiene este acceso"
+      ]
     }
   ],
   "c54cc9c75db9dc58": "Aprueba solo un inicio de sesión que acabes de iniciar.",
@@ -7416,14 +7422,15 @@
       "v": "v"
     }
   ],
-  "600dbb1097adb44f": [
+  "1c9265ba953c351a": [
     "Version: ",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    " · Account: ",
+    " · Account:",
+    " ",
     {
       "i": 2,
       "k": "_gt_value_2",
@@ -7456,14 +7463,15 @@
       "v": "v"
     }
   ],
-  "f84d8194fa854aa8": [
+  "f5e42da999149093": [
     "Run on ",
     {
       "i": 1,
       "k": "_gt_value_1",
       "v": "v"
     },
-    ": ",
+    ":",
+    " ",
     {
       "t": "code",
       "i": 2,
