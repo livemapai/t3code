@@ -2359,6 +2359,8 @@
   "b2332fb96c0a55fb": "该暂缓时间已过，请选择其他时间。",
   "d07ed4990bbb5323": "无法执行会话操作",
   "82e555245a78f961": "此连接无法修改选中的部分会话。",
+  "2f9f31830b1c82a9": "Failed to flag thread",
+  "2c97066a674b174a": "Failed to change what the team sees",
   "e54720cac68f2adb": "所有项目",
   "ac47f86df1c31a4a": "复制分支名失败",
   "4e6305459e784fea": "复制会话 ID 失败",
@@ -2409,6 +2411,7 @@
   "151767f20fa67c48": "已置顶",
   "db8f17154d4f0cfa": "活跃",
   "9578dc3e84f82081": "运行中",
+  "f7f8f978ca8711fa": "Relay",
   "a202dad5b0a0aa56": "已暂缓",
   "b9b34ce02a3a5f8b": "已收尾",
   "dfcce8b35ce4fb90": "加载中",
@@ -2643,6 +2646,11 @@
   "56198134d0174861": "收尾会话",
   "0d36d1316d4fc58a": "唤醒会话",
   "760b0829c8381b1a": "暂缓",
+  "0eabd0ddd05841cd": "Flag",
+  "2fbacee4b4c7b412": "No flag",
+  "9e985faf85b0b53a": "Hide from team",
+  "ef69a1556af371d1": "Show to team",
+  "edace71dbb90f766": "Hand over…",
   "d1259290b8c63577": "重命名会话",
   "6dd1f458bcd6a2ea": "正在重新生成…",
   "de30fdae5b3fea98": "重新生成标题",
@@ -3460,6 +3468,11 @@
   "16e29e57dc2931ee": "链接只能使用一次，24 小时后过期。",
   "4b397764b5592274": "正在创建…",
   "adb486dabb4bfe2c": "创建链接",
+  "b94ba10ce3327686": "Could not send the invite.",
+  "ff8fb305723ea32a": "Teammate",
+  "d77f8f798781a575": "Send to a teammate",
+  "162e521d81dd8a12": "Sending...",
+  "bb081b4501ebd5a7": "Send",
   "841768cdf6a3e423": "{guestName} 是访客",
   "44edab03bdd834b0": "访客链接有效",
   "af2057b5701fe49e": "访客",
@@ -3469,6 +3482,15 @@
   "1b8e5125412bfefb": "与访客共享",
   "356ec2ce33231586": "访客看到的会话与你相同，包括命令输出和智能体的推理过程。访客发送的每条消息都需要你处理。",
   "abd89e9eefedf11b": "完成",
+  "ee21ccf63a68b6da": [
+    "Sent to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". It shows in their Team section."
+  ],
   "18d166056c1ab6ff": "停止分享",
   "7a2d510eac9e4587": "访客链接已过期",
   "653405e4ed498d9f": "发送",
@@ -3837,6 +3859,7 @@
   "649ba70371653c20": "收起",
   "c85985df96e582a2": "{count, plural, other {显示全部 {count} 条排队消息}}",
   "fd97bb02b958b003": "自动化",
+  "450f1d251179b352": "Your other thread",
   "fdd8b3127a343102": "智能体",
   "d506b798402041ab": "立即发送",
   "0a390286be34ef82": "正在保存",
@@ -5104,6 +5127,8 @@
   "22750cc2c6dc56c4": "已安装 Android SDK，但还没有虚拟设备。请在 Android Studio → Device Manager 中创建一个。",
   "3e436963e11ea3bc": "{host} 使用 Expo Simulators 在云端启动 iOS 模拟器。",
   "1a6f2df32b8307a2": "{host} 使用 Expo Simulators 在云端启动 Android 模拟器。",
+  "3cc65cf165af9258": "{host} starts iOS Simulators in the cloud with Limrun.",
+  "db9e6e938fcd48f7": "{host} starts Android emulators in the cloud with Limrun.",
   "600c3e7ff64413cf": "{host} 上可以使用 Xcode 和 iOS 模拟器。",
   "64142a49e6bf92e7": "可以使用 Xcode 和 iOS 模拟器。",
   "2fbdc66961a873a6": "{host} 上可以使用 Android SDK 和模拟器。",
@@ -5951,7 +5976,14 @@
   "a0fd24f965eb070b": "无法导入会话历史。",
   "a506c135c2183ac3": "{count, plural, other {{count} 个文件夹}}",
   "efc48b9736a534bc": "刚刚",
-  "edf393ff951b533a": "欢迎使用 T3 Code",
+  "ee8d164144fc4b9d": [
+    "Welcome to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "3cc77f9daa7eeafd": [
     "正在设置",
     " ",
@@ -5968,15 +6000,20 @@
   ],
   "216ab7514aea1d61": "不使用智能体直接开始",
   "501ce2d99da8bfd1": "设置一个智能体即可开始。",
-  "71f3822326109c8e": [
-    "T3 Code 会收集匿名使用数据以改进应用。如需退出，请参阅",
+  "7da791b649c8a9e2": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " collects anonymous usage data to improve the app. To opt out, see the",
     " ",
     {
       "t": "a",
-      "i": 1,
-      "c": "隐私政策"
+      "i": 2,
+      "c": "privacy policy"
     },
-    "。"
+    "."
   ],
   "b33f35083757b42c": [
     "请参阅",
@@ -7305,7 +7342,7 @@
   "1ee44eb65708a8aa": "条形",
   "7670f789e0d8672a": "仅内置主题支持背景图，因此当前主题显示版本标签。",
   "3c60ded47d8f82e5": "仅内置主题支持背景图。",
-  "a11f85722f908aa4": "选择开发版与 Nightly 环境的标识方式。",
+  "6e1d800ec81fed03": "Choose how Dev, Nightly, and Livemap environments are identified.",
   "ddfb7f26acaf4d0f": "在侧边栏顶部显示开发版或 Nightly 背景图。",
   "a6ec9f054ea34962": "颜色与主题",
   "009ed3b10618aa5f": "界面",
@@ -11378,6 +11415,7 @@
   "514934c5c2d1d6ae": "此工作副本在所选项目和环境中已不可用。",
   "766892e19b165adf": "此项目在此环境中没有工作副本。",
   "1c563d7e36c759af": "此工作副本的环境已不可用。",
+  "6ef9cf6b9a45d8f9": "Ari",
   "81d0d1e78b196630": "通用",
   "afda415d2d75a5d3": "聊天",
   "4beeab8d1814b251": "差异与 PR",
@@ -11615,7 +11653,7 @@
   "9c73aa0c2e2b4e7d": "选择快捷键",
   "300a948f90c4d75c": "后退",
   "2a50e229df85d553": "前进",
-  "8aa6404c8018ea67": "T3 Code 首页",
+  "f5ed6793ad6d5c13": "Ari Code home",
   "8e9626aa27cb188a": "issue",
   "9d2fc1003e82feb1": "用量",
   "20283eb1dd6119f9": "{count, plural, other {{count} 个附件}}",

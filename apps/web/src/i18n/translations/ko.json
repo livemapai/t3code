@@ -2354,6 +2354,8 @@
   "b2332fb96c0a55fb": "해당 다시 알림 시간이 지났습니다. 다른 시간을 선택하세요.",
   "d07ed4990bbb5323": "스레드 작업을 사용할 수 없음",
   "82e555245a78f961": "이 연결로는 선택한 스레드 중 하나 이상을 변경할 수 없습니다.",
+  "2f9f31830b1c82a9": "Failed to flag thread",
+  "2c97066a674b174a": "Failed to change what the team sees",
   "e54720cac68f2adb": "모든 프로젝트",
   "ac47f86df1c31a4a": "브랜치를 복사하지 못했습니다",
   "4e6305459e784fea": "스레드 ID를 복사하지 못했습니다",
@@ -2404,6 +2406,7 @@
   "151767f20fa67c48": "고정됨",
   "db8f17154d4f0cfa": "활성",
   "9578dc3e84f82081": "작업 중",
+  "f7f8f978ca8711fa": "Relay",
   "a202dad5b0a0aa56": "다시 알림 설정됨",
   "b9b34ce02a3a5f8b": "정리됨",
   "dfcce8b35ce4fb90": "불러오는 중",
@@ -2638,6 +2641,11 @@
   "56198134d0174861": "스레드 정리",
   "0d36d1316d4fc58a": "스레드 깨우기",
   "760b0829c8381b1a": "다시 알림",
+  "0eabd0ddd05841cd": "Flag",
+  "2fbacee4b4c7b412": "No flag",
+  "9e985faf85b0b53a": "Hide from team",
+  "ef69a1556af371d1": "Show to team",
+  "edace71dbb90f766": "Hand over…",
   "d1259290b8c63577": "스레드 이름 바꾸기",
   "6dd1f458bcd6a2ea": "다시 생성하는 중…",
   "de30fdae5b3fea98": "제목 다시 생성",
@@ -3451,6 +3459,11 @@
   "16e29e57dc2931ee": "링크는 한 번만 사용할 수 있으며 24시간 후 만료됩니다.",
   "4b397764b5592274": "만드는 중...",
   "adb486dabb4bfe2c": "링크 만들기",
+  "b94ba10ce3327686": "Could not send the invite.",
+  "ff8fb305723ea32a": "Teammate",
+  "d77f8f798781a575": "Send to a teammate",
+  "162e521d81dd8a12": "Sending...",
+  "bb081b4501ebd5a7": "Send",
   "841768cdf6a3e423": "{guestName}님은 게스트입니다",
   "44edab03bdd834b0": "게스트 링크 활성",
   "af2057b5701fe49e": "게스트",
@@ -3460,6 +3473,15 @@
   "1b8e5125412bfefb": "게스트와 공유",
   "356ec2ce33231586": "게스트는 명령 출력과 에이전트의 추론을 포함해 스레드를 나와 똑같이 봅니다. 게스트가 보내는 각 메시지는 내 승인을 기다립니다.",
   "abd89e9eefedf11b": "완료",
+  "ee21ccf63a68b6da": [
+    "Sent to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". It shows in their Team section."
+  ],
   "18d166056c1ab6ff": "공유 중지",
   "7a2d510eac9e4587": "게스트 링크 만료됨",
   "653405e4ed498d9f": "보내기",
@@ -3820,6 +3842,7 @@
   "649ba70371653c20": "간략히 보기",
   "c85985df96e582a2": "{count, plural, other {대기 중인 {count}개 모두 보기}}",
   "fd97bb02b958b003": "자동화",
+  "450f1d251179b352": "Your other thread",
   "fdd8b3127a343102": "에이전트",
   "d506b798402041ab": "지금 보내기",
   "0a390286be34ef82": "저장하는 중",
@@ -5078,6 +5101,8 @@
   "22750cc2c6dc56c4": "Android SDK는 설치되어 있지만 가상 기기가 없습니다. Android Studio → Device Manager에서 만드세요.",
   "3e436963e11ea3bc": "{host}은(는) Expo Simulators로 클라우드에서 iOS 시뮬레이터를 시작합니다.",
   "1a6f2df32b8307a2": "{host}은(는) Expo Simulators로 클라우드에서 Android 에뮬레이터를 시작합니다.",
+  "3cc65cf165af9258": "{host} starts iOS Simulators in the cloud with Limrun.",
+  "db9e6e938fcd48f7": "{host} starts Android emulators in the cloud with Limrun.",
   "600c3e7ff64413cf": "{host}에서 Xcode와 iOS 시뮬레이터를 사용할 수 있습니다.",
   "64142a49e6bf92e7": "Xcode와 iOS 시뮬레이터를 사용할 수 있습니다.",
   "2fbdc66961a873a6": "{host}에서 Android SDK와 에뮬레이터를 사용할 수 있습니다.",
@@ -5924,7 +5949,14 @@
   "a0fd24f965eb070b": "스레드 기록을 가져올 수 없습니다.",
   "a506c135c2183ac3": "{count, plural, other {폴더 {count}개}}",
   "efc48b9736a534bc": "지금",
-  "edf393ff951b533a": "T3 Code에 오신 것을 환영합니다",
+  "ee8d164144fc4b9d": [
+    "Welcome to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "3cc77f9daa7eeafd": [
     {
       "t": "span",
@@ -5939,15 +5971,20 @@
   ],
   "216ab7514aea1d61": "에이전트 없이 시작",
   "501ce2d99da8bfd1": "시작하려면 에이전트를 하나 설정하세요.",
-  "71f3822326109c8e": [
-    "T3 Code는 앱 개선을 위해 익명 사용 데이터를 수집합니다. 거부하려면",
+  "7da791b649c8a9e2": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " collects anonymous usage data to improve the app. To opt out, see the",
     " ",
     {
       "t": "a",
-      "i": 1,
-      "c": "개인정보처리방침"
+      "i": 2,
+      "c": "privacy policy"
     },
-    "을 확인하세요."
+    "."
   ],
   "b33f35083757b42c": [
     {
@@ -7257,7 +7294,7 @@
   "1ee44eb65708a8aa": "막대",
   "7670f789e0d8672a": "기본 제공 테마에만 아트워크가 표시되므로 이 테마는 버전 배지를 표시합니다.",
   "3c60ded47d8f82e5": "기본 제공 테마에만 아트워크가 표시됩니다.",
-  "a11f85722f908aa4": "Dev 및 Nightly 환경을 구분하는 방법을 선택합니다.",
+  "6e1d800ec81fed03": "Choose how Dev, Nightly, and Livemap environments are identified.",
   "ddfb7f26acaf4d0f": "사이드바 헤더에 Dev 또는 Nightly 아트워크를 표시합니다.",
   "a6ec9f054ea34962": "색 및 테마",
   "009ed3b10618aa5f": "인터페이스",
@@ -11301,6 +11338,7 @@
   "514934c5c2d1d6ae": "이 체크아웃은 선택한 프로젝트와 환경에서 더 이상 사용할 수 없습니다.",
   "766892e19b165adf": "이 프로젝트에는 이 환경의 체크아웃이 없습니다.",
   "1c563d7e36c759af": "이 체크아웃의 환경은 더 이상 사용할 수 없습니다.",
+  "6ef9cf6b9a45d8f9": "Ari",
   "81d0d1e78b196630": "일반",
   "afda415d2d75a5d3": "채팅",
   "4beeab8d1814b251": "변경 사항 및 풀 리퀘스트",
@@ -11538,7 +11576,7 @@
   "9c73aa0c2e2b4e7d": "단축키 선택",
   "300a948f90c4d75c": "뒤로",
   "2a50e229df85d553": "앞으로",
-  "8aa6404c8018ea67": "T3 Code 홈",
+  "f5ed6793ad6d5c13": "Ari Code home",
   "8e9626aa27cb188a": "이슈",
   "9d2fc1003e82feb1": "사용량",
   "20283eb1dd6119f9": "{count, plural, other {첨부 파일 {count}개}}",

@@ -2355,6 +2355,8 @@
   "b2332fb96c0a55fb": "Den snooze-tiden har passerat. Välj en annan tid.",
   "d07ed4990bbb5323": "Trådåtgärden är inte tillgänglig",
   "82e555245a78f961": "Den här anslutningen kan inte ändra en eller flera av de valda trådarna.",
+  "2f9f31830b1c82a9": "Failed to flag thread",
+  "2c97066a674b174a": "Failed to change what the team sees",
   "e54720cac68f2adb": "Alla projekt",
   "ac47f86df1c31a4a": "Det gick inte att kopiera grenen",
   "4e6305459e784fea": "Det gick inte att kopiera tråd-ID",
@@ -2405,6 +2407,7 @@
   "151767f20fa67c48": "Fästa",
   "db8f17154d4f0cfa": "Aktiva",
   "9578dc3e84f82081": "Arbetar",
+  "f7f8f978ca8711fa": "Relay",
   "a202dad5b0a0aa56": "Snoozade",
   "b9b34ce02a3a5f8b": "Klara",
   "dfcce8b35ce4fb90": "Läser in",
@@ -2639,6 +2642,11 @@
   "56198134d0174861": "Markera tråden som klar",
   "0d36d1316d4fc58a": "Väck tråd",
   "760b0829c8381b1a": "Snooza",
+  "0eabd0ddd05841cd": "Flag",
+  "2fbacee4b4c7b412": "No flag",
+  "9e985faf85b0b53a": "Hide from team",
+  "ef69a1556af371d1": "Show to team",
+  "edace71dbb90f766": "Hand over…",
   "d1259290b8c63577": "Byt namn på tråd",
   "6dd1f458bcd6a2ea": "Genererar om…",
   "de30fdae5b3fea98": "Generera om titel",
@@ -3455,6 +3463,11 @@
   "16e29e57dc2931ee": "Länken fungerar en gång och går ut om 24 timmar.",
   "4b397764b5592274": "Skapar...",
   "adb486dabb4bfe2c": "Skapa länk",
+  "b94ba10ce3327686": "Could not send the invite.",
+  "ff8fb305723ea32a": "Teammate",
+  "d77f8f798781a575": "Send to a teammate",
+  "162e521d81dd8a12": "Sending...",
+  "bb081b4501ebd5a7": "Send",
   "841768cdf6a3e423": "{guestName} är gäst",
   "44edab03bdd834b0": "Gästlänken är aktiv",
   "af2057b5701fe49e": "Gäst",
@@ -3464,6 +3477,15 @@
   "1b8e5125412bfefb": "Dela med gäst",
   "356ec2ce33231586": "Gästen ser tråden som du gör, inklusive kommandoutdata och agentens resonemang. Varje meddelande gästen skickar väntar på dig.",
   "abd89e9eefedf11b": "Klar",
+  "ee21ccf63a68b6da": [
+    "Sent to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". It shows in their Team section."
+  ],
   "18d166056c1ab6ff": "Sluta dela",
   "7a2d510eac9e4587": "Gästlänken har gått ut",
   "653405e4ed498d9f": "Skicka",
@@ -3832,6 +3854,7 @@
   "649ba70371653c20": "Visa färre",
   "c85985df96e582a2": "{count, plural, one {Visa alla {count} i kö} other {Visa alla {count} i kö}}",
   "fd97bb02b958b003": "Automatisering",
+  "450f1d251179b352": "Your other thread",
   "fdd8b3127a343102": "Agent",
   "d506b798402041ab": "Skicka nu",
   "0a390286be34ef82": "Sparar",
@@ -5098,6 +5121,8 @@
   "22750cc2c6dc56c4": "Android SDK är installerat, men ingen virtuell enhet finns. Skapa en i Android Studio → Device Manager.",
   "3e436963e11ea3bc": "{host} startar iOS-simulatorer i molnet med Expo Simulators.",
   "1a6f2df32b8307a2": "{host} startar Android-emulatorer i molnet med Expo Simulators.",
+  "3cc65cf165af9258": "{host} starts iOS Simulators in the cloud with Limrun.",
+  "db9e6e938fcd48f7": "{host} starts Android emulators in the cloud with Limrun.",
   "600c3e7ff64413cf": "Xcode och iOS-simulatorn är tillgängliga på {host}.",
   "64142a49e6bf92e7": "Xcode och iOS-simulatorn är tillgängliga.",
   "2fbdc66961a873a6": "Android SDK och emulatorn är tillgängliga på {host}.",
@@ -5945,7 +5970,14 @@
   "a0fd24f965eb070b": "Kunde inte importera trådhistorik.",
   "a506c135c2183ac3": "{count, plural, one {{count} mapp} other {{count} mappar}}",
   "efc48b9736a534bc": "nu",
-  "edf393ff951b533a": "Välkommen till T3 Code",
+  "ee8d164144fc4b9d": [
+    "Welcome to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "3cc77f9daa7eeafd": [
     "Konfigurerar",
     " ",
@@ -5962,15 +5994,20 @@
   ],
   "216ab7514aea1d61": "Starta utan agent",
   "501ce2d99da8bfd1": "Konfigurera en agent för att starta.",
-  "71f3822326109c8e": [
-    "T3 Code samlar in anonym användningsdata för att förbättra appen. Se",
+  "7da791b649c8a9e2": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " collects anonymous usage data to improve the app. To opt out, see the",
     " ",
     {
       "t": "a",
-      "i": 1,
-      "c": "integritetspolicyn"
+      "i": 2,
+      "c": "privacy policy"
     },
-    " för att välja bort det."
+    "."
   ],
   "b33f35083757b42c": [
     "Se",
@@ -7296,7 +7333,7 @@
   "1ee44eb65708a8aa": "Staplar",
   "7670f789e0d8672a": "Bara inbyggda teman visar grafik, så det här temat visar versionsetiketten.",
   "3c60ded47d8f82e5": "Bara inbyggda teman visar grafik.",
-  "a11f85722f908aa4": "Välj hur Dev- och Nightly-miljöer identifieras.",
+  "6e1d800ec81fed03": "Choose how Dev, Nightly, and Livemap environments are identified.",
   "ddfb7f26acaf4d0f": "Visa Dev- eller Nightly-grafik i sidofältets sidhuvud.",
   "a6ec9f054ea34962": "Färger och teman",
   "009ed3b10618aa5f": "Gränssnitt",
@@ -11362,6 +11399,7 @@
   "514934c5c2d1d6ae": "Utcheckningen är inte längre tillgänglig i det valda projektet och den valda miljön.",
   "766892e19b165adf": "Projektet har ingen utcheckning i den här miljön.",
   "1c563d7e36c759af": "Utcheckningens miljö är inte längre tillgänglig.",
+  "6ef9cf6b9a45d8f9": "Ari",
   "81d0d1e78b196630": "Allmänt",
   "afda415d2d75a5d3": "Chatt",
   "4beeab8d1814b251": "Diffar och pull requests",
@@ -11599,7 +11637,7 @@
   "9c73aa0c2e2b4e7d": "Välj kortkommando",
   "300a948f90c4d75c": "Gå tillbaka",
   "2a50e229df85d553": "Gå framåt",
-  "8aa6404c8018ea67": "T3 Code start",
+  "f5ed6793ad6d5c13": "Ari Code home",
   "8e9626aa27cb188a": "Ärenden",
   "9d2fc1003e82feb1": "Användning",
   "20283eb1dd6119f9": "{count, plural, one {{count} bilaga} other {{count} bilagor}}",

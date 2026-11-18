@@ -2355,6 +2355,8 @@
   "b2332fb96c0a55fb": "Dieser Zeitpunkt ist bereits vorbei. Wähle einen anderen.",
   "d07ed4990bbb5323": "Thread-Aktion nicht verfügbar",
   "82e555245a78f961": "Diese Verbindung kann einen oder mehrere der ausgewählten Threads nicht ändern.",
+  "2f9f31830b1c82a9": "Failed to flag thread",
+  "2c97066a674b174a": "Failed to change what the team sees",
   "e54720cac68f2adb": "Alle Projekte",
   "ac47f86df1c31a4a": "Branch konnte nicht kopiert werden",
   "4e6305459e784fea": "Thread-ID konnte nicht kopiert werden",
@@ -2405,6 +2407,7 @@
   "151767f20fa67c48": "Angeheftet",
   "db8f17154d4f0cfa": "Aktiv",
   "9578dc3e84f82081": "In Arbeit",
+  "f7f8f978ca8711fa": "Relay",
   "a202dad5b0a0aa56": "Zurückgestellt",
   "b9b34ce02a3a5f8b": "Erledigt",
   "dfcce8b35ce4fb90": "Wird geladen",
@@ -2640,6 +2643,11 @@
   "56198134d0174861": "Thread erledigen",
   "0d36d1316d4fc58a": "Thread wecken",
   "760b0829c8381b1a": "Zurückstellen",
+  "0eabd0ddd05841cd": "Flag",
+  "2fbacee4b4c7b412": "No flag",
+  "9e985faf85b0b53a": "Hide from team",
+  "ef69a1556af371d1": "Show to team",
+  "edace71dbb90f766": "Hand over…",
   "d1259290b8c63577": "Thread umbenennen",
   "6dd1f458bcd6a2ea": "Wird neu erzeugt…",
   "de30fdae5b3fea98": "Titel neu erzeugen",
@@ -3456,6 +3464,11 @@
   "16e29e57dc2931ee": "Der Link funktioniert einmal und läuft in 24 Stunden ab.",
   "4b397764b5592274": "Wird erstellt...",
   "adb486dabb4bfe2c": "Link erstellen",
+  "b94ba10ce3327686": "Could not send the invite.",
+  "ff8fb305723ea32a": "Teammate",
+  "d77f8f798781a575": "Send to a teammate",
+  "162e521d81dd8a12": "Sending...",
+  "bb081b4501ebd5a7": "Send",
   "841768cdf6a3e423": "{guestName} ist Gast",
   "44edab03bdd834b0": "Gastlink aktiv",
   "af2057b5701fe49e": "Gast",
@@ -3465,6 +3478,15 @@
   "1b8e5125412bfefb": "Mit Gast teilen",
   "356ec2ce33231586": "Der Gast sieht den Thread wie du, einschließlich Befehlsausgabe und Überlegungen des Agenten. Jede Nachricht, die er sendet, wartet auf dich.",
   "abd89e9eefedf11b": "Fertig",
+  "ee21ccf63a68b6da": [
+    "Sent to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". It shows in their Team section."
+  ],
   "18d166056c1ab6ff": "Freigabe beenden",
   "7a2d510eac9e4587": "Gastlink abgelaufen",
   "653405e4ed498d9f": "Senden",
@@ -3835,6 +3857,7 @@
   "649ba70371653c20": "Weniger anzeigen",
   "c85985df96e582a2": "{count, plural, one {Alle {count} eingereihten anzeigen} other {Alle {count} eingereihten anzeigen}}",
   "fd97bb02b958b003": "Automatisierung",
+  "450f1d251179b352": "Your other thread",
   "fdd8b3127a343102": "Agent",
   "d506b798402041ab": "Jetzt senden",
   "0a390286be34ef82": "Wird gespeichert",
@@ -5098,6 +5121,8 @@
   "22750cc2c6dc56c4": "Das Android SDK ist installiert, aber es gibt kein virtuelles Gerät. Erstelle eines unter Android Studio → Device Manager.",
   "3e436963e11ea3bc": "{host} startet iOS-Simulatoren in der Cloud mit Expo Simulators.",
   "1a6f2df32b8307a2": "{host} startet Android-Emulatoren in der Cloud mit Expo Simulators.",
+  "3cc65cf165af9258": "{host} starts iOS Simulators in the cloud with Limrun.",
+  "db9e6e938fcd48f7": "{host} starts Android emulators in the cloud with Limrun.",
   "600c3e7ff64413cf": "Xcode und iOS-Simulator sind auf {host} verfügbar.",
   "64142a49e6bf92e7": "Xcode und iOS-Simulator sind verfügbar.",
   "2fbdc66961a873a6": "Das Android SDK und der Emulator sind auf {host} verfügbar.",
@@ -5945,7 +5970,14 @@
   "a0fd24f965eb070b": "Thread-Verlauf konnte nicht importiert werden.",
   "a506c135c2183ac3": "{count, plural, one {{count} Ordner} other {{count} Ordner}}",
   "efc48b9736a534bc": "jetzt",
-  "edf393ff951b533a": "Willkommen bei T3 Code",
+  "ee8d164144fc4b9d": [
+    "Welcome to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "3cc77f9daa7eeafd": [
     {
       "t": "span",
@@ -5960,13 +5992,18 @@
   ],
   "216ab7514aea1d61": "Ohne Agenten starten",
   "501ce2d99da8bfd1": "Richte einen Agenten ein, um zu starten.",
-  "71f3822326109c8e": [
-    "T3 Code erfasst anonyme Nutzungsdaten, um die App zu verbessern. Wie du widersprichst, steht in der",
+  "7da791b649c8a9e2": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " collects anonymous usage data to improve the app. To opt out, see the",
     " ",
     {
       "t": "a",
-      "i": 1,
-      "c": "Datenschutzerklärung"
+      "i": 2,
+      "c": "privacy policy"
     },
     "."
   ],
@@ -7289,7 +7326,7 @@
   "1ee44eb65708a8aa": "Balken",
   "7670f789e0d8672a": "Nur integrierte Designs zeigen Artwork, daher zeigt dieses Design das Versions-Badge.",
   "3c60ded47d8f82e5": "Nur integrierte Designs zeigen Artwork.",
-  "a11f85722f908aa4": "Wähle, wie Dev- und Nightly-Umgebungen gekennzeichnet werden.",
+  "6e1d800ec81fed03": "Choose how Dev, Nightly, and Livemap environments are identified.",
   "ddfb7f26acaf4d0f": "Dev- oder Nightly-Artwork im Kopf der Seitenleiste anzeigen.",
   "a6ec9f054ea34962": "Farben & Designs",
   "009ed3b10618aa5f": "Oberfläche",
@@ -11356,6 +11393,7 @@
   "514934c5c2d1d6ae": "Dieser Checkout ist im ausgewählten Projekt und in der ausgewählten Umgebung nicht mehr verfügbar.",
   "766892e19b165adf": "Dieses Projekt hat keinen Checkout in dieser Umgebung.",
   "1c563d7e36c759af": "Die Umgebung dieses Checkouts ist nicht mehr verfügbar.",
+  "6ef9cf6b9a45d8f9": "Ari",
   "81d0d1e78b196630": "Allgemein",
   "afda415d2d75a5d3": "Chat",
   "4beeab8d1814b251": "Diffs & Pull Requests",
@@ -11593,7 +11631,7 @@
   "9c73aa0c2e2b4e7d": "Tastenkürzel wählen",
   "300a948f90c4d75c": "Zurück",
   "2a50e229df85d553": "Vorwärts",
-  "8aa6404c8018ea67": "T3 Code Startseite",
+  "f5ed6793ad6d5c13": "Ari Code home",
   "8e9626aa27cb188a": "Issues",
   "9d2fc1003e82feb1": "Nutzung",
   "20283eb1dd6119f9": "{count, plural, one {{count} Anhang} other {{count} Anhänge}}",

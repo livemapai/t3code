@@ -2353,6 +2353,8 @@
   "b2332fb96c0a55fb": "そのスヌーズ時刻は過ぎています。別の時刻を選択してください。",
   "d07ed4990bbb5323": "スレッドの操作を利用できません",
   "82e555245a78f961": "この接続では、選択した 1 つ以上のスレッドを変更できません。",
+  "2f9f31830b1c82a9": "Failed to flag thread",
+  "2c97066a674b174a": "Failed to change what the team sees",
   "e54720cac68f2adb": "すべてのプロジェクト",
   "ac47f86df1c31a4a": "ブランチをコピーできませんでした",
   "4e6305459e784fea": "スレッド ID をコピーできませんでした",
@@ -2403,6 +2405,7 @@
   "151767f20fa67c48": "ピン留め済み",
   "db8f17154d4f0cfa": "アクティブ",
   "9578dc3e84f82081": "作業中",
+  "f7f8f978ca8711fa": "Relay",
   "a202dad5b0a0aa56": "スヌーズ中",
   "b9b34ce02a3a5f8b": "対応済み",
   "dfcce8b35ce4fb90": "読み込み中",
@@ -2637,6 +2640,11 @@
   "56198134d0174861": "スレッドを対応済みにする",
   "0d36d1316d4fc58a": "スヌーズを解除",
   "760b0829c8381b1a": "スヌーズ",
+  "0eabd0ddd05841cd": "Flag",
+  "2fbacee4b4c7b412": "No flag",
+  "9e985faf85b0b53a": "Hide from team",
+  "ef69a1556af371d1": "Show to team",
+  "edace71dbb90f766": "Hand over…",
   "d1259290b8c63577": "スレッドの名前を変更",
   "6dd1f458bcd6a2ea": "再生成しています…",
   "de30fdae5b3fea98": "タイトルを再生成",
@@ -3451,6 +3459,11 @@
   "16e29e57dc2931ee": "リンクは 1 回だけ使用でき、24 時間で期限切れになります。",
   "4b397764b5592274": "作成しています...",
   "adb486dabb4bfe2c": "リンクを作成",
+  "b94ba10ce3327686": "Could not send the invite.",
+  "ff8fb305723ea32a": "Teammate",
+  "d77f8f798781a575": "Send to a teammate",
+  "162e521d81dd8a12": "Sending...",
+  "bb081b4501ebd5a7": "Send",
   "841768cdf6a3e423": "{guestName} はゲストです",
   "44edab03bdd834b0": "ゲストリンクが有効です",
   "af2057b5701fe49e": "ゲスト",
@@ -3460,6 +3473,15 @@
   "1b8e5125412bfefb": "ゲストと共有",
   "356ec2ce33231586": "ゲストには、コマンドの出力やエージェントの推論を含め、あなたと同じようにスレッドが表示されます。ゲストが送信したメッセージは、すべてあなたの確認を待ちます。",
   "abd89e9eefedf11b": "完了",
+  "ee21ccf63a68b6da": [
+    "Sent to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ". It shows in their Team section."
+  ],
   "18d166056c1ab6ff": "共有を停止",
   "7a2d510eac9e4587": "ゲストリンクの期限が切れました",
   "653405e4ed498d9f": "送信",
@@ -3822,6 +3844,7 @@
   "649ba70371653c20": "表示を減らす",
   "c85985df96e582a2": "{count, plural, other {キュー内の {count} 件をすべて表示}}",
   "fd97bb02b958b003": "自動化",
+  "450f1d251179b352": "Your other thread",
   "fdd8b3127a343102": "エージェント",
   "d506b798402041ab": "今すぐ送信",
   "0a390286be34ef82": "保存中",
@@ -5081,6 +5104,8 @@
   "22750cc2c6dc56c4": "Android SDK はインストールされていますが、仮想デバイスがありません。Android Studio → Device Manager で作成してください。",
   "3e436963e11ea3bc": "{host} は Expo Simulators を使ってクラウドで iOS シミュレーターを起動します。",
   "1a6f2df32b8307a2": "{host} は Expo Simulators を使ってクラウドで Android エミュレーターを起動します。",
+  "3cc65cf165af9258": "{host} starts iOS Simulators in the cloud with Limrun.",
+  "db9e6e938fcd48f7": "{host} starts Android emulators in the cloud with Limrun.",
   "600c3e7ff64413cf": "{host} で Xcode と iOS シミュレーターを利用できます。",
   "64142a49e6bf92e7": "Xcode と iOS シミュレーターを利用できます。",
   "2fbdc66961a873a6": "{host} で Android SDK とエミュレーターを利用できます。",
@@ -5926,7 +5951,14 @@
   "a0fd24f965eb070b": "スレッドの履歴をインポートできませんでした。",
   "a506c135c2183ac3": "{count, plural, other {{count} 個のフォルダー}}",
   "efc48b9736a534bc": "たった今",
-  "edf393ff951b533a": "T3 Code へようこそ",
+  "ee8d164144fc4b9d": [
+    "Welcome to ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
   "3cc77f9daa7eeafd": [
     {
       "t": "span",
@@ -5941,15 +5973,20 @@
   ],
   "216ab7514aea1d61": "エージェントなしで開始",
   "501ce2d99da8bfd1": "開始するにはエージェントを 1 つセットアップしてください。",
-  "71f3822326109c8e": [
-    "T3 Code はアプリの改善のために匿名の使用状況データを収集します。オプトアウトの方法は",
+  "7da791b649c8a9e2": [
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " collects anonymous usage data to improve the app. To opt out, see the",
     " ",
     {
       "t": "a",
-      "i": 1,
-      "c": "プライバシーポリシー"
+      "i": 2,
+      "c": "privacy policy"
     },
-    " をご覧ください。"
+    "."
   ],
   "b33f35083757b42c": [
     {
@@ -7256,7 +7293,7 @@
   "1ee44eb65708a8aa": "バー",
   "7670f789e0d8672a": "アートワークを表示するのは組み込みのテーマだけのため、このテーマではバージョン表示を使用します。",
   "3c60ded47d8f82e5": "アートワークを表示するのは組み込みのテーマだけです。",
-  "a11f85722f908aa4": "Dev と Nightly の環境の見分け方を選択します。",
+  "6e1d800ec81fed03": "Choose how Dev, Nightly, and Livemap environments are identified.",
   "ddfb7f26acaf4d0f": "サイドバーのヘッダーに Dev または Nightly のアートワークを表示します。",
   "a6ec9f054ea34962": "色とテーマ",
   "009ed3b10618aa5f": "インターフェイス",
@@ -11304,6 +11341,7 @@
   "514934c5c2d1d6ae": "このチェックアウトは、選択したプロジェクトと環境では利用できなくなりました。",
   "766892e19b165adf": "このプロジェクトにはこの環境のチェックアウトがありません。",
   "1c563d7e36c759af": "このチェックアウトの環境は利用できなくなりました。",
+  "6ef9cf6b9a45d8f9": "Ari",
   "81d0d1e78b196630": "一般",
   "afda415d2d75a5d3": "チャット",
   "4beeab8d1814b251": "差分とプルリクエスト",
@@ -11541,7 +11579,7 @@
   "9c73aa0c2e2b4e7d": "ショートカットを選択",
   "300a948f90c4d75c": "戻る",
   "2a50e229df85d553": "進む",
-  "8aa6404c8018ea67": "T3 Code ホーム",
+  "f5ed6793ad6d5c13": "Ari Code home",
   "8e9626aa27cb188a": "Issue",
   "9d2fc1003e82feb1": "使用量",
   "20283eb1dd6119f9": "{count, plural, other {{count} 個の添付ファイル}}",
