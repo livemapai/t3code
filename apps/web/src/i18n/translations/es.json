@@ -7381,6 +7381,110 @@
       "v": "rt"
     }
   ],
+  "8611403209556d02": "Loading Ari host state…",
+  "cfdb60a560152760": "Ari state requires ari:read access to this environment.",
+  "64d107dd49dd4287": "Signed out",
+  "93014a9ed846193e": " (stale)",
+  "7342bfc328008926": "Running",
+  "f84879ada73428c9": "Installed",
+  "d15f079ebaf277ae": "Nunca",
+  "0e2b5ee5d73bcb82": "What the merge button shouts when you merge a pull request.",
+  "9140768ac77bc6cb": "Merge shout",
+  "90a258fff61fd77e": "Desactivado",
+  "bb8656ad34e5d279": "Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar.",
+  "73a23ba0de7b30b5": "Thread flags",
+  "e563a8e3cd4d3198": "Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads.",
+  "bbb28d48418e5dd7": "Relay section",
+  "81d22242a186e16e": "Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked.",
+  "f0a4bcc0a5b28e88": "Team threads",
+  "31859581b0eb15e6": "Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally.",
+  "ba793556bc0bd2a9": "Open Ari Library links in the app",
+  "fa02a22577dbe632": "Features",
+  "91f8f57f4b96a2c4": [
+    "Ari agent host · ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "6a4c5e6388da6284": [
+    "Server host: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "600dbb1097adb44f": [
+    "Version: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " · Account: ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "a6f3ea3bc6ea439a": "Relay",
+  "1b3e1b61a6c2380a": "Service: ",
+  "f7b36ba3a78feafc": [
+    "Listener last seen: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "3fcf5a758d7666d1": [
+    "T3 sign-in expires: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "7288865f1fc6434e": [
+    "Held across this Ari account: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "f84d8194fa854aa8": [
+    "Run on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ": ",
+    {
+      "t": "code",
+      "i": 2,
+      "c": {
+        "i": 3,
+        "k": "_gt_value_3",
+        "v": "v"
+      }
+    }
+  ],
+  "33006275548e85a7": [
+    "Install Ari on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " using your team’s Ari setup instructions."
+  ],
+  "56a64de7353d3632": "Open Ari relay",
+  "8e73b883d41d4102": "Desactivado",
   "ae85d885630b0e51": "{count, plural, one {{count} ámbito} other {{count} ámbitos}}",
   "129431563dc043bc": "{label}: mostrar {scopes}",
   "02df8efa1f3f4ba1": "No se pudo copiar el enlace de la app alojada",
@@ -9627,7 +9731,6 @@
   "26fa470bd81ee396": "Estos permisos se aplican a la conexión actual de este cliente.",
   "059f7301895a5c0d": "Convenciones del repositorio",
   "b2c5419d306bbc16": "Conventional Commits",
-  "d15f079ebaf277ae": "Nunca",
   "19cca7227459820e": "Modelo de generación de texto",
   "fd78267fc2356cb5": "Modelo de escritura para el control de versiones",
   "596ebbf3817af29a": "Heredar",
@@ -10703,7 +10806,6 @@
   "4a237f41ce592b7f": "Conserva los worktrees de este proyecto hasta que los elimines manualmente.",
   "00b8ffd8ea6e6a93": "Usa estas reglas para este proyecto.",
   "72c279824d15a999": "Usa los ajustes de limpieza de worktrees de cada máquina.",
-  "90a258fff61fd77e": "Desactivado",
   "b5702d0b64866b08": "Personalizado",
   "c009c901f3eefe78": "Eliminar los worktrees de hilos eliminados",
   "431c7cd6d50102b7": "Quita los worktrees sin uso cuando se eliminan hilos activos o archivados. Se conservan los worktrees con cambios locales.",
@@ -10725,7 +10827,6 @@
   "b0d0aebadc521ed1": "Elimina las capturas del navegador guardadas tras este número de días. Los enlaces a capturas antiguas dejarán de abrirse.",
   "fe4208562792c313": "Eliminar registros rotados antiguos",
   "8debac9c8e9cff47": "Elimina los archivos de registro rotados inactivos tras este número de días. Se conservan los registros actuales.",
-  "8e73b883d41d4102": "Desactivado",
   "80d58a3fd4e4212a": "Proyecto",
   "de770505be25f1ff": "Carpeta",
   "ada7b9a4d96959d2": "Hilo",
@@ -11406,6 +11507,7 @@
   "1a07e4d043f5df4e": "Conexiones",
   "d8cd577c915539bd": "Cuentas y token de {label}",
   "a5ea998202be1fbc": "Credenciales de {label}",
+  "2ed874822db4cc49": "Ari agent host",
   "8f636f473e42e657": "cualquier archivos locales cambios sin commit archivos con seguimiento editados ignorados env salida de compilación limpieza",
   "b1c7f74049a4147c": "almacenamiento limpieza ejecutar ahora resultados informe eliminados conservados fallidos",
   "2678550365a59e17": "Limpieza de worktrees",
@@ -11665,6 +11767,8 @@
   "984b361806ce8d25": "Reactivado",
   "c6e8abc00ae470d2": "Hecho",
   "8cf699ae75fd8067": "Fijados",
+  "b3e1323220fa6a6b": "Flagged {flag}",
+  "612cbb12a2f3511e": "Started by relay",
   "be451f475c514b37": "Descartar notificación de reactivación",
   "e9ced65134f2f36c": "Reactivar hilo ahora",
   "aca5896600bf173e": "Ahora mismo tienes otra rama en el checkout.",

@@ -537,7 +537,7 @@ function QueuedMessage(props: {
           <FoldedMessageHeader
             icon={fold.icon}
             label={fold.label}
-            fitLabel={fold.fitLabel}
+            fitLabel={fold.fitLabel ?? false}
             summary={fold.summary}
             expanded={expanded}
             onToggle={() => setExpanded((value) => !value)}

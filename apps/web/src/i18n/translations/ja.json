@@ -7347,6 +7347,110 @@
       "v": "rt"
     }
   ],
+  "8611403209556d02": "Loading Ari host state…",
+  "cfdb60a560152760": "Ari state requires ari:read access to this environment.",
+  "64d107dd49dd4287": "Signed out",
+  "93014a9ed846193e": " (stale)",
+  "7342bfc328008926": "Running",
+  "f84879ada73428c9": "Installed",
+  "d15f079ebaf277ae": "しない",
+  "0e2b5ee5d73bcb82": "What the merge button shouts when you merge a pull request.",
+  "9140768ac77bc6cb": "Merge shout",
+  "90a258fff61fd77e": "オフ",
+  "bb8656ad34e5d279": "Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar.",
+  "73a23ba0de7b30b5": "Thread flags",
+  "e563a8e3cd4d3198": "Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads.",
+  "bbb28d48418e5dd7": "Relay section",
+  "81d22242a186e16e": "Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked.",
+  "f0a4bcc0a5b28e88": "Team threads",
+  "31859581b0eb15e6": "Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally.",
+  "ba793556bc0bd2a9": "Open Ari Library links in the app",
+  "fa02a22577dbe632": "Features",
+  "91f8f57f4b96a2c4": [
+    "Ari agent host · ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "6a4c5e6388da6284": [
+    "Server host: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "600dbb1097adb44f": [
+    "Version: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " · Account: ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "a6f3ea3bc6ea439a": "Relay",
+  "1b3e1b61a6c2380a": "Service: ",
+  "f7b36ba3a78feafc": [
+    "Listener last seen: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "3fcf5a758d7666d1": [
+    "T3 sign-in expires: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "7288865f1fc6434e": [
+    "Held across this Ari account: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "f84d8194fa854aa8": [
+    "Run on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ": ",
+    {
+      "t": "code",
+      "i": 2,
+      "c": {
+        "i": 3,
+        "k": "_gt_value_3",
+        "v": "v"
+      }
+    }
+  ],
+  "33006275548e85a7": [
+    "Install Ari on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " using your team’s Ari setup instructions."
+  ],
+  "56a64de7353d3632": "Open Ari relay",
+  "8e73b883d41d4102": "オフ",
   "ae85d885630b0e51": "{count, plural, other {{count} 個のスコープ}}",
   "129431563dc043bc": "{label}: {scopes} を表示",
   "02df8efa1f3f4ba1": "ホスト版アプリのリンクをコピーできませんでした",
@@ -9581,7 +9685,6 @@
   "26fa470bd81ee396": "これらの権限は、このクライアントの現在の接続に適用されます。",
   "059f7301895a5c0d": "リポジトリの規約",
   "b2c5419d306bbc16": "Conventional Commits",
-  "d15f079ebaf277ae": "しない",
   "19cca7227459820e": "テキスト生成モデル",
   "fd78267fc2356cb5": "ソース管理の文章作成モデル",
   "596ebbf3817af29a": "継承",
@@ -10658,7 +10761,6 @@
   "4a237f41ce592b7f": "このプロジェクトのワークツリーは、手動で削除するまで保持します。",
   "00b8ffd8ea6e6a93": "このプロジェクトでこれらのルールを使用します。",
   "72c279824d15a999": "各マシンのワークツリーのクリーンアップ設定を使用します。",
-  "90a258fff61fd77e": "オフ",
   "b5702d0b64866b08": "カスタム",
   "c009c901f3eefe78": "削除したスレッドのワークツリーを削除",
   "431c7cd6d50102b7": "アクティブまたはアーカイブ済みのスレッドを削除したときに、使われていないワークツリーを削除します。ローカルの変更があるワークツリーは保持されます。",
@@ -10680,7 +10782,6 @@
   "b0d0aebadc521ed1": "保存されたブラウザーのキャプチャを、この日数が経過したら削除します。古いキャプチャのリンクは開けなくなります。",
   "fe4208562792c313": "古いローテーション済みログを削除",
   "8debac9c8e9cff47": "使われていないローテーション済みのログファイルを、この日数が経過したら削除します。現在のログは保持されます。",
-  "8e73b883d41d4102": "オフ",
   "80d58a3fd4e4212a": "プロジェクト",
   "de770505be25f1ff": "フォルダー",
   "ada7b9a4d96959d2": "スレッド",
@@ -11361,6 +11462,7 @@
   "1a07e4d043f5df4e": "接続",
   "d8cd577c915539bd": "{label} のアカウントとトークン",
   "a5ea998202be1fbc": "{label} の認証情報",
+  "2ed874822db4cc49": "Ari agent host",
   "8f636f473e42e657": "すべて ローカル ファイル 未コミット 変更 編集済み 追跡 無視 env ビルド 出力 クリーンアップ any local files uncommitted",
   "b1c7f74049a4147c": "ストレージ クリーンアップ 今すぐ実行 結果 レポート 削除 保持 失敗 storage cleanup",
   "2678550365a59e17": "ワークツリーのクリーンアップ",
@@ -11620,6 +11722,8 @@
   "984b361806ce8d25": "再開",
   "c6e8abc00ae470d2": "完了",
   "8cf699ae75fd8067": "ピン留め済み",
+  "b3e1323220fa6a6b": "Flagged {flag}",
+  "612cbb12a2f3511e": "Started by relay",
   "be451f475c514b37": "再開の通知を閉じる",
   "e9ced65134f2f36c": "スレッドを今すぐ再開",
   "aca5896600bf173e": "現在、別のブランチをチェックアウトしています。",

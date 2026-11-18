@@ -7348,6 +7348,110 @@
     },
     " 생성됨"
   ],
+  "8611403209556d02": "Loading Ari host state…",
+  "cfdb60a560152760": "Ari state requires ari:read access to this environment.",
+  "64d107dd49dd4287": "Signed out",
+  "93014a9ed846193e": " (stale)",
+  "7342bfc328008926": "Running",
+  "f84879ada73428c9": "Installed",
+  "d15f079ebaf277ae": "사용 안 함",
+  "0e2b5ee5d73bcb82": "What the merge button shouts when you merge a pull request.",
+  "9140768ac77bc6cb": "Merge shout",
+  "90a258fff61fd77e": "끔",
+  "bb8656ad34e5d279": "Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar.",
+  "73a23ba0de7b30b5": "Thread flags",
+  "e563a8e3cd4d3198": "Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads.",
+  "bbb28d48418e5dd7": "Relay section",
+  "81d22242a186e16e": "Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked.",
+  "f0a4bcc0a5b28e88": "Team threads",
+  "31859581b0eb15e6": "Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally.",
+  "ba793556bc0bd2a9": "Open Ari Library links in the app",
+  "fa02a22577dbe632": "Features",
+  "91f8f57f4b96a2c4": [
+    "Ari agent host · ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "6a4c5e6388da6284": [
+    "Server host: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "600dbb1097adb44f": [
+    "Version: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " · Account: ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "a6f3ea3bc6ea439a": "Relay",
+  "1b3e1b61a6c2380a": "Service: ",
+  "f7b36ba3a78feafc": [
+    "Listener last seen: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "3fcf5a758d7666d1": [
+    "T3 sign-in expires: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "7288865f1fc6434e": [
+    "Held across this Ari account: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "f84d8194fa854aa8": [
+    "Run on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ": ",
+    {
+      "t": "code",
+      "i": 2,
+      "c": {
+        "i": 3,
+        "k": "_gt_value_3",
+        "v": "v"
+      }
+    }
+  ],
+  "33006275548e85a7": [
+    "Install Ari on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " using your team’s Ari setup instructions."
+  ],
+  "56a64de7353d3632": "Open Ari relay",
+  "8e73b883d41d4102": "끔",
   "ae85d885630b0e51": "{count, plural, other {범위 {count}개}}",
   "129431563dc043bc": "{label}: {scopes} 표시",
   "02df8efa1f3f4ba1": "호스팅된 앱 링크를 복사할 수 없습니다",
@@ -9584,7 +9688,6 @@
   "26fa470bd81ee396": "이 권한은 이 클라이언트의 현재 연결에 적용됩니다.",
   "059f7301895a5c0d": "저장소 규칙",
   "b2c5419d306bbc16": "Conventional Commits",
-  "d15f079ebaf277ae": "사용 안 함",
   "19cca7227459820e": "텍스트 생성 모델",
   "fd78267fc2356cb5": "소스 제어 작성 모델",
   "596ebbf3817af29a": "상속",
@@ -10659,7 +10762,6 @@
   "4a237f41ce592b7f": "직접 삭제할 때까지 이 프로젝트의 워크트리를 유지합니다.",
   "00b8ffd8ea6e6a93": "이 프로젝트에 이 규칙을 사용합니다.",
   "72c279824d15a999": "각 머신의 워크트리 정리 설정을 사용합니다.",
-  "90a258fff61fd77e": "끔",
   "b5702d0b64866b08": "사용자 지정",
   "c009c901f3eefe78": "삭제된 스레드의 워크트리 삭제",
   "431c7cd6d50102b7": "활성 또는 보관된 스레드가 삭제되면 사용하지 않는 워크트리를 제거합니다. 로컬 변경 사항이 있는 워크트리는 유지됩니다.",
@@ -10681,7 +10783,6 @@
   "b0d0aebadc521ed1": "저장된 브라우저 캡처를 이 일수가 지나면 삭제합니다. 오래된 캡처 링크는 더 이상 열리지 않습니다.",
   "fe4208562792c313": "오래된 순환 로그 삭제",
   "8debac9c8e9cff47": "비활성 순환 로그 파일을 이 일수가 지나면 삭제합니다. 현재 로그는 유지됩니다.",
-  "8e73b883d41d4102": "끔",
   "80d58a3fd4e4212a": "프로젝트",
   "de770505be25f1ff": "폴더",
   "ada7b9a4d96959d2": "스레드",
@@ -11358,6 +11459,7 @@
   "1a07e4d043f5df4e": "연결",
   "d8cd577c915539bd": "{label} 계정 및 토큰",
   "a5ea998202be1fbc": "{label} 자격 증명",
+  "2ed874822db4cc49": "Ari agent host",
   "8f636f473e42e657": "모든 로컬 파일 커밋하지 않은 변경 사항 편집된 추적 파일 무시된 env 빌드 출력 정리",
   "b1c7f74049a4147c": "저장 공간 정리 지금 실행 결과 보고서 제거됨 유지됨 실패",
   "2678550365a59e17": "워크트리 정리",
@@ -11617,6 +11719,8 @@
   "984b361806ce8d25": "깨어남",
   "c6e8abc00ae470d2": "완료",
   "8cf699ae75fd8067": "고정됨",
+  "b3e1323220fa6a6b": "Flagged {flag}",
+  "612cbb12a2f3511e": "Started by relay",
   "be451f475c514b37": "깨어남 알림 닫기",
   "e9ced65134f2f36c": "지금 스레드 깨우기",
   "aca5896600bf173e": "현재 다른 브랜치를 체크아웃한 상태입니다.",

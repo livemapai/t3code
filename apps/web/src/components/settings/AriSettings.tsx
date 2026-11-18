@@ -1,3 +1,4 @@
+import { T, Var, useGT } from "gt-react";
 import { useCopyToClipboard } from "../../hooks/useCopyToClipboard";
 import { useSearch } from "@tanstack/react-router";
 import { AriMergeShout, type EnvironmentId } from "@t3tools/contracts";
@@ -10,73 +11,110 @@ import { Button } from "../ui/button";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { SettingsPageContainer, SettingsRow, SettingsSection } from "./settingsLayout";
-import { searchableSetting } from "./settingsSearch";
+import { useSearchableSetting } from "./settingsSearch";
 import { useScopedSettings, useUpdateScopedSettings } from "./useScopedSettings";
 
 function AriHost({ environmentId, label }: { environmentId: EnvironmentId; label: string }) {
+  const gt = useGT();
   const query = useAriState(environmentId);
   const { copyToClipboard, isCopied } = useCopyToClipboard();
   const state = query.data;
   return (
     <section className="space-y-3 rounded-lg border p-4 text-sm [&_p]:text-muted-foreground">
-      <h2 className="font-medium">Ari agent host · {label}</h2>
+      <h2 className="font-medium">
+        <T>
+          Ari agent host · <Var>{label}</Var>
+        </T>
+      </h2>
       {!state ? (
         <p>
           {query.error ??
             (query.allowed
-              ? "Loading Ari host state…"
-              : "Ari state requires ari:read access to this environment.")}
+              ? gt("Loading Ari host state…")
+              : gt("Ari state requires ari:read access to this environment."))}
         </p>
       ) : (
         <>
-          <p>Server host: {state.host}</p>
           <p>
-            Version: {state.version ?? "Unavailable"} · Account: {state.account ?? "Signed out"}
+            <T>
+              Server host: <Var>{state.host}</Var>
+            </T>
+          </p>
+          <p>
+            <T>
+              Version: <Var>{state.version ?? gt("Unavailable")}</Var> · Account:{" "}
+              <Var>{state.account ?? gt("Signed out")}</Var>
+            </T>
           </p>
           <h3 className="flex items-center gap-2 font-medium">
-            Relay
+            <T>Relay</T>
             <Badge variant={state.relay.state === "ok" ? "success" : "warning"}>
               {state.relay.state}
-              {state.relay.stale ? " (stale)" : ""}
+              {state.relay.stale ? gt(" (stale)") : ""}
             </Badge>
           </h3>
           {state.relay.state === "ok" && (
             <>
               <p>
-                Service:{" "}
+                <T>Service: </T>{" "}
                 {state.relay.serviceRunning
-                  ? "Running"
+                  ? gt("Running")
                   : state.relay.serviceInstalled
-                    ? "Installed"
-                    : "Not installed"}
+                    ? gt("Installed")
+                    : gt("Not installed")}
               </p>
-              <p>Listener last seen: {state.relay.listeningAt ?? "Never"}</p>
-              <p>T3 sign-in expires: {state.relay.t3ExpiresAt ?? "Unavailable"}</p>
-              <p>Held across this Ari account: {state.relay.held}</p>
+              <p>
+                <T>
+                  Listener last seen: <Var>{state.relay.listeningAt ?? gt("Never")}</Var>
+                </T>
+              </p>
+              <p>
+                <T>
+                  T3 sign-in expires: <Var>{state.relay.t3ExpiresAt ?? gt("Unavailable")}</Var>
+                </T>
+              </p>
+              <p>
+                <T>
+                  Held across this Ari account: <Var>{state.relay.held}</Var>
+                </T>
+              </p>
               {state.relay.senders.map((sender) => (
-                <p key={sender}>From {sender}</p>
+                <p key={sender}>
+                  <T>
+                    From <Var>{sender}</Var>
+                  </T>
+                </p>
               ))}
             </>
           )}
           {state.relay.fixCommand && (
             <div className="space-y-2">
               <p>
-                Run on {state.host}: <code>{state.relay.fixCommand}</code>
+                <T>
+                  Run on <Var>{state.host}</Var>:{" "}
+                  <code>
+                    <Var>{state.relay.fixCommand}</Var>
+                  </code>
+                </T>
               </p>
               <Button
                 variant="outline"
                 onClick={() => copyToClipboard(state.relay.fixCommand!, undefined)}
               >
-                {isCopied ? "Copied" : "Copy command"}
+                {isCopied ? gt("Copied") : gt("Copy command")}
               </Button>
             </div>
           )}
           {state.relay.state === "unavailable" && (
-            <p>Install Ari on {state.host} using your team’s Ari setup instructions.</p>
+            <p>
+              <T>
+                Install Ari on <Var>{state.host}</Var> using your team’s Ari setup instructions.
+              </T>
+            </p>
           )}
           {state.relay.state === "ok" && (
             <a href="https://www.myari.app/en/relay" target="_blank" rel="noreferrer">
-              Open Ari relay
+              <T>Open Ari relay</T>
             </a>
           )}
         </>
@@ -87,13 +125,15 @@ function AriHost({ environmentId, label }: { environmentId: EnvironmentId; label
 const isMergeShout = Schema.is(AriMergeShout);
 
 function MergeShoutRow() {
+  const gt = useGT();
+  const searchableSetting = useSearchableSetting();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   const shout = MERGE_SHOUTS[settings.ariMergeShout];
   return (
     <SettingsRow
       {...searchableSetting("ari-ship-it-sound")}
-      description="What the merge button shouts when you merge a pull request."
+      description={gt("What the merge button shouts when you merge a pull request.")}
       control={
         <Select
           value={settings.ariMergeSoundEnabled ? settings.ariMergeShout : "off"}
@@ -106,8 +146,8 @@ function MergeShoutRow() {
             }
           }}
         >
-          <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Merge shout">
-            <SelectValue>{settings.ariMergeSoundEnabled ? shout.name : "Off"}</SelectValue>
+          <SelectTrigger size="sm" className="w-full sm:w-40" aria-label={gt("Merge shout")}>
+            <SelectValue>{settings.ariMergeSoundEnabled ? shout.name : gt("Off")}</SelectValue>
           </SelectTrigger>
           <SelectPopup align="end" alignItemWithTrigger={false}>
             {Object.entries(MERGE_SHOUTS).map(([value, { name }]) => (
@@ -116,7 +156,7 @@ function MergeShoutRow() {
               </SelectItem>
             ))}
             <SelectItem hideIndicator value="off">
-              Off
+              <T>Off</T>
             </SelectItem>
           </SelectPopup>
         </Select>
@@ -126,17 +166,21 @@ function MergeShoutRow() {
 }
 
 function ThreadFlagsRow() {
+  const gt = useGT();
+  const searchableSetting = useSearchableSetting();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   return (
     <SettingsRow
       {...searchableSetting("ari-thread-flags")}
-      description="Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar."
+      description={gt(
+        "Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar.",
+      )}
       control={
         <Switch
           checked={settings.ariThreadFlagsEnabled}
           onCheckedChange={(checked) => updateSettings({ ariThreadFlagsEnabled: Boolean(checked) })}
-          aria-label="Thread flags"
+          aria-label={gt("Thread flags")}
         />
       }
     />
@@ -144,17 +188,21 @@ function ThreadFlagsRow() {
 }
 
 function RelayShelfRow() {
+  const gt = useGT();
+  const searchableSetting = useSearchableSetting();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   return (
     <SettingsRow
       {...searchableSetting("ari-relay-shelf")}
-      description="Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads."
+      description={gt(
+        "Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads.",
+      )}
       control={
         <Switch
           checked={settings.ariRelayShelfEnabled}
           onCheckedChange={(checked) => updateSettings({ ariRelayShelfEnabled: Boolean(checked) })}
-          aria-label="Relay section"
+          aria-label={gt("Relay section")}
         />
       }
     />
@@ -162,6 +210,8 @@ function RelayShelfRow() {
 }
 
 function TeamThreadsRow() {
+  const gt = useGT();
+  const searchableSetting = useSearchableSetting();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   return (
@@ -169,12 +219,14 @@ function TeamThreadsRow() {
       serverScoped
       {...searchableSetting("ari-team-threads")}
       settingKeys={["ariTeamThreadsEnabled"]}
-      description="Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked."
+      description={gt(
+        "Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked.",
+      )}
       control={
         <Switch
           checked={settings.ariTeamThreadsEnabled}
           onCheckedChange={(checked) => updateSettings({ ariTeamThreadsEnabled: Boolean(checked) })}
-          aria-label="Team threads"
+          aria-label={gt("Team threads")}
         />
       }
     />
@@ -182,19 +234,23 @@ function TeamThreadsRow() {
 }
 
 function LibraryLinksRow() {
+  const gt = useGT();
+  const searchableSetting = useSearchableSetting();
   const settings = useScopedSettings();
   const updateSettings = useUpdateScopedSettings();
   return (
     <SettingsRow
       {...searchableSetting("ari-library-links")}
-      description="Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally."
+      description={gt(
+        "Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally.",
+      )}
       control={
         <Switch
           checked={settings.ariLibraryLinksInAppEnabled}
           onCheckedChange={(checked) =>
             updateSettings({ ariLibraryLinksInAppEnabled: Boolean(checked) })
           }
-          aria-label="Open Ari Library links in the app"
+          aria-label={gt("Open Ari Library links in the app")}
         />
       }
     />
@@ -202,11 +258,12 @@ function LibraryLinksRow() {
 }
 
 export function AriSettings() {
+  const gt = useGT();
   const { environments } = useEnvironments();
   const { machine } = useSearch({ from: "/_chat/settings" });
   return (
     <SettingsPageContainer>
-      <SettingsSection id="ari-features" title="Features">
+      <SettingsSection id="ari-features" title={gt("Features")}>
         <MergeShoutRow />
         <ThreadFlagsRow />
         <RelayShelfRow />

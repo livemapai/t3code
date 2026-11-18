@@ -1205,7 +1205,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
     flag === null || FlagStatusIcon === null ? null : (
       <FlagStatusIcon
         role="img"
-        aria-label={`Flagged ${THREAD_FLAG_LABELS[flag]}`}
+        aria-label={gt("Flagged {flag}", { flag: THREAD_FLAG_LABELS[flag] })}
         data-testid={`sidebar-flag-${flag}`}
         className={cn("size-3 shrink-0", FLAG_ICON_CLASSES[flag])}
       />
@@ -1213,7 +1213,7 @@ const SidebarThreadRow = memo(function SidebarThreadRow(props: SidebarThreadRowP
   const relayIndicator = thread.source.tags?.includes(ARI_RELAY_THREAD_TAG) ? (
     <ArrowDownUpIcon
       role="img"
-      aria-label="Started by relay"
+      aria-label={gt("Started by relay")}
       data-testid="sidebar-relay"
       className="size-3 shrink-0 text-info-foreground"
     />

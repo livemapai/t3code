@@ -264,14 +264,14 @@ export function useThreadActionMenu(input: {
         case "flag:working":
         case "flag:none": {
           const picked = THREAD_FLAGS.find((flag) => action === `flag:${flag}`) ?? null;
-          await reportFailure("Failed to flag thread", () =>
+          await reportFailure(m(msg("Failed to flag thread")), () =>
             setThreadFlag(threadRef, picked, threadFlagOf(thread.source.tags)),
           );
           return;
         }
         case "team:show":
         case "team:hide":
-          await reportFailure("Failed to change what the team sees", () =>
+          await reportFailure(m(msg("Failed to change what the team sees")), () =>
             setThreadTeamShared(threadRef, action === "team:show"),
           );
           return;

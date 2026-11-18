@@ -7396,6 +7396,110 @@
       "v": "rt"
     }
   ],
+  "8611403209556d02": "Loading Ari host state…",
+  "cfdb60a560152760": "Ari state requires ari:read access to this environment.",
+  "64d107dd49dd4287": "Signed out",
+  "93014a9ed846193e": " (stale)",
+  "7342bfc328008926": "Running",
+  "f84879ada73428c9": "Installed",
+  "d15f079ebaf277ae": "从不",
+  "0e2b5ee5d73bcb82": "What the merge button shouts when you merge a pull request.",
+  "9140768ac77bc6cb": "Merge shout",
+  "90a258fff61fd77e": "关闭",
+  "bb8656ad34e5d279": "Right-click a thread and flag it as urgent, later, or working. Flagged threads show an icon in the sidebar.",
+  "73a23ba0de7b30b5": "Thread flags",
+  "e563a8e3cd4d3198": "Keep threads that Ari relay started in a Relay section of the sidebar, apart from your own. One that needs you, or that you write in, shows with your threads.",
+  "bbb28d48418e5dd7": "Relay section",
+  "81d22242a186e16e": "Show teammates' threads in a Team section, and show yours from a thread's menu. Off takes this machine's threads off the team's list at once; turning it back on lists the ones you marked.",
+  "f0a4bcc0a5b28e88": "Team threads",
+  "31859581b0eb15e6": "Open Ari Library files in the in-app browser beside the thread, even when links open in the system browser. Cmd/Ctrl-click still opens them externally.",
+  "ba793556bc0bd2a9": "Open Ari Library links in the app",
+  "fa02a22577dbe632": "Features",
+  "91f8f57f4b96a2c4": [
+    "Ari agent host · ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "6a4c5e6388da6284": [
+    "Server host: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "600dbb1097adb44f": [
+    "Version: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " · Account: ",
+    {
+      "i": 2,
+      "k": "_gt_value_2",
+      "v": "v"
+    }
+  ],
+  "a6f3ea3bc6ea439a": "Relay",
+  "1b3e1b61a6c2380a": "Service: ",
+  "f7b36ba3a78feafc": [
+    "Listener last seen: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "3fcf5a758d7666d1": [
+    "T3 sign-in expires: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "7288865f1fc6434e": [
+    "Held across this Ari account: ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    }
+  ],
+  "f84d8194fa854aa8": [
+    "Run on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    ": ",
+    {
+      "t": "code",
+      "i": 2,
+      "c": {
+        "i": 3,
+        "k": "_gt_value_3",
+        "v": "v"
+      }
+    }
+  ],
+  "33006275548e85a7": [
+    "Install Ari on ",
+    {
+      "i": 1,
+      "k": "_gt_value_1",
+      "v": "v"
+    },
+    " using your team’s Ari setup instructions."
+  ],
+  "56a64de7353d3632": "Open Ari relay",
+  "8e73b883d41d4102": "关闭",
   "ae85d885630b0e51": "{count, plural, other {{count} 个范围}}",
   "129431563dc043bc": "{label}：显示 {scopes}",
   "02df8efa1f3f4ba1": "无法复制托管版应用链接",
@@ -9644,7 +9748,6 @@
   "26fa470bd81ee396": "这些权限适用于此客户端的当前连接。",
   "059f7301895a5c0d": "仓库规范",
   "b2c5419d306bbc16": "约定式提交",
-  "d15f079ebaf277ae": "从不",
   "19cca7227459820e": "文本生成模型",
   "fd78267fc2356cb5": "版本控制文案模型",
   "596ebbf3817af29a": "继承",
@@ -10729,7 +10832,6 @@
   "4a237f41ce592b7f": "保留此项目的工作树，直到你手动删除。",
   "00b8ffd8ea6e6a93": "此项目使用以下规则。",
   "72c279824d15a999": "使用各机器的工作树清理设置。",
-  "90a258fff61fd77e": "关闭",
   "b5702d0b64866b08": "自定义",
   "c009c901f3eefe78": "删除会话时删除工作树",
   "431c7cd6d50102b7": "删除活跃或已归档会话时，移除不再使用的工作树。保留有本地改动的工作树。",
@@ -10751,7 +10853,6 @@
   "b0d0aebadc521ed1": "删除保存超过设定天数的浏览器截图和录制。旧的截图和录制链接将无法打开。",
   "fe4208562792c313": "删除旧轮转日志",
   "8debac9c8e9cff47": "删除超过设定天数且不再写入的轮转日志文件。保留当前日志。",
-  "8e73b883d41d4102": "关闭",
   "80d58a3fd4e4212a": "项目",
   "de770505be25f1ff": "文件夹",
   "ada7b9a4d96959d2": "会话",
@@ -11435,6 +11536,7 @@
   "1a07e4d043f5df4e": "连接",
   "d8cd577c915539bd": "{label} 账户和 token",
   "a5ea998202be1fbc": "{label} 凭据",
+  "2ed874822db4cc49": "Ari agent host",
   "8f636f473e42e657": "任何 本地 文件 未提交 更改 已编辑 已跟踪 文件 忽略 env 构建 输出 清理",
   "b1c7f74049a4147c": "存储 清理 立即运行 结果 报告 已移除 已保留 失败",
   "2678550365a59e17": "工作树清理",
@@ -11694,6 +11796,8 @@
   "984b361806ce8d25": "已唤醒",
   "c6e8abc00ae470d2": "完成",
   "8cf699ae75fd8067": "已置顶",
+  "b3e1323220fa6a6b": "Flagged {flag}",
+  "612cbb12a2f3511e": "Started by relay",
   "be451f475c514b37": "忽略已唤醒通知",
   "e9ced65134f2f36c": "立即唤醒会话",
   "aca5896600bf173e": "你当前检出的是另一个分支。",

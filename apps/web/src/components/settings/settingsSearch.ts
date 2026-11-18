@@ -245,7 +245,7 @@ const SOURCE_CONTROL_HOST_TERMS = sourceControlClients.definitions
 export const SETTINGS_SEARCH_ITEMS = [
   {
     id: "ari-host",
-    title: "Ari agent host",
+    title: msg("Ari agent host"),
     to: "/settings/ari",
     searchTerms: ["ari", "relay", "held", "sign in"],
   },
@@ -556,7 +556,7 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "ari-ship-it-sound",
-    title: "Merge shout",
+    title: msg("Merge shout"),
     to: "/settings/ari",
     searchTerms: [
       "ari livemap merge pull request sound audio ship it bomboclaat bomboclaaaat chime choo choo train",
@@ -564,25 +564,25 @@ export const SETTINGS_SEARCH_ITEMS = [
   },
   {
     id: "ari-thread-flags",
-    title: "Thread flags",
+    title: msg("Thread flags"),
     to: "/settings/ari",
     searchTerms: ["ari livemap flag urgent later working mark sidebar icon"],
   },
   {
     id: "ari-relay-shelf",
-    title: "Relay section",
+    title: msg("Relay section"),
     to: "/settings/ari",
     searchTerms: ["ari livemap relay teammate agent sidebar section shelf separate"],
   },
   {
     id: "ari-team-threads",
-    title: "Team threads",
+    title: msg("Team threads"),
     to: "/settings/ari",
     searchTerms: ["ari livemap team teammates share show hide list who works on what sidebar"],
   },
   {
     id: "ari-library-links",
-    title: "Open Ari Library links in the app",
+    title: msg("Open Ari Library links in the app"),
     to: "/settings/ari",
     searchTerms: ["ari livemap myari library files docs browser panel links system"],
   },
