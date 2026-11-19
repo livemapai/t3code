@@ -48,6 +48,7 @@ export const AuthAccessWriteScope = "access:write" as const;
 export const AuthAriReadScope = "ari:read" as const;
 export const AuthRelayReadScope = "relay:read" as const;
 export const AuthRelayWriteScope = "relay:write" as const;
+export const AuthRelayConfigureScope = "relay:configure" as const;
 export const AuthEnvironmentScope = Schema.Literals([
   AuthOrchestrationReadScope,
   AuthOrchestrationOperateScope,
@@ -67,6 +68,7 @@ export const AuthEnvironmentScope = Schema.Literals([
   AuthAriReadScope,
   AuthRelayReadScope,
   AuthRelayWriteScope,
+  AuthRelayConfigureScope,
 ]);
 export type AuthEnvironmentScope = typeof AuthEnvironmentScope.Type;
 export const AuthEnvironmentScopes = Schema.Array(AuthEnvironmentScope);
@@ -118,7 +120,9 @@ export function authScopeRequiredResponse(requiredPermission: AuthEnvironmentSco
     requiredScope:
       requiredPermission === AuthAriReadScope
         ? AuthOrchestrationReadScope
-        : (legacyParents[requiredPermission] ?? requiredPermission),
+        : requiredPermission === AuthRelayConfigureScope
+          ? AuthRelayWriteScope
+          : (legacyParents[requiredPermission] ?? requiredPermission),
     requiredPermission,
   };
 }
@@ -171,6 +175,11 @@ export const AuthStandardClientScopes = [
   AuthAccessReadScope,
   AuthAccessWriteScope,
   AuthRelayWriteScope,
+] as const;
+
+export const AuthAdministrativeClientScopes = [
+  ...AuthStandardClientScopes,
+  AuthRelayConfigureScope,
 ] as const;
 
 export const AuthTokenExchangeGrantType =
@@ -227,7 +236,8 @@ export type AuthClientPresentationMetadata = typeof AuthClientPresentationMetada
 export const AuthTokenExchangeRequest = Schema.Struct({
   grant_type: Schema.Literal(AuthTokenExchangeGrantType),
   subject_token: TrimmedNonEmptyString,
-  subject_token_type: Schema.Literal(AuthEnvironmentBootstrapTokenType),
+  /** An access token renews its own session, with a DPoP proof from the key it is bound to. */
+  subject_token_type: Schema.Literals([AuthEnvironmentBootstrapTokenType, AuthAccessTokenType]),
   requested_token_type: Schema.Literal(AuthAccessTokenType),
   scope: Schema.optionalKey(TrimmedNonEmptyString),
   client_label: Schema.optionalKey(TrimmedNonEmptyString),
