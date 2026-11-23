@@ -420,6 +420,10 @@ describe("project settings permissions", () => {
   });
 
   it("moves a draft on the removed checkout to a remaining checkout of the group", async () => {
+    // Drafts persist to localStorage, which every browser test file shares; leave none behind.
+    const initialDrafts = useComposerDraftStore.getState();
+    using stack = new DisposableStack();
+    stack.defer(() => useComposerDraftStore.setState(initialDrafts, true));
     setup();
     const draftId = DraftId.make("draft-handed-off");
     const [primaryProject, remoteProject] = state.projects;
