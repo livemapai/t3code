@@ -71,6 +71,12 @@ export class BilliardsAudio {
     }
   }
 
+  /** A soft two-note bell: a thread wants attention. */
+  chime(): void {
+    this.tone("sine", 1318, 1318, 0.2, 0.6);
+    this.tone("sine", 1760, 1760, 0.16, 0.8, 0.12);
+  }
+
   /** A ball taken by a power-up: a soft magic swish. */
   guide(): void {
     this.tone("sine", 520, 1400, 0.16, 0.35);

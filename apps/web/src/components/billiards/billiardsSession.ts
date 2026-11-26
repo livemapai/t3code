@@ -3,12 +3,20 @@ import { observeResize } from "~/lib/observeResize";
 import { BilliardsAudio } from "./billiardsAudio.ts";
 import { BallSprites } from "./billiardsBalls.ts";
 import { ClothNap, Effects } from "./billiardsFx.ts";
+import {
+  Callouts,
+  drawChalkHints,
+  drawScoreboard,
+  type BilliardsLabels,
+  type ScoreView,
+} from "./billiardsHud.ts";
 import { shotSpeed, type PhysicsEvent } from "./billiardsPhysics.ts";
 import {
   drawScene,
   drawStaticLayer,
   FRAME_WIDTH,
   SINK_SECONDS,
+  tableTransform,
   TABLE_ORIGIN,
   type Sinking,
 } from "./billiardsRender.ts";
@@ -27,6 +35,7 @@ import { loadSkin, saveSkin, unlockedSkins, type SkinId } from "./billiardsSkins
 import {
   BilliardsGame,
   EIGHT,
+  FOUL_PENALTY_SECONDS,
   placeRings,
   seededRandom,
   type Foul,
@@ -83,6 +92,8 @@ const CHARGE_MS = 1100;
 const FINE_AIM = 0.12;
 const POCKET_PICK_RADIUS = 0.1;
 const HUD_INTERVAL_MS = 250;
+const FOUL_COLOR = "#ff8a70";
+const CALL_COLOR = "#ffd36a";
 /** How slow the final 8 rolls as it nears the called pocket. */
 const SLOW_MOTION = 0.3;
 
@@ -100,6 +111,10 @@ export class BilliardsSession {
   private readonly sprites = new BallSprites();
   private readonly nap = new ClothNap();
   private readonly fx = new Effects();
+  private readonly callouts = new Callouts();
+  private labels: BilliardsLabels | null = null;
+  /** Where the cue ball dropped this shot, for the scratch callout. */
+  private scratchPocket: number | null = null;
   private readonly stopObservingResize: () => void;
   private day = rackDay();
   private game = dailyGame(this.day);
@@ -170,7 +185,18 @@ export class BilliardsSession {
     this.sprites.reset();
     this.nap.clear();
     this.fx.reset();
+    this.callouts.reset();
     this.emitHud(performance.now(), true);
+  }
+
+  /** The words the scene draws, in the reader's language. */
+  setLabels(labels: BilliardsLabels): void {
+    this.labels = labels;
+  }
+
+  /** A soft bell, for a thread that wants attention while playing. */
+  chime(): void {
+    this.audio.chime();
   }
 
   /** Drops a shot being charged. False when there was none. */
@@ -249,6 +275,9 @@ export class BilliardsSession {
     }
     if (this.game.needsCall() && this.game.calledPocket === null) {
       this.blockedUntil = now + 2500;
+      const cue = this.game.ball(0);
+      if (cue && this.labels)
+        this.callouts.add(this.labels.callFirst, cue.x, cue.y - 0.06, CALL_COLOR);
       this.emitHud(now, true);
       return;
     }
@@ -310,6 +339,7 @@ export class BilliardsSession {
     this.fx.onEvents(events, this.game.balls, breakShot);
     if (this.game.phase !== phase) {
       this.nap.commit();
+      if (phase === "rolling") this.calloutShot();
       if (this.game.phase === "cleared") {
         this.clockEnd = time;
         this.fx.celebrate(this.game.calledPocket);
@@ -323,6 +353,7 @@ export class BilliardsSession {
     this.updateSlowMotion(seconds);
     this.fx.update(simSeconds === 0 ? 0 : Math.max(simSeconds, seconds * 0.5));
     this.sinking = this.sinking.filter((sinking) => time / 1000 - sinking.start < SINK_SECONDS);
+    this.callouts.update(seconds);
 
     drawScene(this.context, this.staticLayer, this.scale, {
       game: this.game,
@@ -338,6 +369,13 @@ export class BilliardsSession {
       vignette: Math.min(1, (1 - this.timeScale) / (1 - SLOW_MOTION)),
       cueStyle: this.cueStyle(),
     });
+    tableTransform(this.context, this.scale);
+    const score = this.scoreView(time);
+    if (this.labels && this.game.phase === "aiming") {
+      drawChalkHints(this.context, score, this.labels, time / 1000);
+    }
+    drawScoreboard(this.context, score);
+    this.callouts.draw(this.context);
     if (time - this.lastHudAt > HUD_INTERVAL_MS) this.emitHud(time, false);
   };
 
@@ -355,6 +393,53 @@ export class BilliardsSession {
       this.sprites.roll(ball.id, dx, dy);
       this.nap.stamp(start.x, start.y, ball.x, ball.y);
     }
+  }
+
+  /** Says what a shot's foul cost, where it happened. */
+  private calloutShot(): void {
+    const shot = this.game.lastShot;
+    const labels = this.labels;
+    const scratchPocket = this.scratchPocket;
+    this.scratchPocket = null;
+    if (!shot?.foul || !labels) return;
+    const seconds = shot.forgiven ? 0 : FOUL_PENALTY_SECONDS[shot.foul];
+    const detail = shot.forgiven ? labels.freeMiss : labels.penalty(seconds);
+    const color = shot.forgiven ? CALL_COLOR : FOUL_COLOR;
+    const pocket = POCKETS.find((candidate) => candidate.id === scratchPocket);
+    const cue = this.game.ball(0);
+    const eight = this.game.ball(EIGHT);
+    switch (shot.foul) {
+      case "scratch":
+        if (pocket) this.callouts.add(labels.scratch, pocket.x, pocket.y, color, detail);
+        break;
+      case "noContact":
+        if (cue) this.callouts.add(labels.miss, cue.x, cue.y - 0.06, color, detail);
+        break;
+      case "early8":
+      case "wrong8":
+      case "scratch8": {
+        const text =
+          shot.foul === "early8"
+            ? labels.early8
+            : shot.foul === "wrong8"
+              ? labels.wrong8
+              : labels.scratch8;
+        if (eight) this.callouts.add(text, eight.x, eight.y - 0.06, color, detail);
+        break;
+      }
+    }
+  }
+
+  private scoreView(now: number): ScoreView {
+    return {
+      totalMs: this.totalMs(now),
+      penaltySeconds: this.game.penaltySeconds,
+      shots: this.game.shots,
+      bestMs: this.todayRuns[0]?.totalMs ?? null,
+      goldenShots: this.game.goldenShots,
+      isBreak: this.game.isBreak,
+      callNeeded: this.game.needsCall() && this.game.calledPocket === null,
+    };
   }
 
   private recordRun(now: number): void {
@@ -414,6 +499,7 @@ export class BilliardsSession {
         case "touch":
           break;
         case "pocket": {
+          if (event.ball === 0) this.scratchPocket = event.pocket;
           this.audio.pocket();
           const pocket = POCKETS[event.pocket];
           if (pocket) {
@@ -426,6 +512,16 @@ export class BilliardsSession {
           if (!ring) break;
           this.audio.powerUp();
           this.fx.powerBurst(ring.x, ring.y, POWER_COLORS[ring.kind]);
+          if (this.labels) {
+            const { labels } = this;
+            const [name, hint] =
+              ring.kind === "wand"
+                ? [labels.wand, labels.wandHint]
+                : ring.kind === "golden"
+                  ? [labels.golden, labels.goldenHint]
+                  : [labels.glow, labels.glowHint];
+            this.callouts.add(name, ring.x, ring.y - 0.05, `rgb(${POWER_COLORS[ring.kind]})`, hint);
+          }
           this.emitHud(now * 1000, true);
           break;
         }

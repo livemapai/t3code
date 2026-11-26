@@ -19,9 +19,10 @@ import {
 // The canvas is a 9:16 frame around the table, in table units.
 export const FRAME_WIDTH = 1.4;
 const FRAME_HEIGHT = (FRAME_WIDTH * 16) / 9;
+// The table sits a little low in the frame, leaving the top for the brass scoreboard.
 export const TABLE_ORIGIN = {
   x: (FRAME_WIDTH - TABLE_WIDTH) / 2,
-  y: (FRAME_HEIGHT - TABLE_LENGTH) / 2,
+  y: 0.3,
 };
 
 const R = BALL_RADIUS;
@@ -60,6 +61,11 @@ export interface SceneView {
 
 export { SINK_SECONDS };
 
+/** Sets the table transform: table units, origin at the cloth's top left corner. */
+export function tableTransform(ctx: CanvasRenderingContext2D, scale: number): void {
+  frameTransform(ctx, scale);
+}
+
 function frameTransform(
   ctx: CanvasRenderingContext2D,
   scale: number,
@@ -84,9 +90,11 @@ export function drawStaticLayer(layer: HTMLCanvasElement, scale: number): void {
   ctx.clearRect(0, 0, layer.width, layer.height);
   frameTransform(ctx, scale);
 
+  // A dark pool hall: warm near the table, black at the edges.
   const backdrop = ctx.createRadialGradient(0.5, 1, 0.2, 0.5, 1, 1.6);
-  backdrop.addColorStop(0, "#141b24");
-  backdrop.addColorStop(1, "#06080c");
+  backdrop.addColorStop(0, "#21170f");
+  backdrop.addColorStop(0.6, "#0d0906");
+  backdrop.addColorStop(1, "#030202");
   ctx.fillStyle = backdrop;
   ctx.fillRect(-TABLE_ORIGIN.x, -TABLE_ORIGIN.y, FRAME_WIDTH, FRAME_HEIGHT);
 
@@ -181,6 +189,15 @@ export function drawStaticLayer(layer: HTMLCanvasElement, scale: number): void {
     ctx.fill();
   }
 
+  // One lamp over the middle of the table: a warm pool of light, edges falling off into the dark.
+  const lamp = ctx.createRadialGradient(0.5, 0.95, 0.05, 0.5, 1, 1.35);
+  lamp.addColorStop(0, "rgba(255, 214, 160, 0.09)");
+  lamp.addColorStop(0.45, "rgba(255, 200, 140, 0.02)");
+  lamp.addColorStop(0.75, "rgba(0, 0, 0, 0.18)");
+  lamp.addColorStop(1, "rgba(0, 0, 0, 0.5)");
+  ctx.fillStyle = lamp;
+  ctx.fillRect(-TABLE_ORIGIN.x, -TABLE_ORIGIN.y, FRAME_WIDTH, FRAME_HEIGHT);
+
   // The tray the potted balls line up in.
   ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
   ctx.beginPath();
@@ -188,7 +205,7 @@ export function drawStaticLayer(layer: HTMLCanvasElement, scale: number): void {
   ctx.fill();
 }
 
-const TRAY_Y = TABLE_LENGTH + RAIL_WIDTH + 0.07;
+const TRAY_Y = TABLE_LENGTH + RAIL_WIDTH + 0.045;
 
 function noisePattern(ctx: CanvasRenderingContext2D, scale: number): CanvasPattern | string {
   const size = 128;

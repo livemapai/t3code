@@ -123,17 +123,21 @@ export class BallSprites {
   ): void {
     if (axis[2] < 0.35) return;
     const angle = Math.atan2(axis[1], axis[0]);
+    // Drawn at real pixel size: tiny fonts scaled up by the table transform render soft.
+    const matrix = ctx.getTransform();
+    const at = matrix.transformPoint({ x: x + axis[0] * r * 0.98, y: y + axis[1] * r * 0.98 });
+    const pixels = r * matrix.a;
     ctx.save();
-    ctx.translate(x + axis[0] * r * 0.98, y + axis[1] * r * 0.98);
+    ctx.setTransform(1, 0, 0, 1, at.x, at.y);
     ctx.rotate(angle);
     ctx.scale(axis[2], 1);
     ctx.rotate(-angle);
-    ctx.globalAlpha = Math.min(1, (axis[2] - 0.35) * 4);
+    ctx.globalAlpha *= Math.min(1, (axis[2] - 0.35) * 4);
     ctx.fillStyle = "#151515";
-    ctx.font = `700 ${r * 0.62}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.font = `700 ${pixels * 0.62}px ui-sans-serif, system-ui, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(String(id), 0, r * 0.04);
+    ctx.fillText(String(id), 0, pixels * 0.04);
     ctx.restore();
   }
 
