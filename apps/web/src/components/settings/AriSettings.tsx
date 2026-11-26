@@ -187,6 +187,31 @@ function ThreadFlagsRow() {
   );
 }
 
+function ThreadFlagSectionsRow() {
+  const gt = useGT();
+  const searchableSetting = useSearchableSetting();
+  const settings = useScopedSettings();
+  const updateSettings = useUpdateScopedSettings();
+  return (
+    <SettingsRow
+      {...searchableSetting("ari-thread-flag-sections")}
+      description={gt(
+        "Group flagged threads under Urgent, In progress and Later headers at the top of the sidebar, with a colour rail on flagged rows. Off keeps the usual order with only the flag icon. Needs Thread flags.",
+      )}
+      control={
+        <Switch
+          checked={settings.ariThreadFlagsEnabled && settings.ariThreadFlagSectionsEnabled}
+          disabled={!settings.ariThreadFlagsEnabled}
+          onCheckedChange={(checked) =>
+            updateSettings({ ariThreadFlagSectionsEnabled: Boolean(checked) })
+          }
+          aria-label={gt("Flag sections")}
+        />
+      }
+    />
+  );
+}
+
 function RelayShelfRow() {
   const gt = useGT();
   const searchableSetting = useSearchableSetting();
@@ -266,6 +291,7 @@ export function AriSettings() {
       <SettingsSection id="ari-features" title={gt("Features")}>
         <MergeShoutRow />
         <ThreadFlagsRow />
+        <ThreadFlagSectionsRow />
         <RelayShelfRow />
         <TeamThreadsRow />
         <LibraryLinksRow />

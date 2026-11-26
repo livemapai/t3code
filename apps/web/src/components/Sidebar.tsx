@@ -35,6 +35,7 @@ import {
 } from "@t3tools/client-runtime/state/thread-settled";
 import {
   THREAD_FLAGS,
+  groupThreadsByFlag,
   matchesThreadFlagFilter,
   threadFlagOf,
   type ThreadFlagFilter,
@@ -292,6 +293,11 @@ import {
   SidebarSectionHeader,
   SidebarSectionPlaceholder,
 } from "./sidebar/SidebarListMarkers";
+import {
+  SidebarFlagSectionHeader,
+  flagRailClassName,
+  sidebarFlagSectionMarker,
+} from "./sidebar/SidebarFlagSectionHeader";
 
 function sameSidebarProviderEntries(
   left: ReadonlyMap<string, SidebarProviderEntry>,
@@ -378,6 +384,8 @@ interface SidebarThreadPartitionInput {
   readonly relayShelfEnabled: boolean;
   /** Boring mode: folders list active threads by the user's latest message. */
   readonly sortActiveBySend: boolean;
+  /** Flag sections: flagged active threads sort ahead of unflagged ones, by flag. */
+  readonly groupActiveByFlag: boolean;
   // Snooze wakes, the queued-turn grace and the Working shelf's exit grace depend
   // on the clock, so the minute tick, the precise snooze-wake tick and the inbox
   // tracker's expiry version are inputs: a new key repartitions.
@@ -438,6 +446,7 @@ function useSidebarThreads(input: {
   readonly projectScopeKey: string | null;
   readonly scopedProjectKeys: ReadonlySet<string> | null;
   readonly flagFilter: ThreadFlagFilter | null;
+  readonly flagSectionsEnabled: boolean;
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
   readonly connectedEnvironmentIds: readonly EnvironmentId[];
   readonly optimisticDrop: SidebarOptimisticDrop | null;
@@ -453,6 +462,7 @@ function useSidebarThreads(input: {
     projectScopeKey,
     scopedProjectKeys,
     flagFilter,
+    flagSectionsEnabled,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -518,6 +528,8 @@ function useSidebarThreads(input: {
     workingShelfEnabled,
     relayShelfEnabled,
     sortActiveBySend: folderGroups !== null,
+    // Folders already group the active rows, so they keep their own order.
+    groupActiveByFlag: flagSectionsEnabled && folderGroups === null,
     clockKey: `${nowMinute}:${snoozeWakeClock}:${inboxReturnsVersion}`,
   });
 
@@ -670,6 +682,7 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
     workingShelfEnabled,
     relayShelfEnabled,
     sortActiveBySend,
+    groupActiveByFlag,
   } = input;
   const preciseNow = new Date().toISOString();
   const visible = filterSidebarV2VisibleThreads(
@@ -734,11 +747,17 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
   }
   // Availability gates dragging only; sorting must stay consistent across clients.
   const sortedPinned = sortPinnedThreadsForSidebar(pinned);
-  const sortedActive = sortActiveBySend
+  const sortedActiveFlat = sortActiveBySend
     ? sortWorkingThreadsBySend(active)
     : workingShelfEnabled
       ? sortInboxThreadsByReturn(active, inboxObservation.returnedAt)
       : sortThreadsForSidebar(active);
+  // Flag groups sit inside the active section, so the active order follows them.
+  const sortedActive = groupActiveByFlag
+    ? groupThreadsByFlag(sortedActiveFlat, (thread) => thread.source.tags).flatMap(
+        (group) => group.threads,
+      )
+    : sortedActiveFlat;
   return {
     pinnedThreads:
       optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -1078,6 +1097,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const threadSearchInputRef = useRef<HTMLInputElement>(null);
   const [threadSearchQuery, setThreadSearchQuery] = useState("");
   const flagsEnabled = useClientSettings((s) => s.ariThreadFlagsEnabled);
+  // Flag sections and rails are an opt-out on top of thread flags.
+  const flagSectionsEnabled = useClientSettings(
+    (s) => s.ariThreadFlagsEnabled && s.ariThreadFlagSectionsEnabled,
+  );
   const [flagFilter, setFlagFilter] = useState<ThreadFlagFilter | null>(null);
   const [searchHighlightKey, setSearchHighlightKey] = useState<string | null>(null);
   const connectedEnvironmentIds = useConnectedEnvironmentIds();
@@ -1405,6 +1428,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     projectScopeKey,
     scopedProjectKeys,
     flagFilter: flagsEnabled ? flagFilter : null,
+    flagSectionsEnabled,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -2005,6 +2029,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     });
   };
   const hasProjectFolders = projectFolders !== null && projectFolders.length > 0;
+  // Project folders already group the active rows, so flag headers show only in the flat list.
+  const activeFlagGroups =
+    flagSectionsEnabled && projectFolders === null
+      ? groupThreadsByFlag(activeThreads, (thread) => thread.source.tags)
+      : [];
+  const showFlagSections = activeFlagGroups.some((group) => group.flag !== null);
   const sidebarListItemsFresh = ((): readonly SidebarListItem[] => {
     const rowsOf = (
       list: readonly EnvironmentThreadShell[],
@@ -2031,9 +2061,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     const pinnedRows = rowsOf(pinnedThreads, "pinned");
     items.push(...pinnedRows);
     items.push({ kind: "marker", marker: "pinned-divider" });
-    const activeRows = rowsOf(activeThreads, "active");
     items.push({ kind: "marker", marker: "active-placeholder" });
-    items.push(...activeRows);
+    if (showFlagSections) {
+      for (const group of activeFlagGroups) {
+        items.push({ kind: "marker", marker: sidebarFlagSectionMarker(group.flag) });
+        items.push(...rowsOf(group.threads, "active"));
+      }
+    } else {
+      items.push(...rowsOf(activeThreads, "active"));
+    }
     if (workingThreads.length > 0) {
       items.push({ kind: "marker", marker: "working-header" });
       items.push(...rowsOf(visibleWorkingThreads, "working"));
@@ -3529,6 +3565,11 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                           : isCard
                             ? "card"
                             : "slim";
+                        // Pinned and running threads keep their place, so their rail still shows the flag.
+                        const railFlag =
+                          flagSectionsEnabled && rowVariant === "card"
+                            ? threadFlagOf(thread.source.tags)
+                            : null;
                         return (
                           <SortableThreadRow
                             key={threadKey}
@@ -3561,6 +3602,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                             snoozeSupported={serverConfigs.has(thread.environmentId)}
                             pinningSupported={serverConfigs.has(thread.environmentId)}
                             isPinned={thread.pinnedAt != null}
+                            railClassName={railFlag ? flagRailClassName(railFlag) : undefined}
                             dropVerb={
                               dragState?.activeKey === threadKey
                                 ? resolveSidebarDropVerb(dragState.activeSection, dragTargetSection)
@@ -3678,6 +3720,25 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                           continue;
                         }
                         switch (item.marker) {
+                          case "flag-urgent-header":
+                          case "flag-working-header":
+                          case "flag-later-header":
+                          case "flag-none-header": {
+                            const group = activeFlagGroups.find(
+                              (candidate) =>
+                                sidebarFlagSectionMarker(candidate.flag) === item.marker,
+                            );
+                            if (group) {
+                              items.push(
+                                <SidebarFlagSectionHeader
+                                  key={item.marker}
+                                  flag={group.flag}
+                                  count={group.threads.length}
+                                />,
+                              );
+                            }
+                            break;
+                          }
                           case "pinned-header":
                             items.push(
                               <SidebarDragBoundary

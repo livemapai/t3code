@@ -5,6 +5,7 @@ import {
   type EnvironmentThreadShell,
 } from "@t3tools/client-runtime/state/models";
 import { isThreadActionable } from "@t3tools/client-runtime/state/thread-inbox";
+import type { ThreadFlag } from "@t3tools/client-runtime/state/thread-flags";
 import { isShownUnderParent } from "@t3tools/client-runtime/state/threads";
 import { backgroundWorkHoldsCompletion } from "@t3tools/shared/orchestrationV2PendingBackgroundWork";
 import { threadPullRequestSearchTerms } from "@t3tools/shared/threadPullRequests";
@@ -235,7 +236,11 @@ export type SidebarListMarker =
   | "working-header"
   | "relay-header"
   | "snoozed-header"
-  | "settled-header";
+  | "settled-header"
+  | SidebarFlagSectionMarker;
+
+/** Flag group headers inside the active section; they never change a row's section. */
+export type SidebarFlagSectionMarker = `flag-${ThreadFlag | "none"}-header`;
 
 export function sidebarMarkerId(marker: SidebarListMarker): string {
   return `${SIDEBAR_MARKER_PREFIX}${marker}`;
