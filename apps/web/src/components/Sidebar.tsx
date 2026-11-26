@@ -35,6 +35,7 @@ import {
 } from "@t3tools/client-runtime/state/thread-settled";
 import {
   THREAD_FLAGS,
+  groupThreadsByFlag,
   matchesThreadFlagFilter,
   threadFlagOf,
   type ThreadFlagFilter,
@@ -292,6 +293,11 @@ import {
   SidebarSectionHeader,
   SidebarSectionPlaceholder,
 } from "./sidebar/SidebarListMarkers";
+import {
+  SidebarFlagSectionHeader,
+  flagRailClassName,
+  sidebarFlagSectionMarker,
+} from "./sidebar/SidebarFlagSectionHeader";
 
 function sameSidebarProviderEntries(
   left: ReadonlyMap<string, SidebarProviderEntry>,
@@ -734,11 +740,15 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
   }
   // Availability gates dragging only; sorting must stay consistent across clients.
   const sortedPinned = sortPinnedThreadsForSidebar(pinned);
-  const sortedActive = sortActiveBySend
-    ? sortWorkingThreadsBySend(active)
-    : workingShelfEnabled
-      ? sortInboxThreadsByReturn(active, inboxObservation.returnedAt)
-      : sortThreadsForSidebar(active);
+  // Flag groups sit inside the active section, so the active order follows them.
+  const sortedActive = groupThreadsByFlag(
+    sortActiveBySend
+      ? sortWorkingThreadsBySend(active)
+      : workingShelfEnabled
+        ? sortInboxThreadsByReturn(active, inboxObservation.returnedAt)
+        : sortThreadsForSidebar(active),
+    (thread) => thread.source.tags,
+  ).flatMap((group) => group.threads);
   return {
     pinnedThreads:
       optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -2005,6 +2015,12 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     });
   };
   const hasProjectFolders = projectFolders !== null && projectFolders.length > 0;
+  // Project folders already group the active rows, so flag headers show only in the flat list.
+  const activeFlagGroups =
+    projectFolders === null
+      ? groupThreadsByFlag(activeThreads, (thread) => thread.source.tags)
+      : [];
+  const showFlagSections = activeFlagGroups.some((group) => group.flag !== null);
   const sidebarListItemsFresh = ((): readonly SidebarListItem[] => {
     const rowsOf = (
       list: readonly EnvironmentThreadShell[],
@@ -2031,9 +2047,15 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     const pinnedRows = rowsOf(pinnedThreads, "pinned");
     items.push(...pinnedRows);
     items.push({ kind: "marker", marker: "pinned-divider" });
-    const activeRows = rowsOf(activeThreads, "active");
     items.push({ kind: "marker", marker: "active-placeholder" });
-    items.push(...activeRows);
+    if (showFlagSections) {
+      for (const group of activeFlagGroups) {
+        items.push({ kind: "marker", marker: sidebarFlagSectionMarker(group.flag) });
+        items.push(...rowsOf(group.threads, "active"));
+      }
+    } else {
+      items.push(...rowsOf(activeThreads, "active"));
+    }
     if (workingThreads.length > 0) {
       items.push({ kind: "marker", marker: "working-header" });
       items.push(...rowsOf(visibleWorkingThreads, "working"));
@@ -3529,6 +3551,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                           : isCard
                             ? "card"
                             : "slim";
+                        // Pinned and running threads keep their place, so their rail still shows the flag.
+                        const railFlag =
+                          rowVariant === "card" ? threadFlagOf(thread.source.tags) : null;
                         return (
                           <SortableThreadRow
                             key={threadKey}
@@ -3561,6 +3586,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                             snoozeSupported={serverConfigs.has(thread.environmentId)}
                             pinningSupported={serverConfigs.has(thread.environmentId)}
                             isPinned={thread.pinnedAt != null}
+                            railClassName={railFlag ? flagRailClassName(railFlag) : undefined}
                             dropVerb={
                               dragState?.activeKey === threadKey
                                 ? resolveSidebarDropVerb(dragState.activeSection, dragTargetSection)
@@ -3678,6 +3704,25 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                           continue;
                         }
                         switch (item.marker) {
+                          case "flag-urgent-header":
+                          case "flag-working-header":
+                          case "flag-later-header":
+                          case "flag-none-header": {
+                            const group = activeFlagGroups.find(
+                              (candidate) =>
+                                sidebarFlagSectionMarker(candidate.flag) === item.marker,
+                            );
+                            if (group) {
+                              items.push(
+                                <SidebarFlagSectionHeader
+                                  key={item.marker}
+                                  flag={group.flag}
+                                  count={group.threads.length}
+                                />,
+                              );
+                            }
+                            break;
+                          }
                           case "pinned-header":
                             items.push(
                               <SidebarDragBoundary
