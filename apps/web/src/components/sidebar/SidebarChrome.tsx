@@ -1,7 +1,7 @@
 import { ArrowLeftIcon, ArrowRightIcon, ChartNoAxesColumnIcon, SettingsIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { T, useGT } from "gt-react";
-import { memo } from "react";
+import { lazy, memo, Suspense, useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { useAtomValue } from "@effect/atom-react";
@@ -42,6 +42,9 @@ import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
 import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
 import { PullRequestGlyph } from "~/components/pullRequest/pullRequestIcons";
 import { observeResize } from "~/lib/observeResize";
+
+// Loaded only when someone triple-clicks the logo.
+const BilliardsOverlay = lazy(() => import("../billiards/BilliardsOverlay"));
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   isElectron,
@@ -169,17 +172,32 @@ function HistoryNavigationButton({
 
 function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
   const gt = useGT();
+  const [billiardsOpen, setBilliardsOpen] = useState(false);
+  // A triple-click opens the billiards easter egg; a single click still goes home.
+  const openBilliardsOnTripleClick = (event: MouseEvent) => {
+    if (event.detail < 3) return;
+    event.preventDefault();
+    setBilliardsOpen(true);
+  };
   return (
-    <Link
-      aria-label={gt("Ari Code home")}
-      className={cn(
-        "relative z-10 ml-[var(--workspace-titlebar-content-left)] hidden h-7 w-fit min-w-0 shrink-0 items-center overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2 focus-visible:ring-inset md:flex",
-        onBackdrop ? "text-white" : "text-foreground",
-      )}
-      to="/"
-    >
-      <SidebarBrandMark onBackdrop={onBackdrop} />
-    </Link>
+    <>
+      <Link
+        aria-label={gt("Ari Code home")}
+        className={cn(
+          "relative z-10 ml-[var(--workspace-titlebar-content-left)] hidden h-7 w-fit min-w-0 shrink-0 select-none items-center overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2 focus-visible:ring-inset md:flex",
+          onBackdrop ? "text-white" : "text-foreground",
+        )}
+        onClick={openBilliardsOnTripleClick}
+        to="/"
+      >
+        <SidebarBrandMark onBackdrop={onBackdrop} />
+      </Link>
+      {billiardsOpen ? (
+        <Suspense fallback={null}>
+          <BilliardsOverlay onClose={() => setBilliardsOpen(false)} />
+        </Suspense>
+      ) : null}
+    </>
   );
 }
 
