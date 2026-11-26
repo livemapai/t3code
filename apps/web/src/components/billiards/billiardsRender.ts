@@ -1,3 +1,6 @@
+import { castTrajectory } from "./billiardsAim.ts";
+import type { BallSprites } from "./billiardsBalls.ts";
+import type { ClothNap, Effects } from "./billiardsFx.ts";
 import type { Ball } from "./billiardsPhysics.ts";
 import { EIGHT, type BilliardsGame } from "./billiardsRules.ts";
 import {
@@ -21,17 +24,6 @@ export const TABLE_ORIGIN = {
 };
 
 const R = BALL_RADIUS;
-const BALL_COLORS = [
-  "#f4f1e8",
-  "#f2c230",
-  "#2160d4",
-  "#d8322b",
-  "#6c3fa3",
-  "#f07a1f",
-  "#1d8a4a",
-  "#8c2233",
-  "#151515",
-];
 const CLOTH_CENTER = "#1d6896";
 const CLOTH_EDGE = "#0f3b5c";
 const CUSHION = "#164f78";
@@ -55,12 +47,31 @@ export interface SceneView {
   readonly sinking: ReadonlyArray<Sinking>;
   /** Seconds, for pulses and animations. */
   readonly now: number;
+  readonly sprites: BallSprites;
+  readonly nap: ClothNap;
+  readonly fx: Effects;
+  /** Screen shake, in table units. */
+  readonly shake: { readonly x: number; readonly y: number };
+  /** 0 to 1: darkens the edges while the final 8 rolls in slow motion. */
+  readonly vignette: number;
 }
 
 export { SINK_SECONDS };
 
-function frameTransform(ctx: CanvasRenderingContext2D, scale: number): void {
-  ctx.setTransform(scale, 0, 0, scale, TABLE_ORIGIN.x * scale, TABLE_ORIGIN.y * scale);
+function frameTransform(
+  ctx: CanvasRenderingContext2D,
+  scale: number,
+  shiftX = 0,
+  shiftY = 0,
+): void {
+  ctx.setTransform(
+    scale,
+    0,
+    0,
+    scale,
+    (TABLE_ORIGIN.x + shiftX) * scale,
+    (TABLE_ORIGIN.y + shiftY) * scale,
+  );
 }
 
 /** Everything that never moves, drawn once per resize. */
@@ -205,10 +216,17 @@ export function drawScene(
   scale: number,
   view: SceneView,
 ): void {
-  const { game } = view;
+  const { game, sprites } = view;
+  const shiftX = view.shake.x * scale;
+  const shiftY = view.shake.y * scale;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.drawImage(staticLayer, 0, 0);
-  frameTransform(ctx, scale);
+  if (shiftX !== 0 || shiftY !== 0) {
+    ctx.fillStyle = "#06080c";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  }
+  ctx.drawImage(staticLayer, shiftX, shiftY);
+  frameTransform(ctx, scale, view.shake.x, view.shake.y);
+  view.nap.draw(ctx, shiftX, shiftY);
 
   const cue = game.ball(0);
   const aiming = game.phase === "aiming" && cue?.onTable;
@@ -216,15 +234,30 @@ export function drawScene(
   if (aiming && cue) drawAimGuide(ctx, game, cue, view.aimAngle);
 
   for (const ball of game.balls) if (ball.onTable) drawShadow(ctx, ball.x, ball.y, 1);
-  for (const ball of game.balls) if (ball.onTable) drawBall(ctx, ball.id, ball.x, ball.y, 1);
-  for (const sinking of view.sinking) drawSinking(ctx, sinking, view.now);
+  for (const ball of game.balls) if (ball.onTable) sprites.draw(ctx, ball.id, ball.x, ball.y);
+  for (const sinking of view.sinking) drawSinking(ctx, sprites, sinking, view.now);
+  view.fx.draw(ctx);
 
   if (aiming && cue) drawCue(ctx, cue, view.aimAngle, view.power ?? 0);
   if (view.power !== null) drawPowerMeter(ctx, view.power);
 
   for (const [i, id] of game.pottedOrder.entries()) {
-    drawBall(ctx, id, 0.035 + i * 0.066, TRAY_Y, 1);
+    sprites.draw(ctx, id, 0.035 + i * 0.066, TRAY_Y);
   }
+  if (view.vignette > 0) drawVignette(ctx, view.vignette);
+}
+
+function drawVignette(ctx: CanvasRenderingContext2D, amount: number): void {
+  const shade = ctx.createRadialGradient(0.5, 1, 0.45, 0.5, 1, 1.45);
+  shade.addColorStop(0, "rgba(0, 0, 0, 0)");
+  shade.addColorStop(1, `rgba(0, 0, 0, ${0.6 * amount})`);
+  ctx.fillStyle = shade;
+  ctx.fillRect(
+    -TABLE_ORIGIN.x - 0.05,
+    -TABLE_ORIGIN.y - 0.05,
+    FRAME_WIDTH + 0.1,
+    FRAME_HEIGHT + 0.1,
+  );
 }
 
 function drawShadow(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
@@ -245,47 +278,12 @@ function drawShadow(ctx: CanvasRenderingContext2D, x: number, y: number, size: n
   ctx.fill();
 }
 
-function drawBall(
+function drawSinking(
   ctx: CanvasRenderingContext2D,
-  id: number,
-  x: number,
-  y: number,
-  size: number,
+  sprites: BallSprites,
+  sinking: Sinking,
+  now: number,
 ): void {
-  const r = R * size;
-  const color = BALL_COLORS[id > EIGHT ? id - EIGHT : id] ?? "#fff";
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.fillStyle = id > EIGHT ? "#f4f1e8" : color;
-  ctx.fillRect(x - r, y - r, r * 2, r * 2);
-  if (id > EIGHT) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x - r, y - r * 0.55, r * 2, r * 1.1);
-  }
-  if (id !== 0) {
-    ctx.fillStyle = "#f7f4ea";
-    ctx.beginPath();
-    ctx.arc(x, y, r * 0.47, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#151515";
-    ctx.font = `700 ${r * 0.62}px ui-sans-serif, system-ui, sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(String(id), x, y + r * 0.04);
-  }
-  const shade = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.05, x, y, r);
-  shade.addColorStop(0, "rgba(255, 255, 255, 0.6)");
-  shade.addColorStop(0.22, "rgba(255, 255, 255, 0.12)");
-  shade.addColorStop(0.65, "rgba(0, 0, 0, 0)");
-  shade.addColorStop(1, "rgba(0, 0, 0, 0.42)");
-  ctx.fillStyle = shade;
-  ctx.fillRect(x - r, y - r, r * 2, r * 2);
-  ctx.restore();
-}
-
-function drawSinking(ctx: CanvasRenderingContext2D, sinking: Sinking, now: number): void {
   const t = Math.min(1, (now - sinking.start) / SINK_SECONDS);
   const ease = t * t;
   const x = sinking.x + (sinking.pocket.x - sinking.x) * ease;
@@ -293,44 +291,8 @@ function drawSinking(ctx: CanvasRenderingContext2D, sinking: Sinking, now: numbe
   const size = 1 - 0.45 * ease;
   ctx.save();
   ctx.globalAlpha = 1 - ease * 0.85;
-  drawBall(ctx, sinking.ball, x, y, size);
+  sprites.draw(ctx, sinking.ball, x, y, size);
   ctx.restore();
-}
-
-interface AimHit {
-  readonly x: number;
-  readonly y: number;
-  readonly ball: Ball | null;
-}
-
-/** Where the cue ball would first touch a ball, or the cushion line, along `angle`. */
-function castAim(game: BilliardsGame, cue: Ball, angle: number): AimHit {
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
-  let best = Infinity;
-  let hit: Ball | null = null;
-  for (const ball of game.balls) {
-    if (!ball.onTable || ball === cue) continue;
-    const fx = cue.x - ball.x;
-    const fy = cue.y - ball.y;
-    const b = fx * dx + fy * dy;
-    const c = fx * fx + fy * fy - 4 * R * R;
-    const disc = b * b - c;
-    if (disc < 0) continue;
-    const t = -b - Math.sqrt(disc);
-    if (t > 0 && t < best) {
-      best = t;
-      hit = ball;
-    }
-  }
-  const wallX = dx > 0 ? (1 - R - cue.x) / dx : dx < 0 ? (R - cue.x) / dx : Infinity;
-  const wallY = dy > 0 ? (2 - R - cue.y) / dy : dy < 0 ? (R - cue.y) / dy : Infinity;
-  const wall = Math.max(0, Math.min(wallX, wallY));
-  if (wall < best) {
-    best = wall;
-    hit = null;
-  }
-  return { x: cue.x + dx * best, y: cue.y + dy * best, ball: hit };
 }
 
 function drawAimGuide(
@@ -339,45 +301,59 @@ function drawAimGuide(
   cue: Ball,
   angle: number,
 ): void {
-  const hit = castAim(game, cue, angle);
+  const path = castTrajectory(game.balls, cue, angle);
   ctx.save();
   ctx.lineCap = "round";
-  ctx.setLineDash([0.01, 0.012]);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-  ctx.lineWidth = 0.0035;
-  ctx.beginPath();
-  ctx.moveTo(cue.x, cue.y);
-  ctx.lineTo(hit.x, hit.y);
-  ctx.stroke();
+  // Zero-length dashes with round caps draw dots; each cushion leg fades a little more.
+  ctx.setLineDash([0, 0.017]);
+  ctx.lineWidth = 0.0065;
+  for (let i = 1; i < path.points.length; i++) {
+    const from = path.points[i - 1];
+    const to = path.points[i];
+    if (!from || !to) continue;
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 - (i - 1) * 0.25})`;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+  }
   ctx.setLineDash([]);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.55)";
-  ctx.lineWidth = 0.003;
-  ctx.beginPath();
-  ctx.arc(hit.x, hit.y, R, 0, Math.PI * 2);
-  ctx.stroke();
-  if (hit.ball) {
-    const nx = (hit.ball.x - hit.x) / (2 * R);
-    const ny = (hit.ball.y - hit.y) / (2 * R);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+  const end = path.points[path.points.length - 1] ?? cue;
+  if (path.ball) {
+    const { ball } = path;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
     ctx.lineWidth = 0.004;
     ctx.beginPath();
-    ctx.moveTo(hit.ball.x + nx * R, hit.ball.y + ny * R);
-    ctx.lineTo(hit.ball.x + nx * 0.3, hit.ball.y + ny * 0.3);
+    ctx.arc(end.x, end.y, R, 0, Math.PI * 2);
+    ctx.stroke();
+    const nx = (ball.x - end.x) / (2 * R);
+    const ny = (ball.y - end.y) / (2 * R);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.lineWidth = 0.0045;
+    ctx.beginPath();
+    ctx.moveTo(ball.x + nx * R, ball.y + ny * R);
+    ctx.lineTo(ball.x + nx * 0.3, ball.y + ny * 0.3);
     ctx.stroke();
     // The cue ball leaves at right angles to the object ball.
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
-    const along = dx * nx + dy * ny;
-    const tx = dx - along * nx;
-    const ty = dy - along * ny;
+    const along = path.dx * nx + path.dy * ny;
+    const tx = path.dx - along * nx;
+    const ty = path.dy - along * ny;
     const length = Math.hypot(tx, ty);
     if (length > 0.05) {
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.lineWidth = 0.003;
       ctx.beginPath();
-      ctx.moveTo(hit.x, hit.y);
-      ctx.lineTo(hit.x + (tx / length) * 0.12, hit.y + (ty / length) * 0.12);
+      ctx.moveTo(end.x, end.y);
+      ctx.lineTo(end.x + (tx / length) * 0.12, end.y + (ty / length) * 0.12);
       ctx.stroke();
     }
+  } else if (path.pocket !== null) {
+    // Straight into a pocket: a scratch.
+    ctx.strokeStyle = "rgba(255, 110, 90, 0.85)";
+    ctx.lineWidth = 0.004;
+    ctx.beginPath();
+    ctx.arc(end.x, end.y, R, 0, Math.PI * 2);
+    ctx.stroke();
   }
   ctx.restore();
 }
@@ -453,6 +429,6 @@ function drawPocketCalls(ctx: CanvasRenderingContext2D, view: SceneView): void {
     ctx.beginPath();
     ctx.arc(pocket.x, pocket.y, pocket.radius * 1.3, 0, Math.PI * 2);
     ctx.stroke();
-    if (called) drawBall(ctx, EIGHT, pocket.x, pocket.y, 0.6);
+    if (called) view.sprites.draw(ctx, EIGHT, pocket.x, pocket.y, 0.6);
   }
 }

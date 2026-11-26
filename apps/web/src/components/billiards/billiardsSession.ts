@@ -1,6 +1,8 @@
 import { observeResize } from "~/lib/observeResize";
 
 import { BilliardsAudio } from "./billiardsAudio.ts";
+import { BallSprites } from "./billiardsBalls.ts";
+import { ClothNap, Effects } from "./billiardsFx.ts";
 import { MAX_SHOT_SPEED, type PhysicsEvent } from "./billiardsPhysics.ts";
 import {
   drawScene,
@@ -10,7 +12,7 @@ import {
   TABLE_ORIGIN,
   type Sinking,
 } from "./billiardsRender.ts";
-import { BilliardsGame, type Foul, type Phase } from "./billiardsRules.ts";
+import { BilliardsGame, EIGHT, type Foul, type Phase } from "./billiardsRules.ts";
 import { POCKETS, type Point } from "./billiardsTable.ts";
 
 /** What the overlay shows around the canvas. */
@@ -35,6 +37,8 @@ const MIN_SHOT_SPEED = 0.3;
 const FINE_AIM = 0.12;
 const POCKET_PICK_RADIUS = 0.1;
 const HUD_INTERVAL_MS = 250;
+/** How slow the final 8 rolls as it nears the called pocket. */
+const SLOW_MOTION = 0.3;
 
 function wrapAngle(angle: number): number {
   return Math.atan2(Math.sin(angle), Math.cos(angle));
@@ -47,6 +51,9 @@ export class BilliardsSession {
   private readonly staticLayer = document.createElement("canvas");
   private readonly onHud: (hud: BilliardsHud) => void;
   private readonly audio = new BilliardsAudio();
+  private readonly sprites = new BallSprites();
+  private readonly nap = new ClothNap();
+  private readonly fx = new Effects();
   private readonly stopObservingResize: () => void;
   private game = new BilliardsGame();
   private scale = 1;
@@ -60,6 +67,10 @@ export class BilliardsSession {
   private clockStart: number | null = null;
   private clockEnd: number | null = null;
   private blockedUntil = 0;
+  /** Hit-stops and slow motion don't count against the player's clock. */
+  private frozenMs = 0;
+  private timeScale = 1;
+  private finalShot = false;
   private lastHud: BilliardsHud | null = null;
   private lastHudAt = 0;
 
@@ -98,6 +109,12 @@ export class BilliardsSession {
     this.clockStart = null;
     this.clockEnd = null;
     this.blockedUntil = 0;
+    this.frozenMs = 0;
+    this.timeScale = 1;
+    this.finalShot = false;
+    this.sprites.reset();
+    this.nap.clear();
+    this.fx.reset();
     this.emitHud(performance.now(), true);
   }
 
@@ -118,6 +135,14 @@ export class BilliardsSession {
     this.staticLayer.height = this.canvas.height;
     this.scale = this.canvas.width / FRAME_WIDTH;
     drawStaticLayer(this.staticLayer, this.scale);
+    this.sprites.resize(this.scale);
+    this.nap.resize(
+      this.canvas.width,
+      this.canvas.height,
+      this.scale,
+      TABLE_ORIGIN.x * this.scale,
+      TABLE_ORIGIN.y * this.scale,
+    );
   }
 
   private toTable(event: PointerEvent): Point {
@@ -185,8 +210,12 @@ export class BilliardsSession {
       this.canvas.releasePointerCapture(event.pointerId);
     }
     const speed = MIN_SHOT_SPEED + (MAX_SHOT_SPEED - MIN_SHOT_SPEED) * power * power;
+    const finalShot = this.game.objectBallsLeft() === 0;
     if (!this.game.shoot(this.aimAngle, speed)) return;
+    this.finalShot = finalShot;
     this.audio.cue(power);
+    const cue = this.game.ball(0);
+    if (cue) this.fx.cueStrike(cue, this.aimAngle, power);
     this.emitHud(now, true);
   };
 
@@ -203,16 +232,39 @@ export class BilliardsSession {
     const seconds = this.lastFrame === 0 ? 0 : Math.min(0.05, (time - this.lastFrame) / 1000);
     this.lastFrame = time;
 
+    // A hit-stop freezes everything for a beat; slow motion stretches the final 8.
+    let simSeconds = seconds * this.timeScale;
+    let frozenSeconds = seconds - simSeconds;
+    if (this.fx.hitStop > 0) {
+      const stop = Math.min(this.fx.hitStop, seconds);
+      this.fx.hitStop -= stop;
+      simSeconds = 0;
+      frozenSeconds = seconds;
+    }
+    if (this.clockStart !== null && this.clockEnd === null) this.frozenMs += frozenSeconds * 1000;
+
     const phase = this.game.phase;
+    const breakShot = this.game.isBreak;
+    const before = new Map<number, Point>();
+    for (const ball of this.game.balls)
+      if (ball.onTable) before.set(ball.id, { x: ball.x, y: ball.y });
     const events: PhysicsEvent[] = [];
-    this.game.advance(seconds, events);
+    this.game.advance(simSeconds, events);
+    this.trackRolling(before, simSeconds);
     this.playEvents(events, time / 1000);
+    this.fx.onEvents(events, this.game.balls, breakShot);
     if (this.game.phase !== phase) {
-      if (this.game.phase === "cleared") this.clockEnd = time;
+      this.nap.commit();
+      if (this.game.phase === "cleared") {
+        this.clockEnd = time;
+        this.fx.celebrate(this.game.calledPocket);
+      }
       // The clock starts once the break settles.
       if (!this.game.isBreak && this.clockStart === null) this.clockStart = time;
       this.emitHud(time, true);
     }
+    this.updateSlowMotion(seconds);
+    this.fx.update(simSeconds === 0 ? 0 : Math.max(simSeconds, seconds * 0.5));
     this.sinking = this.sinking.filter((sinking) => time / 1000 - sinking.start < SINK_SECONDS);
 
     drawScene(this.context, this.staticLayer, this.scale, {
@@ -222,9 +274,46 @@ export class BilliardsSession {
       hoverPocket: this.pocketAt(this.pointer),
       sinking: this.sinking,
       now: time / 1000,
+      sprites: this.sprites,
+      nap: this.nap,
+      fx: this.fx,
+      shake: this.fx.shakeOffset(),
+      vignette: Math.min(1, (1 - this.timeScale) / (1 - SLOW_MOTION)),
     });
     if (time - this.lastHudAt > HUD_INTERVAL_MS) this.emitHud(time, false);
   };
+
+  /** Rolls each moving ball's sprite and brushes the cloth along its path. */
+  private trackRolling(before: ReadonlyMap<number, Point>, seconds: number): void {
+    if (seconds === 0) return;
+    for (const ball of this.game.balls) {
+      const start = before.get(ball.id);
+      if (!start || !ball.onTable) continue;
+      const dx = ball.x - start.x;
+      const dy = ball.y - start.y;
+      const distance = Math.hypot(dx, dy);
+      // A respot jumps the ball; it didn't roll there.
+      if (distance < 1e-5 || distance > 0.2) continue;
+      this.sprites.roll(ball.id, dx, dy);
+      this.nap.stamp(start.x, start.y, ball.x, ball.y);
+    }
+  }
+
+  private updateSlowMotion(seconds: number): void {
+    let target = 1;
+    const eight = this.game.ball(EIGHT);
+    const pocket = POCKETS.find((candidate) => candidate.id === this.game.calledPocket);
+    if (this.finalShot && this.game.phase === "rolling" && eight?.onTable && pocket) {
+      const dx = pocket.x - eight.x;
+      const dy = pocket.y - eight.y;
+      const distance = Math.hypot(dx, dy);
+      const speed = Math.hypot(eight.vx, eight.vy);
+      const heading = speed > 0 ? (dx * eight.vx + dy * eight.vy) / (distance * speed) : 0;
+      if (speed > 0.05 && distance < 0.35 && heading > 0.85) target = SLOW_MOTION;
+    }
+    this.timeScale += (target - this.timeScale) * Math.min(1, seconds * 8);
+    if (Math.abs(this.timeScale - target) < 0.01) this.timeScale = target;
+  }
 
   private playEvents(events: ReadonlyArray<PhysicsEvent>, now: number): void {
     const clicks: number[] = [];
@@ -253,7 +342,7 @@ export class BilliardsSession {
       shots: game.shots,
       penaltySeconds: game.penaltySeconds,
       totalMs:
-        (this.clockStart === null ? 0 : (this.clockEnd ?? now) - this.clockStart) +
+        (this.clockStart === null ? 0 : (this.clockEnd ?? now) - this.clockStart - this.frozenMs) +
         game.penaltySeconds * 1000,
       needsCall: game.needsCall(),
       calledPocket: game.calledPocket,
