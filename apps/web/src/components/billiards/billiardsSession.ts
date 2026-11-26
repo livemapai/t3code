@@ -23,6 +23,7 @@ import {
   type Medal,
 } from "./billiardsRecords.ts";
 import { cueTip, POWER_COLORS, type CueStyle } from "./billiardsCues.ts";
+import { loadSkin, saveSkin, unlockedSkins, type SkinId } from "./billiardsSkins.ts";
 import {
   BilliardsGame,
   EIGHT,
@@ -57,6 +58,8 @@ export interface BilliardsHud {
   /** A power-up waiting for the next shot. */
   readonly armed: "wand" | "glow" | null;
   readonly goldenShots: number;
+  readonly skin: SkinId;
+  readonly unlockedSkins: ReadonlySet<SkinId>;
 }
 
 export interface RunResult {
@@ -64,6 +67,8 @@ export interface RunResult {
   /** 1 is the best run today. */
   readonly rankToday: number;
   readonly medal: Medal | null;
+  /** Skins this run unlocked. */
+  readonly newSkins: ReadonlyArray<SkinId>;
 }
 
 function dailyGame(day: string): BilliardsGame {
@@ -101,6 +106,8 @@ export class BilliardsSession {
   private runs = loadRuns();
   private todayRuns = runsOn(this.runs, this.day);
   private result: RunResult | null = null;
+  private unlocked = unlockedSkins(this.runs);
+  private skin: SkinId = this.unlocked.has(loadSkin()) ? loadSkin() : "classic";
   private scale = 1;
   private frame = 0;
   private lastFrame = 0;
@@ -359,11 +366,15 @@ export class BilliardsSession {
       finishedAt: new Date().toISOString(),
     };
     this.runs = saveRun(this.runs, run);
+    const before = this.unlocked;
+    this.unlocked = unlockedSkins(this.runs);
+    const newSkins = [...this.unlocked].filter((id) => !before.has(id));
     this.todayRuns = runsOn(this.runs, this.day);
     this.result = {
       run,
       rankToday: this.todayRuns.indexOf(run) + 1,
       medal: medalFor(run.totalMs),
+      newSkins,
     };
   }
 
@@ -446,20 +457,25 @@ export class BilliardsSession {
       this.fx.trail(cue.x, cue.y, POWER_COLORS.glow);
     }
     const style = this.cueStyle();
-    if (
-      style !== "classic" &&
-      this.game.phase === "aiming" &&
-      cue?.onTable &&
-      Math.random() < 0.35
-    ) {
+    const sparks =
+      style === "wand" || style === "golden" || style === "glow" ? POWER_COLORS[style] : null;
+    if (sparks && this.game.phase === "aiming" && cue?.onTable && Math.random() < 0.35) {
       const tip = cueTip(cue, this.aimAngle, this.power(now));
-      this.fx.trail(tip.x, tip.y, POWER_COLORS[style]);
+      this.fx.trail(tip.x, tip.y, sparks);
     }
   }
 
   private cueStyle(): CueStyle {
     if (this.game.armed) return this.game.armed;
-    return this.game.goldenShots > 0 ? "golden" : "classic";
+    return this.game.goldenShots > 0 ? "golden" : this.skin;
+  }
+
+  /** Picks a stick skin; only unlocked ones take. */
+  setSkin(id: SkinId): void {
+    if (!this.unlocked.has(id)) return;
+    this.skin = id;
+    saveSkin(id);
+    this.emitHud(performance.now(), true);
   }
 
   private emitHud(now: number, force: boolean): void {
@@ -480,6 +496,8 @@ export class BilliardsSession {
       result: this.result,
       armed: game.armed,
       goldenShots: game.goldenShots,
+      skin: this.skin,
+      unlockedSkins: this.unlocked,
     };
     this.lastHudAt = now;
     const last = this.lastHud;

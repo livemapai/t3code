@@ -1,11 +1,12 @@
 import type { Ball } from "./billiardsPhysics.ts";
 import { RING_RADIUS, type PowerKind, type PowerRing } from "./billiardsRules.ts";
+import type { SkinId } from "./billiardsSkins.ts";
 import { BALL_RADIUS } from "./billiardsTable.ts";
 
 // The stick's looks and the power-up rings. A power-up changes the stick while it's armed;
 // the same looks become unlockable skins later.
 
-export type CueStyle = "classic" | PowerKind;
+export type CueStyle = SkinId | PowerKind;
 
 const R = BALL_RADIUS;
 const CUE_LENGTH = 1.15;
@@ -65,6 +66,10 @@ export function drawCue(
     const scale = ctx.getTransform().a;
     ctx.shadowColor = `rgba(${POWER_COLORS[style]}, 0.9)`;
     ctx.shadowBlur = (0.018 + Math.sin(now * 6) * 0.006) * scale;
+  } else if (style === "ember") {
+    const scale = ctx.getTransform().a;
+    ctx.shadowColor = "rgba(255, 110, 30, 0.6)";
+    ctx.shadowBlur = (0.01 + Math.sin(now * 2.2) * 0.004) * scale;
   }
   outline(0);
   ctx.fillStyle = body;
@@ -89,6 +94,66 @@ function cueStops(style: CueStyle, now: number): ReadonlyArray<readonly [number,
         [0.631, "#2a1810"],
         [1, "#120a06"],
       ];
+    case "ari":
+      return [
+        [0, "#fff3c4"],
+        [0.012, "#fff3c4"],
+        [0.0121, "#ffc83d"],
+        [0.03, "#ffc83d"],
+        [0.031, "#8a4fc0"],
+        [0.4, "#5b2a86"],
+        [0.401, "#ffc83d"],
+        [0.415, "#ffc83d"],
+        [0.416, "#4a1f70"],
+        [0.6, "#3a1858"],
+        [0.601, "#ffc83d"],
+        [0.61, "#ffc83d"],
+        [0.611, "#2a0f42"],
+        [1, "#1a0829"],
+      ];
+    case "copper": {
+      // Engraved rings along a warm metal shaft.
+      const stops: Array<readonly [number, string]> = [
+        [0, "#7fb2e0"],
+        [0.01, "#7fb2e0"],
+        [0.0101, "#f3c6a0"],
+        [0.03, "#e8a476"],
+      ];
+      for (let i = 0; i < 8; i++) {
+        const at = 0.08 + i * 0.11;
+        stops.push([at, i % 2 === 0 ? "#b87333" : "#d48a4f"], [at + 0.004, "#6b3a1c"]);
+      }
+      stops.push([1, "#5a2e14"]);
+      return stops;
+    }
+    case "chrome": {
+      // A slow reflection slides along polished steel.
+      const band = 0.1 + ((now * 0.25) % 1) * 0.8;
+      return [
+        [0, "#7fb2e0"],
+        [0.01, "#7fb2e0"],
+        [0.0101, "#f4f7fa"],
+        [0.03, "#cfd6de"],
+        [Math.max(0.035, band - 0.1), "#8d97a3"],
+        [band, "#ffffff"],
+        [Math.min(0.97, band + 0.1), "#8d97a3"],
+        [1, "#3c434c"],
+      ];
+    }
+    case "ember": {
+      // Charred wood with embers that breathe along it.
+      const stops: Array<readonly [number, string]> = [
+        [0, "#ffd9a0"],
+        [0.015, "#ffd9a0"],
+        [0.016, "#2a0f06"],
+      ];
+      for (let i = 1; i < 9; i++) {
+        const heat = 0.5 + 0.5 * Math.sin(now * 2.6 + i * 1.7);
+        stops.push([i / 9, `hsl(${18 + heat * 14}, 100%, ${10 + heat * 42}%)`]);
+      }
+      stops.push([1, "#120604"]);
+      return stops;
+    }
     case "golden": {
       // A shine runs down the stick, over and over.
       const band = 0.08 + ((now * 0.45) % 1) * 0.84;

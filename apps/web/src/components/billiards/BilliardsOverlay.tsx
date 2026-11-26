@@ -1,6 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useGT } from "gt-react";
-import { CircleCheckIcon, MedalIcon, MessageCircleQuestionIcon, XIcon } from "lucide-react";
+import {
+  CircleCheckIcon,
+  LockIcon,
+  MedalIcon,
+  MessageCircleQuestionIcon,
+  PaletteIcon,
+  GiftIcon,
+  XIcon,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -10,6 +18,7 @@ import { medalFor, nextMedal, type Medal } from "./billiardsRecords";
 import { POWER_COLORS } from "./billiardsCues";
 import { FOUL_PENALTY_SECONDS, GLOW_BALLS } from "./billiardsRules";
 import { BilliardsSession, type BilliardsHud } from "./billiardsSession";
+import { SKINS, type Skin, type SkinId } from "./billiardsSkins";
 import { snapshotThreads, threadAlerts, type ThreadAlert } from "./billiardsThreadAlerts";
 
 const MAX_ALERTS = 3;
@@ -40,6 +49,7 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
   const threads = useThreadShells();
   const [baseline] = useState(() => snapshotThreads(threads));
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
   const alerts = threadAlerts(baseline, threads)
     .filter((alert) => !dismissed.has(alertId(alert)))
     .slice(0, MAX_ALERTS);
@@ -75,6 +85,36 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
       to: "/$environmentId/$threadId",
       params: { environmentId: alert.thread.environmentId, threadId: alert.thread.id },
     });
+  };
+
+  const skinName = (id: SkinId) => {
+    switch (id) {
+      case "classic":
+        return gt("Classic", { $context: "billiards cue skin" });
+      case "ari":
+        // oxlint-disable-next-line t3code/no-untranslated-copy -- product name
+        return "Ari";
+      case "copper":
+        return gt("Copper", { $context: "billiards cue skin" });
+      case "chrome":
+        return gt("Chrome", { $context: "billiards cue skin" });
+      case "ember":
+        return gt("Ember", { $context: "billiards cue skin" });
+    }
+  };
+  const unlockHint = (skin: Skin) => {
+    switch (skin.unlock) {
+      case null:
+        return "";
+      case "clear":
+        return gt("Clear a table");
+      case "bronze":
+        return gt("Win a bronze medal");
+      case "silver":
+        return gt("Win a silver medal");
+      case "gold":
+        return gt("Win a gold medal");
+    }
   };
 
   const medalLabel = (medal: Medal) =>
@@ -212,6 +252,18 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
             <span className="ml-auto text-sm font-semibold">{formatClock(hud?.totalMs ?? 0)}</span>
             <button
               type="button"
+              aria-label={gt("Choose a stick")}
+              aria-expanded={pickerOpen}
+              onClick={() => setPickerOpen(!pickerOpen)}
+              className={cn(
+                "pointer-events-auto flex size-6 items-center justify-center rounded-md hover:bg-white/10 hover:text-white",
+                pickerOpen ? "bg-white/10 text-white" : "text-white/60",
+              )}
+            >
+              <PaletteIcon className="size-3.5" />
+            </button>
+            <button
+              type="button"
               aria-label={gt("Close")}
               onClick={onClose}
               className="pointer-events-auto -mr-1 flex size-6 items-center justify-center rounded-md text-white/60 hover:bg-white/10 hover:text-white"
@@ -231,6 +283,40 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
             {status.text}
           </p>
         </div>
+        {pickerOpen && hud ? (
+          <div className="absolute top-12 right-3 w-48 rounded-xl bg-black/90 p-1.5 text-xs text-white shadow-2xl ring-1 ring-white/15">
+            <p className="px-2 pt-1 pb-1.5 font-medium text-white/55">{gt("Stick")}</p>
+            {SKINS.map((skin) => {
+              const unlocked = hud.unlockedSkins.has(skin.id);
+              return (
+                <button
+                  key={skin.id}
+                  type="button"
+                  disabled={!unlocked}
+                  onClick={() => sessionRef.current?.setSkin(skin.id)}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left",
+                    unlocked ? "hover:bg-white/10" : "cursor-default opacity-45",
+                    hud.skin === skin.id && "bg-white/15",
+                  )}
+                >
+                  <span
+                    aria-hidden
+                    className="h-1.5 w-10 shrink-0 rounded-full"
+                    style={{ background: skin.swatch }}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{skinName(skin.id)}</span>
+                    {unlocked ? null : (
+                      <span className="block truncate text-white/55">{unlockHint(skin)}</span>
+                    )}
+                  </span>
+                  {unlocked ? null : <LockIcon aria-hidden className="size-3 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {alerts.length > 0 ? (
           <div className="pointer-events-none absolute inset-x-0 bottom-2 flex flex-col-reverse items-center gap-1.5 px-4">
             {alerts.map((alert) => (
@@ -289,6 +375,15 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
               {hud.result?.rankToday === 1 ? (
                 <p className="mt-1 text-sm text-warning">{gt("New best today!")}</p>
               ) : null}
+              {hud.result?.newSkins.map((id) => (
+                <p
+                  key={id}
+                  className="mt-1 flex items-center justify-center gap-1.5 text-xs text-white"
+                >
+                  <GiftIcon aria-hidden className="size-3.5 text-warning" />
+                  {gt("New stick unlocked: {name}", { name: skinName(id) })}
+                </p>
+              ))}
               {hud.result && hud.result.medal !== "gold" ? (
                 <p className="mt-1 text-xs text-white/55">
                   {nextMedalText(hud.result.run.totalMs)}
