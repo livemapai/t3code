@@ -37,14 +37,20 @@ export type PhysicsEvent =
 /** One fixed simulation step. Small enough that a break-speed ball can't pass through another. */
 export const STEP_SECONDS = 1 / 480;
 /** The fastest shot, in table widths per second. */
-export const MAX_SHOT_SPEED = 8;
+const MAX_SHOT_SPEED = 8;
+const MIN_SHOT_SPEED = 0.3;
 
-const ROLL_DECEL = 0.5;
-const DRAG = 0.12;
+/** Cue ball speed for a shot charged to `power` (0 to 1); low power gets the finer control. */
+export function shotSpeed(power: number): number {
+  return MIN_SHOT_SPEED + (MAX_SHOT_SPEED - MIN_SHOT_SPEED) * power * power;
+}
+
+export const ROLL_DECEL = 0.5;
+export const DRAG = 0.12;
 const SLEEP_SPEED = 0.012;
 const BALL_RESTITUTION = 0.94;
-const CUSHION_RESTITUTION = 0.72;
-const CUSHION_GRIP = 0.94;
+export const CUSHION_RESTITUTION = 0.72;
+export const CUSHION_GRIP = 0.94;
 const DIAMETER = BALL_RADIUS * 2;
 const OUT_MARGIN = BALL_RADIUS * 1.2;
 

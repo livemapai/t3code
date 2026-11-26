@@ -1,16 +1,22 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useGT } from "gt-react";
-import { CircleCheckIcon, MessageCircleQuestionIcon, XIcon } from "lucide-react";
+import { CircleCheckIcon, MedalIcon, MessageCircleQuestionIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { cn } from "../../lib/utils";
 import { useThreadShells } from "../../state/entities";
+import { medalFor, nextMedal, type Medal } from "./billiardsRecords";
 import { FOUL_PENALTY_SECONDS } from "./billiardsRules";
 import { BilliardsSession, type BilliardsHud } from "./billiardsSession";
 import { snapshotThreads, threadAlerts, type ThreadAlert } from "./billiardsThreadAlerts";
 
 const MAX_ALERTS = 3;
+const MEDAL_COLORS: Readonly<Record<Medal, string>> = {
+  gold: "#e8b931",
+  silver: "#c4cbd4",
+  bronze: "#c8834f",
+};
 
 function formatClock(ms: number, tenths = false): string {
   const seconds = Math.floor(ms / 1000);
@@ -70,6 +76,23 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
     });
   };
 
+  const medalLabel = (medal: Medal) =>
+    medal === "gold"
+      ? gt("Gold medal")
+      : medal === "silver"
+        ? gt("Silver medal")
+        : gt("Bronze medal");
+  const nextMedalText = (totalMs: number) => {
+    const next = nextMedal(totalMs);
+    if (!next) return null;
+    const time = formatClock(next[1]);
+    return next[0] === "gold"
+      ? gt("Next: gold under {time}", { time })
+      : next[0] === "silver"
+        ? gt("Next: silver under {time}", { time })
+        : gt("Next: bronze under {time}", { time });
+  };
+
   const status = (() => {
     if (!hud) return { text: "", tone: "quiet" };
     if (hud.blocked) return { text: gt("Call a pocket for the 8 first: click it."), tone: "warn" };
@@ -122,7 +145,7 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
     }
     if (hud.isBreak) {
       return {
-        text: gt("The clock starts after the break. Hold to charge, release to shoot."),
+        text: gt("Today's rack is the same for everyone. The clock starts after the break."),
         tone: "quiet",
       };
     }
@@ -149,6 +172,11 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
             {hud && hud.penaltySeconds > 0 ? (
               <span className="text-warning">
                 {gt("Penalties +{seconds} s", { seconds: hud.penaltySeconds })}
+              </span>
+            ) : null}
+            {hud?.todayRuns[0] ? (
+              <span className="text-white/45">
+                {gt("Best {time}", { time: formatClock(hud.todayRuns[0].totalMs, true) })}
               </span>
             ) : null}
             <span className="ml-auto text-sm font-semibold">{formatClock(hud?.totalMs ?? 0)}</span>
@@ -216,8 +244,25 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
             <div className="rounded-2xl bg-black/85 px-10 py-7 text-center text-white shadow-2xl ring-1 ring-white/10">
               <p className="text-sm font-medium text-white/70">{gt("Table cleared")}</p>
               <p className="mt-1 text-6xl font-semibold tabular-nums">
-                {formatClock(hud.totalMs, true)}
+                {formatClock(hud.result?.run.totalMs ?? hud.totalMs, true)}
               </p>
+              {hud.result?.medal ? (
+                <p
+                  className="mt-2 flex items-center justify-center gap-1.5 text-sm font-semibold"
+                  style={{ color: MEDAL_COLORS[hud.result.medal] }}
+                >
+                  <MedalIcon aria-hidden className="size-4" />
+                  {medalLabel(hud.result.medal)}
+                </p>
+              ) : null}
+              {hud.result?.rankToday === 1 ? (
+                <p className="mt-1 text-sm text-warning">{gt("New best today!")}</p>
+              ) : null}
+              {hud.result && hud.result.medal !== "gold" ? (
+                <p className="mt-1 text-xs text-white/55">
+                  {nextMedalText(hud.result.run.totalMs)}
+                </p>
+              ) : null}
               <p className="mt-3 text-xs text-white/55 tabular-nums">
                 {gt("{clock} played, +{seconds} s penalties, {shots} shots", {
                   clock: formatClock(hud.totalMs - hud.penaltySeconds * 1000, true),
@@ -225,6 +270,44 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
                   shots: hud.shots,
                 })}
               </p>
+              {hud.todayRuns.length > 1 ? (
+                <div className="mt-4 border-t border-white/10 pt-3 text-left">
+                  <p className="text-xs font-medium text-white/55">
+                    {gt("Today on this computer")}
+                  </p>
+                  <ol className="mt-1.5 space-y-0.5 text-xs tabular-nums">
+                    {hud.todayRuns.slice(0, 5).map((run, index) => (
+                      <li
+                        key={run.finishedAt}
+                        className={cn(
+                          "flex items-center gap-2 rounded-md px-2 py-0.5",
+                          run === hud.result?.run ? "bg-white/10 text-white" : "text-white/65",
+                        )}
+                      >
+                        <span className="w-5 text-white/40">{index + 1}</span>
+                        <span className="flex-1">{formatClock(run.totalMs, true)}</span>
+                        {run.penaltySeconds > 0 ? (
+                          <span className="text-warning">
+                            {gt("+{seconds} s", { seconds: run.penaltySeconds })}
+                          </span>
+                        ) : null}
+                        {(() => {
+                          const medal = medalFor(run.totalMs);
+                          return medal ? (
+                            <MedalIcon
+                              aria-label={medalLabel(medal)}
+                              className="size-3.5"
+                              style={{ color: MEDAL_COLORS[medal] }}
+                            />
+                          ) : (
+                            <span className="size-3.5" />
+                          );
+                        })()}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
               <div className="mt-5 flex justify-center gap-2">
                 <button
                   type="button"

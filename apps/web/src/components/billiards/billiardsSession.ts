@@ -3,7 +3,7 @@ import { observeResize } from "~/lib/observeResize";
 import { BilliardsAudio } from "./billiardsAudio.ts";
 import { BallSprites } from "./billiardsBalls.ts";
 import { ClothNap, Effects } from "./billiardsFx.ts";
-import { MAX_SHOT_SPEED, type PhysicsEvent } from "./billiardsPhysics.ts";
+import { shotSpeed, type PhysicsEvent } from "./billiardsPhysics.ts";
 import {
   drawScene,
   drawStaticLayer,
@@ -12,7 +12,17 @@ import {
   TABLE_ORIGIN,
   type Sinking,
 } from "./billiardsRender.ts";
-import { BilliardsGame, EIGHT, type Foul, type Phase } from "./billiardsRules.ts";
+import {
+  loadRuns,
+  medalFor,
+  rackDay,
+  rackSeed,
+  runsOn,
+  saveRun,
+  type BilliardsRun,
+  type Medal,
+} from "./billiardsRecords.ts";
+import { BilliardsGame, EIGHT, seededRandom, type Foul, type Phase } from "./billiardsRules.ts";
 import { POCKETS, type Point } from "./billiardsTable.ts";
 
 /** What the overlay shows around the canvas. */
@@ -30,10 +40,26 @@ export interface BilliardsHud {
   readonly forgiven: boolean;
   /** The player tried to shoot the 8 without calling a pocket. */
   readonly blocked: boolean;
+  /** Today's rack, `YYYY-MM-DD`. */
+  readonly day: string;
+  /** This machine's runs on today's rack, best first. */
+  readonly todayRuns: ReadonlyArray<BilliardsRun>;
+  /** How the run that just cleared the table placed. */
+  readonly result: RunResult | null;
+}
+
+export interface RunResult {
+  readonly run: BilliardsRun;
+  /** 1 is the best run today. */
+  readonly rankToday: number;
+  readonly medal: Medal | null;
+}
+
+function dailyGame(day: string): BilliardsGame {
+  return new BilliardsGame({ random: seededRandom(rackSeed(day)) });
 }
 
 const CHARGE_MS = 1100;
-const MIN_SHOT_SPEED = 0.3;
 const FINE_AIM = 0.12;
 const POCKET_PICK_RADIUS = 0.1;
 const HUD_INTERVAL_MS = 250;
@@ -55,7 +81,11 @@ export class BilliardsSession {
   private readonly nap = new ClothNap();
   private readonly fx = new Effects();
   private readonly stopObservingResize: () => void;
-  private game = new BilliardsGame();
+  private day = rackDay();
+  private game = dailyGame(this.day);
+  private runs = loadRuns();
+  private todayRuns = runsOn(this.runs, this.day);
+  private result: RunResult | null = null;
   private scale = 1;
   private frame = 0;
   private lastFrame = 0;
@@ -102,7 +132,10 @@ export class BilliardsSession {
   }
 
   restart(): void {
-    this.game = new BilliardsGame();
+    this.day = rackDay();
+    this.game = dailyGame(this.day);
+    this.todayRuns = runsOn(this.runs, this.day);
+    this.result = null;
     this.aimAngle = -Math.PI / 2;
     this.chargeStart = null;
     this.sinking = [];
@@ -209,7 +242,7 @@ export class BilliardsSession {
     if (this.canvas.hasPointerCapture(event.pointerId)) {
       this.canvas.releasePointerCapture(event.pointerId);
     }
-    const speed = MIN_SHOT_SPEED + (MAX_SHOT_SPEED - MIN_SHOT_SPEED) * power * power;
+    const speed = shotSpeed(power);
     const finalShot = this.game.objectBallsLeft() === 0;
     if (!this.game.shoot(this.aimAngle, speed)) return;
     this.finalShot = finalShot;
@@ -258,6 +291,7 @@ export class BilliardsSession {
       if (this.game.phase === "cleared") {
         this.clockEnd = time;
         this.fx.celebrate(this.game.calledPocket);
+        this.recordRun(time);
       }
       // The clock starts once the break settles.
       if (!this.game.isBreak && this.clockStart === null) this.clockStart = time;
@@ -297,6 +331,29 @@ export class BilliardsSession {
       this.sprites.roll(ball.id, dx, dy);
       this.nap.stamp(start.x, start.y, ball.x, ball.y);
     }
+  }
+
+  private recordRun(now: number): void {
+    const run: BilliardsRun = {
+      day: this.day,
+      totalMs: Math.round(this.totalMs(now)),
+      penaltySeconds: this.game.penaltySeconds,
+      shots: this.game.shots,
+      finishedAt: new Date().toISOString(),
+    };
+    this.runs = saveRun(this.runs, run);
+    this.todayRuns = runsOn(this.runs, this.day);
+    this.result = {
+      run,
+      rankToday: this.todayRuns.indexOf(run) + 1,
+      medal: medalFor(run.totalMs),
+    };
+  }
+
+  private totalMs(now: number): number {
+    const clock =
+      this.clockStart === null ? 0 : (this.clockEnd ?? now) - this.clockStart - this.frozenMs;
+    return clock + this.game.penaltySeconds * 1000;
   }
 
   private updateSlowMotion(seconds: number): void {
@@ -341,14 +398,15 @@ export class BilliardsSession {
       isBreak: game.isBreak,
       shots: game.shots,
       penaltySeconds: game.penaltySeconds,
-      totalMs:
-        (this.clockStart === null ? 0 : (this.clockEnd ?? now) - this.clockStart - this.frozenMs) +
-        game.penaltySeconds * 1000,
+      totalMs: this.totalMs(now),
       needsCall: game.needsCall(),
       calledPocket: game.calledPocket,
       foul: game.phase === "rolling" ? null : (game.lastShot?.foul ?? null),
       forgiven: game.lastShot?.forgiven ?? false,
       blocked: now < this.blockedUntil,
+      day: this.day,
+      todayRuns: this.todayRuns,
+      result: this.result,
     };
     this.lastHudAt = now;
     const last = this.lastHud;

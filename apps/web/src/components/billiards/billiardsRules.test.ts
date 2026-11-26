@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { makeBall, MAX_SHOT_SPEED, type Ball, type PhysicsEvent } from "./billiardsPhysics.ts";
+import { makeBall, shotSpeed, type Ball, type PhysicsEvent } from "./billiardsPhysics.ts";
 import { BilliardsGame, EIGHT, rackBalls, seededRandom } from "./billiardsRules.ts";
 import { BALL_RADIUS, FOOT_SPOT, HEAD_SPOT, POCKETS } from "./billiardsTable.ts";
 
@@ -51,7 +51,7 @@ describe("the break", () => {
   it("spreads the rack at full power and comes to rest on the table", () => {
     const game = new BilliardsGame({ random: seededRandom(3) });
     const cue = game.ball(0)!;
-    expect(game.shoot(angleTo(cue, FOOT_SPOT.x, FOOT_SPOT.y) + 0.004, MAX_SHOT_SPEED)).toBe(true);
+    expect(game.shoot(angleTo(cue, FOOT_SPOT.x, FOOT_SPOT.y) + 0.004, shotSpeed(1))).toBe(true);
     settle(game);
     expect(game.phase).toBe("aiming");
     expect(game.shots).toBe(0);
@@ -70,7 +70,7 @@ describe("the break", () => {
   it("is the same every time for the same rack and shot", () => {
     const run = () => {
       const game = new BilliardsGame({ random: seededRandom(11) });
-      game.shoot(-Math.PI / 2 + 0.01, MAX_SHOT_SPEED);
+      game.shoot(-Math.PI / 2 + 0.01, shotSpeed(1));
       settle(game);
       return game.balls.map((ball) => [ball.id, ball.x, ball.y, ball.onTable]);
     };

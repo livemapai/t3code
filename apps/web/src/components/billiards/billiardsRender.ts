@@ -1,7 +1,7 @@
 import { castTrajectory } from "./billiardsAim.ts";
 import type { BallSprites } from "./billiardsBalls.ts";
 import type { ClothNap, Effects } from "./billiardsFx.ts";
-import type { Ball } from "./billiardsPhysics.ts";
+import { shotSpeed, type Ball } from "./billiardsPhysics.ts";
 import { EIGHT, type BilliardsGame } from "./billiardsRules.ts";
 import {
   BALL_RADIUS,
@@ -231,7 +231,7 @@ export function drawScene(
   const cue = game.ball(0);
   const aiming = game.phase === "aiming" && cue?.onTable;
   if (game.needsCall()) drawPocketCalls(ctx, view);
-  if (aiming && cue) drawAimGuide(ctx, game, cue, view.aimAngle);
+  if (aiming && cue) drawAimGuide(ctx, game, cue, view.aimAngle, view.power);
 
   for (const ball of game.balls) if (ball.onTable) drawShadow(ctx, ball.x, ball.y, 1);
   for (const ball of game.balls) if (ball.onTable) sprites.draw(ctx, ball.id, ball.x, ball.y);
@@ -300,8 +300,10 @@ function drawAimGuide(
   game: BilliardsGame,
   cue: Ball,
   angle: number,
+  power: number | null,
 ): void {
-  const path = castTrajectory(game.balls, cue, angle);
+  // While charging, the line only reaches as far as this power rolls the cue ball.
+  const path = castTrajectory(game.balls, cue, angle, power === null ? null : shotSpeed(power));
   ctx.save();
   ctx.lineCap = "round";
   // Zero-length dashes with round caps draw dots; each cushion leg fades a little more.
@@ -347,6 +349,12 @@ function drawAimGuide(
       ctx.lineTo(end.x + (tx / length) * 0.12, end.y + (ty / length) * 0.12);
       ctx.stroke();
     }
+  } else if (path.stops) {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.lineWidth = 0.003;
+    ctx.beginPath();
+    ctx.arc(end.x, end.y, R, 0, Math.PI * 2);
+    ctx.stroke();
   } else if (path.pocket !== null) {
     // Straight into a pocket: a scratch.
     ctx.strokeStyle = "rgba(255, 110, 90, 0.85)";

@@ -1,4 +1,10 @@
-import type { Ball } from "./billiardsPhysics.ts";
+import {
+  CUSHION_GRIP,
+  CUSHION_RESTITUTION,
+  DRAG,
+  ROLL_DECEL,
+  type Ball,
+} from "./billiardsPhysics.ts";
 import { BALL_RADIUS, TABLE_LENGTH, TABLE_WIDTH, type Point } from "./billiardsTable.ts";
 
 const R = BALL_RADIUS;
@@ -13,6 +19,8 @@ export interface Trajectory {
   readonly ball: Ball | null;
   /** The path ends in this pocket: a scratch, unless a ball comes first. */
   readonly pocket: number | null;
+  /** The cue ball runs out of speed at the path's end. */
+  readonly stops: boolean;
   /** Direction of the last segment, for the cue ball's deflection off `ball`. */
   readonly dx: number;
   readonly dy: number;
@@ -32,16 +40,38 @@ function pocketAt(x: number, y: number, onSideRail: boolean): number | null {
   return null;
 }
 
+/** How far a ball rolling at `speed` travels before friction stops it (same law as the physics). */
+function stoppingDistance(speed: number): number {
+  return speed / DRAG - (ROLL_DECEL / (DRAG * DRAG)) * Math.log(1 + (DRAG * speed) / ROLL_DECEL);
+}
+
+/** The speed left after rolling `distance` from `speed`. */
+function speedAfter(speed: number, distance: number): number {
+  const target = stoppingDistance(speed) - distance;
+  if (target <= 0) return 0;
+  let low = 0;
+  let high = speed;
+  for (let i = 0; i < 30; i++) {
+    const mid = (low + high) / 2;
+    if (stoppingDistance(mid) < target) low = mid;
+    else high = mid;
+  }
+  return (low + high) / 2;
+}
+
 /**
  * Where the cue ball goes along `angle` if nothing slows it: off up to `bounces` cushions,
- * until it touches a ball or runs into a pocket. Cushions are treated as straight rails.
+ * until it touches a ball, runs into a pocket, or (given a `speed`) stops. Cushions bounce it the
+ * way the physics does: they keep less of the speed into the rail than along it.
  */
 export function castTrajectory(
   balls: ReadonlyArray<Ball>,
   cue: Ball,
   angle: number,
+  speed: number | null = null,
   bounces = AIM_BOUNCES,
 ): Trajectory {
+  let v = speed ?? Infinity;
   let x = cue.x;
   let y = cue.y;
   let dx = Math.cos(angle);
@@ -68,20 +98,33 @@ export function castTrajectory(
     const wallX = dx > 0 ? (TABLE_WIDTH - R - x) / dx : dx < 0 ? (R - x) / dx : Infinity;
     const wallY = dy > 0 ? (TABLE_LENGTH - R - y) / dy : dy < 0 ? (R - y) / dy : Infinity;
     const wall = Math.max(0, Math.min(wallX, wallY));
-    const remaining = MAX_LENGTH - travelled;
+    const rolls = v === Infinity ? Infinity : stoppingDistance(v);
+    const remaining = Math.min(MAX_LENGTH - travelled, rolls);
     if (hit && best <= wall && best <= remaining) {
       points.push({ x: x + dx * best, y: y + dy * best });
-      return { points, ball: hit, pocket: null, dx, dy };
+      return { points, ball: hit, pocket: null, stops: false, dx, dy };
     }
     const step = Math.min(wall, remaining);
     x += dx * step;
     y += dy * step;
     travelled += step;
     points.push({ x, y });
-    if (step === remaining) return { points, ball: null, pocket: null, dx, dy };
+    if (step === remaining) {
+      return { points, ball: null, pocket: null, stops: rolls <= wall, dx, dy };
+    }
     const pocket = pocketAt(x, y, wall === wallX);
-    if (pocket !== null || bounce >= bounces) return { points, ball: null, pocket, dx, dy };
-    if (wall === wallX) dx = -dx;
-    if (wall === wallY) dy = -dy;
+    if (pocket !== null || bounce >= bounces) {
+      return { points, ball: null, pocket, stops: false, dx, dy };
+    }
+    // Same bounce as the physics: the speed into the rail drops more than the speed along it.
+    const normalX = wall === wallX;
+    const along = normalX ? dy : dx;
+    const into = normalX ? dx : dy;
+    const outAlong = along * CUSHION_GRIP;
+    const outInto = -into * CUSHION_RESTITUTION;
+    const factor = Math.hypot(outAlong, outInto);
+    dx = normalX ? outInto / factor : outAlong / factor;
+    dy = normalX ? outAlong / factor : outInto / factor;
+    if (v !== Infinity) v = speedAfter(v, step) * factor;
   }
 }
