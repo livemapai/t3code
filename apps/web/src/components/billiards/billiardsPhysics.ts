@@ -15,6 +15,8 @@ export interface Ball {
   vx: number;
   vy: number;
   onTable: boolean;
+  /** A power-up steers this ball into this pocket, through everything in the way. */
+  guidedTo: number | null;
 }
 
 export type PhysicsEvent =
@@ -26,6 +28,12 @@ export type PhysicsEvent =
       readonly x: number;
       readonly y: number;
     }
+  /** The cue ball passed through this ball, with the glow cue. */
+  | { readonly kind: "touch"; readonly ball: number }
+  /** The cue ball rolled over a power-up ring. Raised by the game, not the physics. */
+  | { readonly kind: "powerUp"; readonly ring: number }
+  /** A power-up took hold of this ball and steers it into a pocket. Raised by the game. */
+  | { readonly kind: "guide"; readonly ball: number }
   | {
       readonly kind: "pocket";
       readonly ball: number;
@@ -53,9 +61,16 @@ export const CUSHION_RESTITUTION = 0.72;
 export const CUSHION_GRIP = 0.94;
 const DIAMETER = BALL_RADIUS * 2;
 const OUT_MARGIN = BALL_RADIUS * 1.2;
+/** A guided ball never rolls slower than this on its way to the pocket. */
+const GUIDED_SPEED = 1.6;
+
+export interface StepOptions {
+  /** The cue ball passes through other balls instead of hitting them. */
+  readonly cueGhost?: boolean;
+}
 
 export function makeBall(id: number, x: number, y: number): Ball {
-  return { id, x, y, vx: 0, vy: 0, onTable: true };
+  return { id, x, y, vx: 0, vy: 0, onTable: true, guidedTo: null };
 }
 
 export function anyMoving(balls: ReadonlyArray<Ball>): boolean {
@@ -76,11 +91,32 @@ function nearestPocket(x: number, y: number): Pocket {
 }
 
 /** Advances every ball by one fixed step, appending what happened to `events`. Deterministic. */
-export function stepPhysics(balls: Ball[], events: PhysicsEvent[]): void {
+export function stepPhysics(
+  balls: Ball[],
+  events: PhysicsEvent[],
+  options: StepOptions = {},
+): void {
   const dt = STEP_SECONDS;
 
   for (const ball of balls) {
-    if (!ball.onTable || (ball.vx === 0 && ball.vy === 0)) continue;
+    if (!ball.onTable) continue;
+    if (ball.guidedTo !== null) {
+      const pocket = POCKETS[ball.guidedTo];
+      if (pocket) {
+        const dx = pocket.x - ball.x;
+        const dy = pocket.y - ball.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        const speed = Math.max(GUIDED_SPEED, Math.hypot(ball.vx, ball.vy));
+        // Turn smoothly towards the pocket rather than snapping.
+        const turn = Math.min(1, dt * 14);
+        ball.vx += ((dx / distance) * speed - ball.vx) * turn;
+        ball.vy += ((dy / distance) * speed - ball.vy) * turn;
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+        continue;
+      }
+    }
+    if (ball.vx === 0 && ball.vy === 0) continue;
     const speed = Math.hypot(ball.vx, ball.vy);
     const loss = (ROLL_DECEL + DRAG * speed) * dt;
     if (speed - loss < SLEEP_SPEED) {
@@ -101,10 +137,15 @@ export function stepPhysics(balls: Ball[], events: PhysicsEvent[]): void {
     for (let j = i + 1; j < balls.length; j++) {
       const b = balls[j];
       if (!b?.onTable) continue;
+      if (a.guidedTo !== null || b.guidedTo !== null) continue;
       const dx = b.x - a.x;
       const dy = b.y - a.y;
       const distanceSquared = dx * dx + dy * dy;
       if (distanceSquared >= DIAMETER * DIAMETER || distanceSquared === 0) continue;
+      if (options.cueGhost && (a.id === 0 || b.id === 0)) {
+        events.push({ kind: "touch", ball: a.id === 0 ? b.id : a.id });
+        continue;
+      }
       const distance = Math.sqrt(distanceSquared);
       const nx = dx / distance;
       const ny = dy / distance;
@@ -125,7 +166,7 @@ export function stepPhysics(balls: Ball[], events: PhysicsEvent[]): void {
   }
 
   for (const ball of balls) {
-    if (!ball.onTable) continue;
+    if (!ball.onTable || ball.guidedTo !== null) continue;
     for (const { a, b } of CUSHION_SEGMENTS) {
       const sx = b.x - a.x;
       const sy = b.y - a.y;
@@ -169,5 +210,6 @@ export function stepPhysics(balls: Ball[], events: PhysicsEvent[]): void {
     ball.onTable = false;
     ball.vx = 0;
     ball.vy = 0;
+    ball.guidedTo = null;
   }
 }

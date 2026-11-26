@@ -11,6 +11,8 @@ const R = BALL_RADIUS;
 /** How many cushions the guide follows the cue ball off. */
 const AIM_BOUNCES = 2;
 const MAX_LENGTH = 3;
+/** The golden cue's full sight. */
+export const GOLDEN_SIGHT = { bounces: 5, length: 7 } as const;
 
 export interface Trajectory {
   /** The cue ball's path: its centre at the start, at each cushion, and where it ends. */
@@ -69,7 +71,8 @@ export function castTrajectory(
   cue: Ball,
   angle: number,
   speed: number | null = null,
-  bounces = AIM_BOUNCES,
+  bounces: number = AIM_BOUNCES,
+  maxLength: number = MAX_LENGTH,
 ): Trajectory {
   let v = speed ?? Infinity;
   let x = cue.x;
@@ -99,7 +102,7 @@ export function castTrajectory(
     const wallY = dy > 0 ? (TABLE_LENGTH - R - y) / dy : dy < 0 ? (R - y) / dy : Infinity;
     const wall = Math.max(0, Math.min(wallX, wallY));
     const rolls = v === Infinity ? Infinity : stoppingDistance(v);
-    const remaining = Math.min(MAX_LENGTH - travelled, rolls);
+    const remaining = Math.min(maxLength - travelled, rolls);
     if (hit && best <= wall && best <= remaining) {
       points.push({ x: x + dx * best, y: y + dy * best });
       return { points, ball: hit, pocket: null, stops: false, dx, dy };

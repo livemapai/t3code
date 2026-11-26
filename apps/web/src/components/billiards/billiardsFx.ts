@@ -202,7 +202,7 @@ export class Effects {
           DUST,
           0.15 + v * 0.3,
         );
-      } else {
+      } else if (event.kind === "pocket") {
         const pocket = POCKETS[event.pocket];
         if (!pocket) continue;
         const gold = event.ball === EIGHT;
@@ -245,6 +245,28 @@ export class Effects {
       this.impactShown = true;
       this.hitStop = 0.03;
     }
+  }
+
+  /** A power-up collected, or a ball taken by one: a burst in its colour. */
+  powerBurst(x: number, y: number, color: string): void {
+    this.ring(x, y, R, R * 5, 0.55, 0.006, color, 0.9);
+    this.ring(x, y, R * 0.5, R * 3, 0.35, 0.003, WHITE, 0.6);
+    this.burst(x, y, 22, 0.55, color, 0.6);
+  }
+
+  /** One spark left behind something magic as it moves. */
+  trail(x: number, y: number, color: string): void {
+    const angle = Math.random() * Math.PI * 2;
+    this.particle(
+      x + Math.cos(angle) * R * 0.6,
+      y + Math.sin(angle) * R * 0.6,
+      Math.cos(angle) * 0.03,
+      Math.sin(angle) * 0.03,
+      0.45 + Math.random() * 0.3,
+      0.0025 + Math.random() * 0.0025,
+      color,
+      2,
+    );
   }
 
   /** The table cleared: a wide gold wave from the called pocket. */

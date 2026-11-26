@@ -1,4 +1,5 @@
-import { castTrajectory } from "./billiardsAim.ts";
+import { castTrajectory, GOLDEN_SIGHT } from "./billiardsAim.ts";
+import { drawCue, drawRings, POWER_COLORS, type CueStyle } from "./billiardsCues.ts";
 import type { BallSprites } from "./billiardsBalls.ts";
 import type { ClothNap, Effects } from "./billiardsFx.ts";
 import { shotSpeed, type Ball } from "./billiardsPhysics.ts";
@@ -54,6 +55,7 @@ export interface SceneView {
   readonly shake: { readonly x: number; readonly y: number };
   /** 0 to 1: darkens the edges while the final 8 rolls in slow motion. */
   readonly vignette: number;
+  readonly cueStyle: CueStyle;
 }
 
 export { SINK_SECONDS };
@@ -227,18 +229,23 @@ export function drawScene(
   ctx.drawImage(staticLayer, shiftX, shiftY);
   frameTransform(ctx, scale, view.shake.x, view.shake.y);
   view.nap.draw(ctx, shiftX, shiftY);
+  if (!game.isBreak) drawRings(ctx, game.rings, view.now);
 
   const cue = game.ball(0);
   const aiming = game.phase === "aiming" && cue?.onTable;
   if (game.needsCall()) drawPocketCalls(ctx, view);
-  if (aiming && cue) drawAimGuide(ctx, game, cue, view.aimAngle, view.power);
+  if (aiming && cue) {
+    drawAimGuide(ctx, game, cue, view.aimAngle, view.power, game.goldenShots > 0);
+  }
 
   for (const ball of game.balls) if (ball.onTable) drawShadow(ctx, ball.x, ball.y, 1);
   for (const ball of game.balls) if (ball.onTable) sprites.draw(ctx, ball.id, ball.x, ball.y);
   for (const sinking of view.sinking) drawSinking(ctx, sprites, sinking, view.now);
   view.fx.draw(ctx);
 
-  if (aiming && cue) drawCue(ctx, cue, view.aimAngle, view.power ?? 0);
+  if (aiming && cue) {
+    drawCue(ctx, cue, view.aimAngle, view.power ?? 0, view.cueStyle, view.now);
+  }
   if (view.power !== null) drawPowerMeter(ctx, view.power);
 
   for (const [i, id] of game.pottedOrder.entries()) {
@@ -301,9 +308,14 @@ function drawAimGuide(
   cue: Ball,
   angle: number,
   power: number | null,
+  golden: boolean,
 ): void {
   // While charging, the line only reaches as far as this power rolls the cue ball.
-  const path = castTrajectory(game.balls, cue, angle, power === null ? null : shotSpeed(power));
+  const speed = power === null ? null : shotSpeed(power);
+  const path = golden
+    ? castTrajectory(game.balls, cue, angle, speed, GOLDEN_SIGHT.bounces, GOLDEN_SIGHT.length)
+    : castTrajectory(game.balls, cue, angle, speed);
+  const dots = golden ? POWER_COLORS.golden : "255, 255, 255";
   ctx.save();
   ctx.lineCap = "round";
   // Zero-length dashes with round caps draw dots; each cushion leg fades a little more.
@@ -313,7 +325,7 @@ function drawAimGuide(
     const from = path.points[i - 1];
     const to = path.points[i];
     if (!from || !to) continue;
-    ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 - (i - 1) * 0.25})`;
+    ctx.strokeStyle = `rgba(${dots}, ${Math.max(0.2, 0.8 - (i - 1) * (golden ? 0.1 : 0.25))})`;
     ctx.beginPath();
     ctx.moveTo(from.x, from.y);
     ctx.lineTo(to.x, to.y);
@@ -330,12 +342,28 @@ function drawAimGuide(
     ctx.stroke();
     const nx = (ball.x - end.x) / (2 * R);
     const ny = (ball.y - end.y) / (2 * R);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
-    ctx.lineWidth = 0.0045;
-    ctx.beginPath();
-    ctx.moveTo(ball.x + nx * R, ball.y + ny * R);
-    ctx.lineTo(ball.x + nx * 0.3, ball.y + ny * 0.3);
-    ctx.stroke();
+    if (golden) {
+      // Full sight: where the object ball goes, off its cushions too.
+      const others = game.balls.filter((other) => other !== cue);
+      const objectPath = castTrajectory(others, ball, Math.atan2(ny, nx), null, 3, 2.5);
+      ctx.setLineDash([0, 0.017]);
+      ctx.lineWidth = 0.0065;
+      ctx.strokeStyle = `rgba(${POWER_COLORS.golden}, 0.85)`;
+      ctx.beginPath();
+      for (const [i, point] of objectPath.points.entries()) {
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.lineWidth = 0.0045;
+      ctx.beginPath();
+      ctx.moveTo(ball.x + nx * R, ball.y + ny * R);
+      ctx.lineTo(ball.x + nx * 0.3, ball.y + ny * 0.3);
+      ctx.stroke();
+    }
     // The cue ball leaves at right angles to the object ball.
     const along = path.dx * nx + path.dy * ny;
     const tx = path.dx - along * nx;
@@ -364,49 +392,6 @@ function drawAimGuide(
     ctx.stroke();
   }
   ctx.restore();
-}
-
-const CUE_LENGTH = 1.15;
-
-function drawCue(ctx: CanvasRenderingContext2D, cue: Ball, angle: number, power: number): void {
-  const dx = Math.cos(angle);
-  const dy = Math.sin(angle);
-  const back = R + 0.012 + power * 0.14;
-  const tipX = cue.x - dx * back;
-  const tipY = cue.y - dy * back;
-  const buttX = tipX - dx * CUE_LENGTH;
-  const buttY = tipY - dy * CUE_LENGTH;
-  const px = -dy;
-  const py = dx;
-  const outline = (offset: number) => {
-    ctx.beginPath();
-    ctx.moveTo(tipX + px * 0.0065 + offset, tipY + py * 0.0065 + offset * 1.4);
-    ctx.lineTo(buttX + px * 0.013 + offset, buttY + py * 0.013 + offset * 1.4);
-    ctx.lineTo(buttX - px * 0.013 + offset, buttY - py * 0.013 + offset * 1.4);
-    ctx.lineTo(tipX - px * 0.0065 + offset, tipY - py * 0.0065 + offset * 1.4);
-    ctx.closePath();
-  };
-  outline(0.012);
-  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-  ctx.fill();
-  const body = ctx.createLinearGradient(tipX, tipY, buttX, buttY);
-  for (const [stop, color] of [
-    [0, "#7fb2e0"],
-    [0.01, "#7fb2e0"],
-    [0.0101, "#f3efe4"],
-    [0.025, "#f3efe4"],
-    [0.026, "#e0c69c"],
-    [0.62, "#b8875a"],
-    [0.621, "#d4af37"],
-    [0.63, "#d4af37"],
-    [0.631, "#2a1810"],
-    [1, "#120a06"],
-  ] as const) {
-    body.addColorStop(stop, color);
-  }
-  outline(0);
-  ctx.fillStyle = body;
-  ctx.fill();
 }
 
 function drawPowerMeter(ctx: CanvasRenderingContext2D, power: number): void {

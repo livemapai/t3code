@@ -22,7 +22,15 @@ import {
   type BilliardsRun,
   type Medal,
 } from "./billiardsRecords.ts";
-import { BilliardsGame, EIGHT, seededRandom, type Foul, type Phase } from "./billiardsRules.ts";
+import { cueTip, POWER_COLORS, type CueStyle } from "./billiardsCues.ts";
+import {
+  BilliardsGame,
+  EIGHT,
+  placeRings,
+  seededRandom,
+  type Foul,
+  type Phase,
+} from "./billiardsRules.ts";
 import { POCKETS, type Point } from "./billiardsTable.ts";
 
 /** What the overlay shows around the canvas. */
@@ -46,6 +54,9 @@ export interface BilliardsHud {
   readonly todayRuns: ReadonlyArray<BilliardsRun>;
   /** How the run that just cleared the table placed. */
   readonly result: RunResult | null;
+  /** A power-up waiting for the next shot. */
+  readonly armed: "wand" | "glow" | null;
+  readonly goldenShots: number;
 }
 
 export interface RunResult {
@@ -56,7 +67,11 @@ export interface RunResult {
 }
 
 function dailyGame(day: string): BilliardsGame {
-  return new BilliardsGame({ random: seededRandom(rackSeed(day)) });
+  const seed = rackSeed(day);
+  return new BilliardsGame({
+    random: seededRandom(seed),
+    rings: placeRings(seededRandom(seed ^ 0x5bd1e995)),
+  });
 }
 
 const CHARGE_MS = 1100;
@@ -297,6 +312,7 @@ export class BilliardsSession {
       if (!this.game.isBreak && this.clockStart === null) this.clockStart = time;
       this.emitHud(time, true);
     }
+    if (simSeconds > 0 || this.game.phase === "aiming") this.trailMagic(time);
     this.updateSlowMotion(seconds);
     this.fx.update(simSeconds === 0 ? 0 : Math.max(simSeconds, seconds * 0.5));
     this.sinking = this.sinking.filter((sinking) => time / 1000 - sinking.start < SINK_SECONDS);
@@ -313,6 +329,7 @@ export class BilliardsSession {
       fx: this.fx,
       shake: this.fx.shakeOffset(),
       vignette: Math.min(1, (1 - this.timeScale) / (1 - SLOW_MOTION)),
+      cueStyle: this.cueStyle(),
     });
     if (time - this.lastHudAt > HUD_INTERVAL_MS) this.emitHud(time, false);
   };
@@ -376,19 +393,73 @@ export class BilliardsSession {
     const clicks: number[] = [];
     const thuds: number[] = [];
     for (const event of events) {
-      if (event.kind === "ball") clicks.push(event.speed);
-      else if (event.kind === "cushion") thuds.push(event.speed);
-      else {
-        this.audio.pocket();
-        const pocket = POCKETS[event.pocket];
-        if (pocket) {
-          this.sinking.push({ ball: event.ball, x: event.x, y: event.y, pocket, start: now });
+      switch (event.kind) {
+        case "ball":
+          clicks.push(event.speed);
+          break;
+        case "cushion":
+          thuds.push(event.speed);
+          break;
+        case "touch":
+          break;
+        case "pocket": {
+          this.audio.pocket();
+          const pocket = POCKETS[event.pocket];
+          if (pocket) {
+            this.sinking.push({ ball: event.ball, x: event.x, y: event.y, pocket, start: now });
+          }
+          break;
+        }
+        case "powerUp": {
+          const ring = this.game.rings.find((candidate) => candidate.id === event.ring);
+          if (!ring) break;
+          this.audio.powerUp();
+          this.fx.powerBurst(ring.x, ring.y, POWER_COLORS[ring.kind]);
+          this.emitHud(now * 1000, true);
+          break;
+        }
+        case "guide": {
+          const ball = this.game.ball(event.ball);
+          const power = this.game.activePower;
+          if (!ball || !power) break;
+          this.audio.guide();
+          this.fx.powerBurst(ball.x, ball.y, POWER_COLORS[power]);
+          break;
         }
       }
     }
     // A break makes dozens of contacts in one frame; the loudest few carry it.
     for (const speed of clicks.sort((a, b) => b - a).slice(0, 3)) this.audio.click(speed);
     for (const speed of thuds.sort((a, b) => b - a).slice(0, 2)) this.audio.cushion(speed);
+  }
+
+  /** Sparks behind balls a power-up is steering, and off a magic stick while aiming. */
+  private trailMagic(now: number): void {
+    const power = this.game.activePower;
+    for (const ball of this.game.balls) {
+      if (ball.onTable && ball.guidedTo !== null && power) {
+        this.fx.trail(ball.x, ball.y, POWER_COLORS[power]);
+      }
+    }
+    const cue = this.game.ball(0);
+    if (power === "glow" && cue?.onTable && this.game.phase === "rolling") {
+      this.fx.trail(cue.x, cue.y, POWER_COLORS.glow);
+    }
+    const style = this.cueStyle();
+    if (
+      style !== "classic" &&
+      this.game.phase === "aiming" &&
+      cue?.onTable &&
+      Math.random() < 0.35
+    ) {
+      const tip = cueTip(cue, this.aimAngle, this.power(now));
+      this.fx.trail(tip.x, tip.y, POWER_COLORS[style]);
+    }
+  }
+
+  private cueStyle(): CueStyle {
+    if (this.game.armed) return this.game.armed;
+    return this.game.goldenShots > 0 ? "golden" : "classic";
   }
 
   private emitHud(now: number, force: boolean): void {
@@ -407,6 +478,8 @@ export class BilliardsSession {
       day: this.day,
       todayRuns: this.todayRuns,
       result: this.result,
+      armed: game.armed,
+      goldenShots: game.goldenShots,
     };
     this.lastHudAt = now;
     const last = this.lastHud;

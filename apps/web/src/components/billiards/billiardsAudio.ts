@@ -63,10 +63,31 @@ export class BilliardsAudio {
     this.tone("sine", 700 + p * 300, 500, 0.15 + p * 0.2, 0.04);
   }
 
-  private tone(type: OscillatorType, from: number, to: number, gain: number, decay: number): void {
+  /** A power-up: a quick rising chime. */
+  powerUp(): void {
+    for (const [i, note] of [784, 1047, 1319, 1568].entries()) {
+      this.tone("sine", note, note * 1.01, 0.22, 0.28, i * 0.055);
+      this.tone("triangle", note * 2, note * 2, 0.05, 0.18, i * 0.055);
+    }
+  }
+
+  /** A ball taken by a power-up: a soft magic swish. */
+  guide(): void {
+    this.tone("sine", 520, 1400, 0.16, 0.35);
+    this.hiss("highpass", 5000, 0.7, 0.08, 0.3);
+  }
+
+  private tone(
+    type: OscillatorType,
+    from: number,
+    to: number,
+    gain: number,
+    decay: number,
+    delay = 0,
+  ): void {
     const { context, master } = this;
     if (!context || !master) return;
-    const at = context.currentTime;
+    const at = context.currentTime + delay;
     const oscillator = context.createOscillator();
     const envelope = context.createGain();
     oscillator.type = type;

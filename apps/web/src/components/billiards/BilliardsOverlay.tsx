@@ -7,7 +7,8 @@ import { createPortal } from "react-dom";
 import { cn } from "../../lib/utils";
 import { useThreadShells } from "../../state/entities";
 import { medalFor, nextMedal, type Medal } from "./billiardsRecords";
-import { FOUL_PENALTY_SECONDS } from "./billiardsRules";
+import { POWER_COLORS } from "./billiardsCues";
+import { FOUL_PENALTY_SECONDS, GLOW_BALLS } from "./billiardsRules";
 import { BilliardsSession, type BilliardsHud } from "./billiardsSession";
 import { snapshotThreads, threadAlerts, type ThreadAlert } from "./billiardsThreadAlerts";
 
@@ -93,7 +94,7 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
         : gt("Next: bronze under {time}", { time });
   };
 
-  const status = (() => {
+  const status = ((): { text: string; tone: string; color?: string } => {
     if (!hud) return { text: "", tone: "quiet" };
     if (hud.blocked) return { text: gt("Call a pocket for the 8 first: click it."), tone: "warn" };
     switch (hud.foul) {
@@ -138,10 +139,39 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
       case null:
         break;
     }
+    if (hud.armed === "wand") {
+      return {
+        text: gt("Wand ready: the first ball you hit drops into the nearest pocket."),
+        tone: "power",
+        color: `rgb(${POWER_COLORS.wand})`,
+      };
+    }
+    if (hud.armed === "glow") {
+      return {
+        text: gt(
+          "Glow cue ready: the cue ball bursts through up to {count} balls and drops them.",
+          {
+            count: GLOW_BALLS,
+          },
+        ),
+        tone: "power",
+        color: `rgb(${POWER_COLORS.glow})`,
+      };
+    }
     if (hud.needsCall) {
       return hud.calledPocket === null
         ? { text: gt("Only the 8 is left. Click the pocket you call."), tone: "call" }
         : { text: gt("8 called. Click another pocket to change it."), tone: "call" };
+    }
+    if (hud.goldenShots > 0) {
+      return {
+        text: gt(
+          "{count, plural, =1 {Golden cue: full sight for this shot.} other {Golden cue: full sight for {count} shots.}}",
+          { count: hud.goldenShots },
+        ),
+        tone: "power",
+        color: `rgb(${POWER_COLORS.golden})`,
+      };
     }
     if (hud.isBreak) {
       return {
@@ -196,6 +226,7 @@ export default function BilliardsOverlay({ onClose }: { onClose: () => void }) {
               status.tone === "call" && "text-warning",
               status.tone === "quiet" && "text-white/55",
             )}
+            style={status.color ? { color: status.color } : undefined}
           >
             {status.text}
           </p>
