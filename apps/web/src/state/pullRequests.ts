@@ -705,7 +705,16 @@ function createMergedEnvironmentQuery<Input, A>(
         appAtomRegistry.refresh(atom);
       }
     };
-    return { ...view, refresh };
+    // Retry reloads only failed environments, so a read still in flight elsewhere is not restarted.
+    const retry = () => {
+      for (const atom of new Set(
+        (JSON.parse(key) as ReadonlyArray<EnvironmentQueryTarget<Input>>).map(atomFor),
+      )) {
+        const result = appAtomRegistry.get(atom);
+        if (result._tag === "Failure" && !result.waiting) appAtomRegistry.refresh(atom);
+      }
+    };
+    return { ...view, refresh, retry };
   };
 }
 
@@ -757,6 +766,7 @@ export interface MergedPullRequestListView {
   readonly isPending: boolean;
   readonly observations: ReadonlyArray<readonly [EnvironmentId, PullRequestListResult, number]>;
   readonly refresh: (targets?: ReadonlyArray<EnvironmentQueryTarget<PullRequestListInput>>) => void;
+  readonly retry: () => void;
 }
 
 // Merge inside each hook: the React Compiler memoizes it on `query.values` only there, and
@@ -772,6 +782,7 @@ export function usePullRequestList(
     isPending: query.isPending,
     observations: query.observations,
     refresh: query.refresh,
+    retry: query.retry,
   };
 }
 
@@ -786,6 +797,7 @@ export function usePullRequestHostList(
     isPending: query.isPending,
     observations: query.observations,
     refresh: query.refresh,
+    retry: query.retry,
   };
 }
 

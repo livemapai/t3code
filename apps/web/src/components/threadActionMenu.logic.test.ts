@@ -108,4 +108,9 @@ describe("buildThreadActionMenuItems", () => {
       .map((child) => child.id);
     expect(checked).toEqual(["flag:later"]);
   });
+
+  it("disables only rename where no inline title editor exists", () => {
+    const items = buildThreadActionMenuItems({ ...baseState, canRename: false });
+    expect(items.filter((item) => item.disabled).map((item) => item.id)).toEqual(["rename"]);
+  });
 });
