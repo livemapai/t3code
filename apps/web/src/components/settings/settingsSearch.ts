@@ -569,6 +569,14 @@ export const SETTINGS_SEARCH_ITEMS = [
     searchTerms: ["ari livemap flag urgent later working mark sidebar icon"],
   },
   {
+    id: "ari-thread-flag-sections",
+    title: msg("Flag sections"),
+    to: "/settings/ari",
+    searchTerms: [
+      "ari livemap flag urgent later working in progress group section header rail colour color sidebar",
+    ],
+  },
+  {
     id: "ari-relay-shelf",
     title: msg("Relay section"),
     to: "/settings/ari",

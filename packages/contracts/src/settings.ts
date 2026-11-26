@@ -542,6 +542,10 @@ export const ClientSettingsSchema = Schema.Struct({
   ariMergeSoundEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   ariMergeShout: AriMergeShout.pipe(Schema.withDecodingDefault(Effect.succeed("ship-it"))),
   ariThreadFlagsEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  // Sidebar flag sections and colour rails; only applies while ariThreadFlagsEnabled is on.
+  ariThreadFlagSectionsEnabled: Schema.Boolean.pipe(
+    Schema.withDecodingDefault(Effect.succeed(true)),
+  ),
   ariRelayShelfEnabled: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   ariLibraryLinksInAppEnabled: Schema.Boolean.pipe(
     Schema.withDecodingDefault(Effect.succeed(true)),
@@ -2125,6 +2129,7 @@ export const ClientSettingsPatch = Schema.Struct({
   ariMergeSoundEnabled: Schema.optionalKey(Schema.Boolean),
   ariMergeShout: Schema.optionalKey(AriMergeShout),
   ariThreadFlagsEnabled: Schema.optionalKey(Schema.Boolean),
+  ariThreadFlagSectionsEnabled: Schema.optionalKey(Schema.Boolean),
   ariRelayShelfEnabled: Schema.optionalKey(Schema.Boolean),
   ariLibraryLinksInAppEnabled: Schema.optionalKey(Schema.Boolean),
   toolCallVisibility: Schema.optionalKey(ToolCallVisibility),

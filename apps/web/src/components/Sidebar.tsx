@@ -384,6 +384,8 @@ interface SidebarThreadPartitionInput {
   readonly relayShelfEnabled: boolean;
   /** Boring mode: folders list active threads by the user's latest message. */
   readonly sortActiveBySend: boolean;
+  /** Flag sections: flagged active threads sort ahead of unflagged ones, by flag. */
+  readonly groupActiveByFlag: boolean;
   // Snooze wakes, the queued-turn grace and the Working shelf's exit grace depend
   // on the clock, so the minute tick, the precise snooze-wake tick and the inbox
   // tracker's expiry version are inputs: a new key repartitions.
@@ -444,6 +446,7 @@ function useSidebarThreads(input: {
   readonly projectScopeKey: string | null;
   readonly scopedProjectKeys: ReadonlySet<string> | null;
   readonly flagFilter: ThreadFlagFilter | null;
+  readonly flagSectionsEnabled: boolean;
   readonly serverConfigs: ReadonlyMap<EnvironmentId, EnvironmentServerConfig>;
   readonly connectedEnvironmentIds: readonly EnvironmentId[];
   readonly optimisticDrop: SidebarOptimisticDrop | null;
@@ -459,6 +462,7 @@ function useSidebarThreads(input: {
     projectScopeKey,
     scopedProjectKeys,
     flagFilter,
+    flagSectionsEnabled,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -524,6 +528,8 @@ function useSidebarThreads(input: {
     workingShelfEnabled,
     relayShelfEnabled,
     sortActiveBySend: folderGroups !== null,
+    // Folders already group the active rows, so they keep their own order.
+    groupActiveByFlag: flagSectionsEnabled && folderGroups === null,
     clockKey: `${nowMinute}:${snoozeWakeClock}:${inboxReturnsVersion}`,
   });
 
@@ -676,6 +682,7 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
     workingShelfEnabled,
     relayShelfEnabled,
     sortActiveBySend,
+    groupActiveByFlag,
   } = input;
   const preciseNow = new Date().toISOString();
   const visible = filterSidebarV2VisibleThreads(
@@ -740,15 +747,17 @@ function partitionSidebarThreads(input: SidebarThreadPartitionInput) {
   }
   // Availability gates dragging only; sorting must stay consistent across clients.
   const sortedPinned = sortPinnedThreadsForSidebar(pinned);
+  const sortedActiveFlat = sortActiveBySend
+    ? sortWorkingThreadsBySend(active)
+    : workingShelfEnabled
+      ? sortInboxThreadsByReturn(active, inboxObservation.returnedAt)
+      : sortThreadsForSidebar(active);
   // Flag groups sit inside the active section, so the active order follows them.
-  const sortedActive = groupThreadsByFlag(
-    sortActiveBySend
-      ? sortWorkingThreadsBySend(active)
-      : workingShelfEnabled
-        ? sortInboxThreadsByReturn(active, inboxObservation.returnedAt)
-        : sortThreadsForSidebar(active),
-    (thread) => thread.source.tags,
-  ).flatMap((group) => group.threads);
+  const sortedActive = groupActiveByFlag
+    ? groupThreadsByFlag(sortedActiveFlat, (thread) => thread.source.tags).flatMap(
+        (group) => group.threads,
+      )
+    : sortedActiveFlat;
   return {
     pinnedThreads:
       optimisticDrop?.section !== "pinned" || optimisticDrop.order === null
@@ -1088,6 +1097,10 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const threadSearchInputRef = useRef<HTMLInputElement>(null);
   const [threadSearchQuery, setThreadSearchQuery] = useState("");
   const flagsEnabled = useClientSettings((s) => s.ariThreadFlagsEnabled);
+  // Flag sections and rails are an opt-out on top of thread flags.
+  const flagSectionsEnabled = useClientSettings(
+    (s) => s.ariThreadFlagsEnabled && s.ariThreadFlagSectionsEnabled,
+  );
   const [flagFilter, setFlagFilter] = useState<ThreadFlagFilter | null>(null);
   const [searchHighlightKey, setSearchHighlightKey] = useState<string | null>(null);
   const connectedEnvironmentIds = useConnectedEnvironmentIds();
@@ -1415,6 +1428,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
     projectScopeKey,
     scopedProjectKeys,
     flagFilter: flagsEnabled ? flagFilter : null,
+    flagSectionsEnabled,
     serverConfigs,
     connectedEnvironmentIds,
     optimisticDrop,
@@ -2017,7 +2031,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   const hasProjectFolders = projectFolders !== null && projectFolders.length > 0;
   // Project folders already group the active rows, so flag headers show only in the flat list.
   const activeFlagGroups =
-    projectFolders === null
+    flagSectionsEnabled && projectFolders === null
       ? groupThreadsByFlag(activeThreads, (thread) => thread.source.tags)
       : [];
   const showFlagSections = activeFlagGroups.some((group) => group.flag !== null);
@@ -3553,7 +3567,9 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
                             : "slim";
                         // Pinned and running threads keep their place, so their rail still shows the flag.
                         const railFlag =
-                          rowVariant === "card" ? threadFlagOf(thread.source.tags) : null;
+                          flagSectionsEnabled && rowVariant === "card"
+                            ? threadFlagOf(thread.source.tags)
+                            : null;
                         return (
                           <SortableThreadRow
                             key={threadKey}
